@@ -1,0 +1,40 @@
+1: import streamlit as st
+2: import pandas as pd
+3: import plotly.express as px
+4: from datetime import datetime, timedelta
+5: import re
+6: import json
+7: import base64
+8: import io
+9: import random
+10: from supabase import create_client
+11: from groq import Groq
+12: from login import show_login_page, get_current_user, logout
+13: 
+14: # ==========================================
+15: # 1. SETUP & AUTH CHECK
+16: # ==========================================
+17: st.set_page_config(
+18:     page_title="Kita Cuan \u2014 Partner Bisnis UMKM",
+19:     page_icon="\U0001f525",
+20:     layout="wide",
+21:     initial_sidebar_state="expanded"
+22: )
+23:     # === TOGGLE MENU (Native, Pasti Berfungsi) ===
+24:     show_menu = st.toggle(
+25:         "\u2630 Menu Navigasi",
+26:         value=True,
+27:         key="sidebar_toggle",
+28:         help="Klik untuk menampilkan atau menyembunyikan menu"
+29:     )
+30:     
+31:     if show_menu:
+32:         selected = st.radio(
+33:             "Menu",
+34:             ["\U0001f525 Ringkasan", "\u270d\ufe0f Catat Transaksi", "\U0001f4d6 Buku Kas", "\U0001f4e5 Laporan KUR"],
+35:             label_visibility="collapsed"
+36:         )
+37:     else:
+38:         selected = "\U0001f525 Ringkasan"
+39:         st.info("\U0001f4a1 Aktifkan toggle di atas untuk melihat menu lengkap")
+40: 

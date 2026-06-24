@@ -1,0 +1,16 @@
+24: # === AUTH GATE ===
+25: if not show_login_page():
+26:     st.stop()
+27: 
+28: user = get_current_user()
+29: USER_ID = user.id
+30: 
+31: if 'show_menu' not in st.session_state:
+32:     st.session_state.show_menu = True
+33: 
+34: col1, col2 = st.columns([1, 19])
+35: with col1:
+36:     if st.button('\u2630', key='hamburger_button', help='Tampilkan atau sembunyikan menu'):
+37:         st.session_state.show_menu = not st.session_state.show_menu
+38: with col2:
+39:     pass
