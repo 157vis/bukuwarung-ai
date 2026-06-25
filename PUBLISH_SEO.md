@@ -25,6 +25,11 @@ Folder statis untuk landing page ada di:
 - `site/sitemap.xml`
 - `site/og-image.svg`
 
+Konfigurasi Streamlit yang sudah disiapkan:
+
+- `.streamlit/config.toml`
+- `.streamlit/secrets.toml.example`
+
 Halaman-halaman ini sudah memuat:
 
 - title dan meta description
@@ -49,6 +54,12 @@ Halaman-halaman ini sudah memuat:
 SUPABASE_URL = "https://xxxx.supabase.co"
 SUPABASE_KEY = "anon-key"
 GROQ_API_KEY = "gsk_xxx"
+```
+
+Template yang sama juga sudah tersedia di:
+
+```text
+.streamlit/secrets.toml.example
 ```
 
 5. Deploy dan dapatkan URL aplikasi.
