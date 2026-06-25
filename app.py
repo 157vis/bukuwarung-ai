@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
 
-from brand import APP_NAME, PAGE_ICON, PAGE_TITLE, DASHBOARD_TITLE
+from brand import APP_NAME, PAGE_ICON, PAGE_TITLE, DASHBOARD_TITLE, DEMO_QUERY
+from demo_dashboard import render_demo_dashboard
 from landing import render_landing
 from login import show_login_page, get_current_user, logout
 from laris_core import LarisCore
@@ -105,20 +106,34 @@ def inject_dashboard_style() -> None:
     )
 
 
-def get_query_flag(name: str) -> bool:
+def get_query_value(name: str):
     params = getattr(st, "query_params", {}) or {}
-    return params.get(name, [None])[0] == "1"
+    value = params.get(name)
+    if isinstance(value, list):
+        return value[0] if value else None
+    return value
+
+
+def get_query_flag(name: str) -> bool:
+    return get_query_value(name) == "1"
 
 
 def render_home() -> None:
     # Tombol akses native Streamlit (selalu terbaca, tidak overlay, tidak di dalam iframe).
-    col_brand, col_cta = st.columns([4, 1])
+    col_brand, col_demo, col_cta = st.columns([4, 1, 1])
     with col_brand:
         st.markdown(f"### {APP_NAME}")
+    with col_demo:
+        if st.button("Lihat Demo", use_container_width=True):
+            st.session_state["demo_mode"] = True
+            st.session_state.pop("show_login", None)
+            st.rerun()
     with col_cta:
         if st.button("Masuk ke Dashboard", type="primary", use_container_width=True):
+            st.session_state.pop("demo_mode", None)
             st.session_state["show_login"] = True
             st.rerun()
+    st.caption(f"Publik bisa mencoba dashboard contoh lewat {DEMO_QUERY}")
     render_landing()
 
 
@@ -563,10 +578,19 @@ def main() -> None:
     page_config()
     render_header()
 
+    if get_query_flag("demo"):
+        st.session_state["demo_mode"] = True
+        st.session_state.pop("show_login", None)
+
     show_login = st.session_state.get("show_login", False) or get_query_flag("login")
     if get_query_flag("login"):
+        st.session_state.pop("demo_mode", None)
         st.session_state["show_login"] = True
         show_login = True
+
+    if st.session_state.get("demo_mode"):
+        render_demo_dashboard()
+        return
 
     if show_login:
         if show_login_page():
