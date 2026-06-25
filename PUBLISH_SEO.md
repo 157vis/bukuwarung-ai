@@ -16,6 +16,11 @@ Folder statis untuk landing page ada di:
 - `site/artikel/cara-mencatat-keuangan-warung/index.html`
 - `site/artikel/syarat-kur-umkm-2026/index.html`
 - `site/artikel/aplikasi-kasir-whatsapp-umkm/index.html`
+- `site/artikel/pembukuan-sederhana-usaha-rumahan/index.html`
+- `site/artikel/cara-menghitung-laba-warung/index.html`
+- `site/artikel/aplikasi-stok-barang-umkm/index.html`
+- `site/artikel/contoh-catatan-pemasukan-pengeluaran-umkm/index.html`
+- `site/artikel/aplikasi-kasir-toko-kelontong/index.html`
 - `site/robots.txt`
 - `site/sitemap.xml`
 - `site/og-image.svg`
@@ -160,6 +165,11 @@ Pembagian intent halaman:
 - `site/artikel/cara-mencatat-keuangan-warung/index.html` -> intent informasional warung / toko kecil
 - `site/artikel/syarat-kur-umkm-2026/index.html` -> intent informasional pembiayaan / KUR
 - `site/artikel/aplikasi-kasir-whatsapp-umkm/index.html` -> intent komersial aplikasi kasir WhatsApp
+- `site/artikel/pembukuan-sederhana-usaha-rumahan/index.html` -> intent informasional usaha rumahan
+- `site/artikel/cara-menghitung-laba-warung/index.html` -> intent informasional owner warung
+- `site/artikel/aplikasi-stok-barang-umkm/index.html` -> intent operasional stok / inventaris
+- `site/artikel/contoh-catatan-pemasukan-pengeluaran-umkm/index.html` -> intent edukatif pembukuan sederhana
+- `site/artikel/aplikasi-kasir-toko-kelontong/index.html` -> intent komersial toko kelontong / retail kecil
 
 ## 8. Checklist go-live
 
