@@ -14,14 +14,71 @@ from groq import Groq
 
 class LarisCore:
     def __init__(self, supabase_url: str, supabase_key: str, groq_api_key: str):
+        self.supabase_url = supabase_url
+        self.supabase_key = supabase_key
         self.supabase = create_client(supabase_url, supabase_key)
         self.groq_client = Groq(api_key=groq_api_key)
 
-    def resolve_user_id_by_phone(self, phone: str) -> str:
-        """Petakan nomor WA ke user_id Supabase."""
+    def create_client_account(self, email: str, password: str):
+        """Buat akun client baru (Supabase Auth). Return (user_id, error_msg)."""
+        try:
+            # Client terpisah agar sesi admin yang sedang login tidak terganggu.
+            tmp = create_client(self.supabase_url, self.supabase_key)
+            res = tmp.auth.sign_up({"email": email, "password": password})
+            user = getattr(res, "user", None)
+            if user and getattr(user, "id", None):
+                return user.id, None
+            return None, "Gagal membuat akun. Cek format email / kemungkinan email sudah terdaftar."
+        except Exception as exc:
+            return None, str(exc)[:200]
+
+    def list_all_wa_numbers(self):
+        """Admin: ambil semua pemetaan nomor WA -> client."""
+        try:
+            resp = self.supabase.table("wa_users").select("*").order("id", desc=True).execute()
+            return resp.data or []
+        except Exception as exc:
+            print("ERROR list_all_wa_numbers:", exc)
+            return None
+
+    @staticmethod
+    def normalize_phone(phone: str) -> str:
+        """Normalisasi nomor WA: buang +, spasi, suffix WA; awalan 0 -> 62."""
         normalized = phone.replace("@s.whatsapp.net", "").strip().lstrip("+")
+        normalized = "".join(ch for ch in normalized if ch.isdigit())
         if normalized.startswith("0"):
             normalized = "62" + normalized[1:]
+        return normalized
+
+    def link_wa_number(self, user_id: str, phone: str, label: str = None):
+        """Hubungkan nomor WA ke seorang client (user_id). Upsert berdasarkan phone."""
+        normalized = self.normalize_phone(phone)
+        if not normalized:
+            raise ValueError("Nomor WA tidak valid.")
+        data = {"phone": normalized, "user_id": user_id, "label": label}
+        return self.supabase.table("wa_users").upsert(data, on_conflict="phone").execute()
+
+    def list_wa_numbers(self, user_id: str):
+        try:
+            resp = self.supabase.table("wa_users").select("*").eq("user_id", user_id).order("id", desc=True).execute()
+            return resp.data or []
+        except Exception as exc:
+            print("ERROR list_wa_numbers:", exc)
+            return None
+
+    def unlink_wa_number(self, user_id: str, phone: str):
+        normalized = self.normalize_phone(phone)
+        return (
+            self.supabase.table("wa_users")
+            .delete()
+            .eq("phone", normalized)
+            .eq("user_id", user_id)
+            .execute()
+        )
+
+    def resolve_user_id_by_phone(self, phone: str) -> str:
+        """Petakan nomor WA ke user_id Supabase."""
+        normalized = self.normalize_phone(phone)
 
         for candidate in {phone, normalized, f"+{normalized}"}:
             resp = (
@@ -51,6 +108,14 @@ class LarisCore:
             .execute()
         )
         return pd.DataFrame(response.data) if response.data else pd.DataFrame()
+
+    def table_exists(self, table_name: str) -> bool:
+        try:
+            resp = self.supabase.table(table_name).select("id").limit(1).execute()
+            return resp is not None
+        except BaseException as exc:
+            print(f"ERROR table_exists({table_name}):", exc)
+            return False
 
     def db_insert_transaction(
         self, user_id: str, type_txn, category, amount, note, is_prive=False
@@ -138,18 +203,30 @@ class LarisCore:
         return self.supabase.table("warehouses").insert(data).execute()
 
     def list_warehouses(self, user_id: str):
-        resp = self.supabase.table("warehouses").select("*").eq("user_id", user_id).order("id", desc=False).execute()
-        return resp.data or []
+        try:
+            resp = self.supabase.table("warehouses").select("*").eq("user_id", user_id).order("id", desc=False).execute()
+            return resp.data or []
+        except BaseException as exc:
+            print("ERROR list_warehouses:", exc)
+            return None
 
     def update_warehouse(self, user_id: str, warehouse_id: int, **fields):
-        return (
-            self.supabase.table("warehouses").update(fields).eq("id", warehouse_id).eq("user_id", user_id).execute()
-        )
+        try:
+            return (
+                self.supabase.table("warehouses").update(fields).eq("id", warehouse_id).eq("user_id", user_id).execute()
+            )
+        except BaseException as exc:
+            print("ERROR update_warehouse:", exc)
+            return None
 
     def delete_warehouse(self, user_id: str, warehouse_id: int):
-        return (
-            self.supabase.table("warehouses").delete().eq("id", warehouse_id).eq("user_id", user_id).execute()
-        )
+        try:
+            return (
+                self.supabase.table("warehouses").delete().eq("id", warehouse_id).eq("user_id", user_id).execute()
+            )
+        except BaseException as exc:
+            print("ERROR delete_warehouse:", exc)
+            return None
 
     def add_inventory_entry(self, user_id: str, warehouse_id: int, barang: str, qty_in: int = 0, qty_out: int = 0, note: str = None):
         data = {
@@ -161,21 +238,167 @@ class LarisCore:
             "note": note,
             "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
         }
-        # insert inventory entry
-        insert_result = self.supabase.table("inventory_entries").insert(data).execute()
         try:
-            print("DEBUG add_inventory_entry:", data)
-            print("DEBUG add_inventory_entry result:", getattr(insert_result, "data", None), getattr(insert_result, "error", None))
-        except Exception:
-            pass
-        return insert_result
+            insert_result = self.supabase.table("inventory_entries").insert(data).execute()
+            try:
+                print("DEBUG add_inventory_entry:", data)
+                print("DEBUG add_inventory_entry result:", getattr(insert_result, "data", None), getattr(insert_result, "error", None))
+            except Exception:
+                pass
+            return insert_result
+        except Exception as exc:
+            print("ERROR add_inventory_entry:", exc)
+            return None
 
     def list_inventory(self, user_id: str, warehouse_id: int = None):
-        q = self.supabase.table("inventory_entries").select("*").eq("user_id", user_id)
-        if warehouse_id is not None:
-            q = q.eq("warehouse_id", warehouse_id)
-        resp = q.order("id", desc=True).execute()
-        return resp.data or []
+        try:
+            q = self.supabase.table("inventory_entries").select("*").eq("user_id", user_id)
+            if warehouse_id is not None:
+                q = q.eq("warehouse_id", warehouse_id)
+            resp = q.order("id", desc=True).execute()
+            return resp.data or []
+        except Exception as exc:
+            print("ERROR list_inventory:", exc)
+            return None
+
+    # --------------------
+    # Approvals (Ruang Komando / Proactive UI)
+    # --------------------
+    def create_approval(self, user_id: str, agent_id: str, action_type: str, summary: str, payload: dict = None):
+        """Buat ApprovalRequest status PENDING. Dipakai agent saat butuh persetujuan owner."""
+        data = {
+            "user_id": user_id,
+            "agent_id": agent_id,
+            "action_type": action_type,
+            "summary": summary,
+            "payload": payload or {},
+            "status": "PENDING",
+        }
+        try:
+            return self.supabase.table("approvals").insert(data).execute()
+        except Exception as exc:
+            print("ERROR create_approval:", exc)
+            return None
+
+    def list_pending_approvals(self, user_id: str):
+        try:
+            resp = (
+                self.supabase.table("approvals")
+                .select("*")
+                .eq("user_id", user_id)
+                .eq("status", "PENDING")
+                .order("id", desc=True)
+                .execute()
+            )
+            return resp.data or []
+        except Exception as exc:
+            print("ERROR list_pending_approvals:", exc)
+            return None
+
+    def update_approval_status(self, user_id: str, approval_id, status: str):
+        if status not in ("APPROVED", "REJECTED"):
+            raise ValueError("status harus APPROVED atau REJECTED")
+        try:
+            return (
+                self.supabase.table("approvals")
+                .update({"status": status, "updated_at": datetime.now().isoformat()})
+                .eq("id", approval_id)
+                .eq("user_id", user_id)
+                .execute()
+            )
+        except Exception as exc:
+            print("ERROR update_approval_status:", exc)
+            return None
+
+    # --------------------
+    # Logistik (cek stok & saran restock)
+    # --------------------
+    def get_product_stock(self, user_id: str, product: str):
+        """Kembalikan (stok, jumlah_baris) dari tabel `products` untuk produk tertentu."""
+        try:
+            resp = (
+                self.supabase.table("products")
+                .select("stock")
+                .eq("user_id", user_id)
+                .ilike("name", f"%{product}%")
+                .execute()
+            )
+            rows = resp.data or []
+            stock = sum((r.get("stock") or 0) for r in rows)
+            return stock, len(rows)
+        except Exception as exc:
+            print("ERROR get_product_stock:", exc)
+            return 0, 0
+
+    def adjust_product_stock(self, user_id: str, product: str, delta: int):
+        """Tambah/kurangi stok produk (delta negatif = terjual). Return stok baru atau None."""
+        try:
+            resp = (
+                self.supabase.table("products")
+                .select("id, stock")
+                .eq("user_id", user_id)
+                .ilike("name", f"%{product}%")
+                .limit(1)
+                .execute()
+            )
+            rows = resp.data or []
+            if not rows:
+                return None
+            row = rows[0]
+            new_stock = (row.get("stock") or 0) + delta
+            self.supabase.table("products").update({"stock": new_stock}).eq("id", row["id"]).execute()
+            return new_stock
+        except Exception as exc:
+            print("ERROR adjust_product_stock:", exc)
+            return None
+
+    def ai_logistik_parse(self, text: str) -> dict:
+        """Ekstrak {product, qty} dari teks penjualan, mis. 'jual indomie 5'. None jika gagal."""
+        prompt = (
+            f'Dari teks penjualan warung "{text}", ekstrak nama produk dan jumlah unit yang terjual. '
+            'Balas HANYA JSON objek: {"product": "nama produk", "qty": angka}. '
+            'Jika tidak ada produk/jumlah jelas, balas {"product": null, "qty": 0}.'
+        )
+        try:
+            res = self.groq_client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}],
+                model="openai/gpt-oss-120b",
+                temperature=0.1,
+                response_format={"type": "json_object"},
+            )
+            data = json.loads(res.choices[0].message.content)
+            if not data.get("product"):
+                return None
+            return {"product": str(data["product"]).strip(), "qty": int(data.get("qty") or 0)}
+        except Exception:
+            return None
+
+    # --------------------
+    # Log percakapan WhatsApp (opsional, untuk Chat History)
+    # --------------------
+    def log_wa_message(self, user_id: str, role: str, content: str, phone: str = None, agent_id: str = None):
+        data = {"user_id": user_id, "role": role, "content": content, "phone": phone, "agent_id": agent_id}
+        try:
+            return self.supabase.table("wa_messages").insert(data).execute()
+        except Exception as exc:
+            print("ERROR log_wa_message:", exc)
+            return None
+
+    def list_wa_messages(self, user_id: str, limit: int = 30):
+        try:
+            resp = (
+                self.supabase.table("wa_messages")
+                .select("*")
+                .eq("user_id", user_id)
+                .order("id", desc=True)
+                .limit(limit)
+                .execute()
+            )
+            rows = resp.data or []
+            return list(reversed(rows))
+        except Exception as exc:
+            print("ERROR list_wa_messages:", exc)
+            return []
 
     def delete_last_transaction(self, user_id):
         last = (
