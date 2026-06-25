@@ -13,6 +13,9 @@ Folder statis untuk landing page ada di:
 - `site/index.html`
 - `site/fitur/index.html`
 - `site/harga/index.html`
+- `site/artikel/cara-mencatat-keuangan-warung/index.html`
+- `site/artikel/syarat-kur-umkm-2026/index.html`
+- `site/artikel/aplikasi-kasir-whatsapp-umkm/index.html`
 - `site/robots.txt`
 - `site/sitemap.xml`
 - `site/og-image.svg`
@@ -154,6 +157,9 @@ Pembagian intent halaman:
 - `site/index.html` -> keyword utama brand + AI kasir WhatsApp UMKM
 - `site/fitur/index.html` -> fitur dan use case
 - `site/harga/index.html` -> intent harga
+- `site/artikel/cara-mencatat-keuangan-warung/index.html` -> intent informasional warung / toko kecil
+- `site/artikel/syarat-kur-umkm-2026/index.html` -> intent informasional pembiayaan / KUR
+- `site/artikel/aplikasi-kasir-whatsapp-umkm/index.html` -> intent komersial aplikasi kasir WhatsApp
 
 ## 8. Checklist go-live
 
