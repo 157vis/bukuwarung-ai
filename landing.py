@@ -55,11 +55,11 @@ def _load_landing_html() -> str:
     )
     html = html.replace(
         "<li><i class=\"fas fa-check-circle\"></i> Dashboard sederhana</li>",
-        f'<li><i class="fas fa-check-circle"></i> Dashboard buku kas (<a href="{LOGIN_QUERY}" target="_parent" style="color:#1e40af;font-weight:700">masuk</a>)</li>',
+        "<li><i class=\"fas fa-check-circle\"></i> Dashboard buku kas</li>",
     )
     html = html.replace(
         "<li><i class=\"fas fa-check-circle\"></i> Dashboard lengkap + analytics</li>",
-        f'<li><i class="fas fa-check-circle"></i> Dashboard lengkap + Laris Score (<a href="{LOGIN_QUERY}" target="_parent" style="color:#1e40af;font-weight:700">masuk</a>)</li>',
+        "<li><i class=\"fas fa-check-circle\"></i> Dashboard lengkap + Laris Score</li>",
     )
 
     nav_dash_css = """
