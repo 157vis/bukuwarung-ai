@@ -5,7 +5,7 @@ from pathlib import Path
 import streamlit as st
 import streamlit.components.v1 as components
 
-from brand import APP_NAME, LANDING_LOGO_HTML, LOGIN_QUERY
+from brand import APP_NAME, APP_TAGLINE, LANDING_LOGO_HTML, LOGIN_QUERY
 
 _LANDING_CANDIDATES = (
     Path(__file__).parent / "static" / "laris-landing.html",
@@ -13,15 +13,37 @@ _LANDING_CANDIDATES = (
 )
 
 
-def _landing_path() -> Path:
+def _landing_path():
     for path in _LANDING_CANDIDATES:
         if path.exists():
             return path
-    raise FileNotFoundError("Landing HTML tidak ditemukan (static/laris-landing.html atau Laris-AI.html)")
+    return None
+
+
+def _render_fallback_landing() -> None:
+    """Landing sederhana berbasis Streamlit bila file HTML tidak tersedia."""
+    st.markdown(
+        f"""
+        <div style="text-align:center;padding:3rem 1rem;">
+            <h1 style="font-size:2.6rem;margin-bottom:0.5rem;">{APP_NAME}</h1>
+            <p style="font-size:1.2rem;color:#94a3b8;">{APP_TAGLINE}</p>
+            <p style="max-width:640px;margin:1.5rem auto;color:#cbd5e1;">
+                Catat penjualan, stok, dan keuangan UMKM langsung dari WhatsApp dengan AI.
+                Laporan KUR otomatis, dashboard real-time, dan asisten Multi-Agent.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    c1, c2, c3 = st.columns([1, 2, 1])
+    with c2:
+        if st.button("Masuk ke Dashboard", type="primary", use_container_width=True):
+            st.session_state["show_login"] = True
+            st.rerun()
 
 
 def _load_landing_html() -> str:
-    html = _landing_path().read_text(encoding="utf-8")
+    html = _landing_path().read_text(encoding="utf-8")  # type: ignore[union-attr]
 
     html = html.replace("<title>Laris.AI —", f"<title>{APP_NAME} —")
     html = html.replace(
@@ -83,6 +105,10 @@ def _load_landing_html() -> str:
 
 def render_landing():
     """Tampilkan landing page full-screen."""
+    if _landing_path() is None:
+        _render_fallback_landing()
+        return
+
     st.markdown(
         """
         <style>
