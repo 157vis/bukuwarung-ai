@@ -1,0 +1,23 @@
+# Rahasia — JANGAN di-upload ke GitHub
+.streamlit/secrets.toml
+kita-cuan-wa-bot/.env
+*.env
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Editor / OS
+.vscode/
+.cursor/
+.DS_Store
+
+# Stack Next.js lama (tidak dipakai untuk Streamlit)
+laris-ai/
+
+# File scratch / sementara
+app_hamburger_block.txt
+app_head.txt
+tmp_*.py
+tmp-*.json
