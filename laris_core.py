@@ -478,11 +478,14 @@ class LarisCore:
 
     def vision_extractor_agent_from_b64(self, b64: str) -> list:
         prompt = (
-            "Baca struk warung Indonesia. Cari GRAND TOTAL. "
-            'Balas HANYA objek JSON dengan key "transactions" berisi array, mis. '
-            '{"transactions":[{"type":"Pengeluaran","amount":50000,"category":"Bahan Baku","note":"ringkasan"}]}. '
-            'Jika tidak terbaca, balas {"transactions": []}.'
+            "Baca struk belanja warung Indonesia. Ambil HANYA nilai GRAND TOTAL / TOTAL akhir "
+            "(jangan rincian per item agar tidak dobel). "
+            'Balas HANYA objek JSON dengan key "transactions" berisi TEPAT SATU item: '
+            '{"transactions":[{"type":"Pengeluaran","amount":<grand total>,"category":"Bahan Baku","note":"ringkasan belanja"}]}. '
+            'Jika total tidak terbaca, balas {"transactions": []}.'
         )
+        # Deteksi tipe gambar dari header base64 (PNG vs JPEG) agar mime cocok.
+        mime = "image/png" if b64.startswith("iVBOR") else "image/jpeg"
         try:
             res = self.groq_client.chat.completions.create(
                 messages=[
@@ -490,11 +493,11 @@ class LarisCore:
                         "role": "user",
                         "content": [
                             {"type": "text", "text": prompt},
-                            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}},
+                            {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}},
                         ],
                     }
                 ],
-                model="openai/gpt-oss-120b",
+                model="meta-llama/llama-4-scout-17b-16e-instruct",
                 temperature=0.1,
                 response_format={"type": "json_object"},
             )
