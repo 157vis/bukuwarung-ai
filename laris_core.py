@@ -894,3 +894,26 @@ class LarisCore:
             return res.choices[0].message.content.strip()
         except Exception:
             return "Gagal mengambil saran AI."
+            
+class TenantManager:
+    """Handle multi-tenant. Belum dipakai, cuma siap-siap."""
+    def _init_(self, sb):
+        self.sb = sb
+    def get_active_tenant(self, user_id):
+        try:
+            r = self.sb.table("active_tenant_session").select("tenant_id").eq("user_id", user_id).limit(1).execute()
+            return str(r.data[0]["tenant_id"]) if r.data else None
+        except Exception:
+            return None
+    def set_active_tenant(self, user_id, tenant_id):
+        try:
+            exp = (datetime.now() + timedelta(days=7)).isoformat()
+            self.sb.table("active_tenant_session").upsert({"user_id": user_id, "tenant_id": tenant_id, "source": "manual", "expires_at": exp}, on_conflict="user_id").execute()
+        except Exception:
+            pass
+    def get_user_tenants(self, user_id):
+        try:
+            r = self.sb.table("user_tenants").select("tenant_id, is_default, label").eq("user_id", user_id).execute()
+            return r.data or []
+        except Exception:
+            return []
