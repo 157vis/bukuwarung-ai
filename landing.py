@@ -68,28 +68,10 @@ def _load_landing_html() -> str:
         f'<div class="nav-links">\n                {demo_link}\n                {dashboard_link}\n                <a href="#fitur">Fitur</a>',
     )
     html = html.replace(
-        '<div class="mobile-menu" id="mobileMenu">\n            <a href="#fitur"',
+        '<div class="mobile-menu" id="mobileMenu">\n            <a href="#fitur" class="mobile-link">',
         f'<div class="mobile-menu" id="mobileMenu">\n            <a href="{DEMO_QUERY}" target="_parent" class="mobile-link">'
         f'<i class="fas fa-eye"></i> Demo</a>\n            <a href="{LOGIN_QUERY}" target="_parent" class="mobile-link">'
-        f'<i class="fas fa-chart-line"></i> Dashboard</a>\n            <a href="#fitur"',
-    )
-
-    # Agent Admin = modul buku kas di dashboard
-    html = html.replace(
-        "<h3>Agent Admin \"Dewi\" 🔵</h3>\n                            <div class=\"role\">Admin & Laporan</div>",
-        "<h3>Agent Admin \"Dewi\" 🔵</h3>\n                            <div class=\"role\">Buku Kas & Laporan KUR</div>",
-    )
-    html = html.replace(
-        "<li><i class=\"fas fa-check-circle\"></i> Rekap orderan harian</li>",
-        "<li><i class=\"fas fa-check-circle\"></i> Buku kas & catat transaksi AI</li>",
-    )
-    html = html.replace(
-        "<li><i class=\"fas fa-check-circle\"></i> Dashboard sederhana</li>",
-        "<li><i class=\"fas fa-check-circle\"></i> Dashboard buku kas</li>",
-    )
-    html = html.replace(
-        "<li><i class=\"fas fa-check-circle\"></i> Dashboard lengkap + analytics</li>",
-        "<li><i class=\"fas fa-check-circle\"></i> Dashboard lengkap + Laris Score</li>",
+        f'<i class="fas fa-chart-line"></i> Dashboard</a>\n            <a href="#fitur" class="mobile-link">',
     )
 
     nav_dash_css = """

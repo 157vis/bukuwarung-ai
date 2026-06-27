@@ -69,18 +69,18 @@ Lalu di dashboard provider:
 - **Fonnte**: Device → Webhook URL = `https://<url-publik>/webhook`
 - **Wablas**: Pengaturan → Webhook = `https://<url-publik>/webhook`
 
-## 4. Cara menambah CLIENT BARU (mudah & multi-tenant)
+## 4. Cara menambah CLIENT BARU (admin only)
 
-Tiap client = 1 akun + 1+ nomor WA. Tidak perlu sentuh database manual.
+Pendaftaran client **hanya oleh Super Admin** (`Rafihrr1@gmail.com`) — tab Daftar sudah dihilangkan.
 
-1. **Client daftar akun**: buka dashboard Streamlit → tab **"Daftar Baru"** → email & password.
-2. **Client login** → buka menu **⚙️ Pengaturan → Hubungkan Nomor WhatsApp** →
-   masukkan nomor WA mereka → **Hubungkan**. (Ini menulis ke tabel `wa_users`.)
-3. **Selesai.** Saat client kirim WA ke nomor bot, `resolve_user_id_by_phone`
-   otomatis mengenali nomornya dan semua data masuk ke akun client tersebut.
+1. **Admin login** → menu **⚙️ Pengaturan → ➕ Tambah Client Baru** (email, password, nomor WA, label).
+2. **Catat `user_id`** client → jalankan `../sql/seed_trial_products.sql` (ganti `USER_ID_TRIAL`) agar Logistik AI punya katalog stok.
+3. **Selesai.** Saat client kirim WA ke nomor bot, `resolve_user_id_by_phone` mengenali nomor di `wa_users`.
 
-> Mode cepat (1 client / demo): set `WA_DEFAULT_USER_ID` di `.env` ke user_id Anda
-> (terlihat di menu Pengaturan). Semua pesan tanpa mapping akan masuk ke user itu.
+> Panduan lengkap trial + WA: **`../docs/PANDUAN_TRIAL_WA.md`**
+
+> Mode cepat (1 client / demo): set `WA_DEFAULT_USER_ID` di `.env` ke user_id trial.
+> Semua pesan tanpa mapping akan masuk ke user itu.
 
 ## 5. Tes alur lengkap
 
