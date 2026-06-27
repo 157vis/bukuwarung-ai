@@ -2,6 +2,10 @@
 .streamlit/secrets.toml
 kita-cuan-wa-bot/.env
 *.env
+*.env.*
+!*.env.example
+!**/.env.example
+Rafi.env
 
 # Python
 .venv/
