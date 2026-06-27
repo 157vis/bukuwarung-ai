@@ -38,15 +38,6 @@ class LarisCore:
     def normalize_user_id(user_id) -> str:
         return str(user_id).strip() if user_id else ""
 
-def _get_tenant_id(self, user_id: str):
-        """Ambil tenant_id aktif. Return None kalau flag OFF atau tidak ada."""
-        if not self.multi_tenant or not self.tenant_mgr:
-            return None
-        try:
-            return self.tenant_mgr.get_active_tenant(user_id)
-        except Exception:
-            return None
-
     def count_transactions(self, user_id: str) -> tuple[int, str | None]:
         """Hitung transaksi user (untuk diagnostik dashboard)."""
         uid = self.normalize_user_id(user_id)
