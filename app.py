@@ -19,11 +19,16 @@ def agent_label(agent_id) -> str:
 
 
 def get_core() -> LarisCore:
-    return LarisCore(
+    core = LarisCore(
         st.secrets["SUPABASE_URL"],
         st.secrets["SUPABASE_KEY"],
         st.secrets["GROQ_API_KEY"],
     )
+    # Teruskan token login agar RLS Supabase mengenali user (auth.uid()).
+    token = st.session_state.get("access_token")
+    if token:
+        core.set_access_token(token)
+    return core
 
 
 def page_config() -> None:

@@ -19,6 +19,19 @@ class LarisCore:
         self.supabase = create_client(supabase_url, supabase_key)
         self.groq_client = Groq(api_key=groq_api_key)
 
+    def set_access_token(self, token: str):
+        """Teruskan JWT user login ke PostgREST agar RLS mengenali auth.uid().
+
+        Tanpa ini, query berjalan sebagai role anon dan akan terblokir RLS.
+        Tidak dipakai oleh bot WhatsApp (bot memakai service_role yang bypass RLS).
+        """
+        if not token:
+            return
+        try:
+            self.supabase.postgrest.auth(token)
+        except Exception as exc:
+            print("ERROR set_access_token:", exc)
+
     def create_client_account(self, email: str, password: str):
         """Buat akun client baru (Supabase Auth). Return (user_id, error_msg)."""
         try:
