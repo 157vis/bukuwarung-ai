@@ -5,7 +5,7 @@ from pathlib import Path
 import streamlit as st
 import streamlit.components.v1 as components
 
-from brand import APP_NAME, APP_TAGLINE, LANDING_LOGO_HTML, LOGIN_QUERY
+from brand import APP_NAME, APP_TAGLINE, LANDING_LOGO_HTML, LOGIN_QUERY, DEMO_QUERY
 
 _LANDING_CANDIDATES = (
     Path(__file__).parent / "static" / "laris-landing.html",
@@ -40,6 +40,9 @@ def _render_fallback_landing() -> None:
         if st.button("Masuk ke Dashboard", type="primary", use_container_width=True):
             st.session_state["show_login"] = True
             st.rerun()
+        if st.button("Lihat Demo Publik", use_container_width=True):
+            st.session_state["demo_mode"] = True
+            st.rerun()
 
 
 def _load_landing_html() -> str:
@@ -52,17 +55,22 @@ def _load_landing_html() -> str:
     )
     html = html.replace("© 2026 Laris.AI —", f"© 2026 {APP_NAME} —")
 
+    demo_link = (
+        f'<a href="{DEMO_QUERY}" target="_parent" class="nav-demo">'
+        f'<i class="fas fa-eye"></i> Demo</a>'
+    )
     dashboard_link = (
         f'<a href="{LOGIN_QUERY}" target="_parent" class="nav-dashboard">'
         f'<i class="fas fa-chart-line"></i> Dashboard</a>'
     )
     html = html.replace(
         '<div class="nav-links">\n                <a href="#fitur">Fitur</a>',
-        f'<div class="nav-links">\n                {dashboard_link}\n                <a href="#fitur">Fitur</a>',
+        f'<div class="nav-links">\n                {demo_link}\n                {dashboard_link}\n                <a href="#fitur">Fitur</a>',
     )
     html = html.replace(
         '<div class="mobile-menu" id="mobileMenu">\n            <a href="#fitur"',
-        f'<div class="mobile-menu" id="mobileMenu">\n            <a href="{LOGIN_QUERY}" target="_parent" class="mobile-link">'
+        f'<div class="mobile-menu" id="mobileMenu">\n            <a href="{DEMO_QUERY}" target="_parent" class="mobile-link">'
+        f'<i class="fas fa-eye"></i> Demo</a>\n            <a href="{LOGIN_QUERY}" target="_parent" class="mobile-link">'
         f'<i class="fas fa-chart-line"></i> Dashboard</a>\n            <a href="#fitur"',
     )
 
@@ -85,6 +93,19 @@ def _load_landing_html() -> str:
     )
 
     nav_dash_css = """
+        .nav-demo {
+            background: rgba(255,255,255,0.12) !important;
+            color: #1e40af !important;
+            padding: 10px 18px !important;
+            border-radius: 50px !important;
+            font-weight: 700 !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            border: 1px solid rgba(124,58,237,0.25) !important;
+        }
+        .nav-demo:hover { opacity: 0.92; transform: translateY(-1px); }
+        .nav-demo::after { display: none !important; }
         .nav-dashboard {
             background: linear-gradient(135deg, #7c3aed, #1e40af) !important;
             color: #fff !important;
