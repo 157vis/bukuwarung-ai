@@ -437,11 +437,32 @@ class LarisCore:
             return f"[{text}]"
         return text
 
+    @staticmethod
+    def _parse_transactions(content: str) -> list:
+        """Parse respons AI jadi list transaksi, tahan terhadap bentuk objek/array."""
+        try:
+            data = json.loads(content)
+        except Exception as exc:
+            print("ERROR parse transaksi (json):", exc, "| raw:", str(content)[:160])
+            return []
+        if isinstance(data, list):
+            return [d for d in data if isinstance(d, dict)]
+        if isinstance(data, dict):
+            for key in ("transactions", "data", "items", "result", "transaksi"):
+                if isinstance(data.get(key), list):
+                    return [d for d in data[key] if isinstance(d, dict)]
+            # Objek transaksi tunggal
+            if "amount" in data and "type" in data:
+                return [data]
+        return []
+
     def ai_extractor_agent(self, text: str) -> list:
         prompt = (
-            f'Anda akuntan warung Indonesia. Ekstrak teks "{text}" jadi array JSON. '
-            'Aturan: type(Pemasukan/Pengeluaran), amount(angka), category, note. '
-            'Jika ada "prive"/"ambil pribadi" set category="Prive". HANYA JSON array.'
+            f'Anda akuntan warung Indonesia. Ekstrak teks "{text}" menjadi JSON. '
+            'Balas HANYA objek JSON dengan key "transactions" berisi array. '
+            'Tiap item: {"type":"Pemasukan" atau "Pengeluaran","amount":angka,"category":"...","note":"..."}. '
+            'Jika ada "prive"/"ambil pribadi" set category="Prive". '
+            'Jika tidak ada transaksi jelas, balas {"transactions": []}.'
         )
         try:
             res = self.groq_client.chat.completions.create(
@@ -450,15 +471,17 @@ class LarisCore:
                 temperature=0.1,
                 response_format={"type": "json_object"},
             )
-            return json.loads(self.clean_json_response(res.choices[0].message.content))
-        except Exception:
+            return self._parse_transactions(res.choices[0].message.content)
+        except Exception as exc:
+            print("ERROR ai_extractor_agent:", exc)
             return []
 
     def vision_extractor_agent_from_b64(self, b64: str) -> list:
         prompt = (
             "Baca struk warung Indonesia. Cari GRAND TOTAL. "
-            "Output JSON: [{'type':'Pengeluaran','amount':angka,'category':'Bahan Baku','note':'ringkasan'}]. "
-            "Hanya JSON."
+            'Balas HANYA objek JSON dengan key "transactions" berisi array, mis. '
+            '{"transactions":[{"type":"Pengeluaran","amount":50000,"category":"Bahan Baku","note":"ringkasan"}]}. '
+            'Jika tidak terbaca, balas {"transactions": []}.'
         )
         try:
             res = self.groq_client.chat.completions.create(
@@ -475,8 +498,9 @@ class LarisCore:
                 temperature=0.1,
                 response_format={"type": "json_object"},
             )
-            return json.loads(self.clean_json_response(res.choices[0].message.content))
-        except Exception:
+            return self._parse_transactions(res.choices[0].message.content)
+        except Exception as exc:
+            print("ERROR vision_extractor_agent:", exc)
             return []
 
     def vision_extractor_agent_from_upload(self, uploaded_file) -> list:
