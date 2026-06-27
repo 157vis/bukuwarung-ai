@@ -35,6 +35,7 @@ from agents import (
     resolve_user_id,
     core,
 )
+from orchestrator import orchestrate_transaction_created
 
 load_dotenv(_BOT_DIR / ".env")
 
@@ -50,7 +51,7 @@ groq = Groq(api_key=os.environ["GROQ_API_KEY"])
 # Ambang stok kritis: di bawah ini Logistik AI menyarankan PO (butuh approval owner).
 STOCK_THRESHOLD = int(os.environ.get("STOCK_THRESHOLD", "10"))
 REORDER_QTY = int(os.environ.get("REORDER_QTY", "5"))
-BOT_LOGIC_VERSION = "2026-06-27-ai-agents-v3"
+BOT_LOGIC_VERSION = "2026-06-27-logistik-orchestrator-v4"
 
 # Cegah loop: Fonnte autoread kadang mengirim balasan bot kembali ke webhook.
 _BOT_TEXT_MARKERS = (
@@ -69,46 +70,6 @@ _BOT_TEXT_MARKERS = (
     "belum terdaftar",
 )
 _recent_inbound: dict[str, float] = {}
-
-
-def proactive_logistik_check(user_id: str, text: str) -> str:
-    """Kolaborasi ala SOUL.md: setelah Admin catat penjualan, Logistik AI:
-    1) kurangi stok produk di tabel products sesuai jumlah terjual,
-    2) jika stok jatuh di bawah ambang, JANGAN buat PO langsung -> buat
-       ApprovalRequest (PENDING) untuk owner.
-    Mengembalikan catatan tambahan untuk balasan WA (atau string kosong)."""
-    try:
-        parsed = core.ai_logistik_parse(text)
-        if not parsed or not parsed.get("product"):
-            return ""
-        product = parsed["product"]
-        qty = max(0, int(parsed.get("qty") or 0))
-
-        # Kurangi stok terjual (None = produk tidak terdaftar di katalog -> abaikan).
-        new_stock = core.adjust_product_stock(user_id, product, -qty) if qty else None
-        if new_stock is None:
-            new_stock, found = core.get_product_stock(user_id, product)
-            if found == 0:
-                return ""
-
-        if new_stock >= STOCK_THRESHOLD:
-            return ""
-
-        summary = (
-            f"Stok {product} tinggal {new_stock}. Saran: pesan {REORDER_QTY} unit "
-            f"ke supplier biar nggak kehabisan."
-        )
-        core.create_approval(
-            user_id,
-            agent_id="logistik",
-            action_type="create_po",
-            summary=summary,
-            payload={"product": product, "current_stock": new_stock, "reorder_qty": REORDER_QTY},
-        )
-        return f"\n\n📦 *Logistik AI:* {summary}\nBuka *Ruang Komando* untuk Setujui/Tolak."
-    except Exception as exc:
-        print("ERROR proactive_logistik_check:", exc)
-        return ""
 
 
 async def is_safe_message(text: str) -> bool:
@@ -466,6 +427,7 @@ async def webhook(request: Request):
                 )
             total = sum(d.get("amount", 0) for d in data)
             reply = f"✅ Struk terbaca!\nTotal: Rp {total:,.0f}\n{len(data)} transaksi tercatat."
+            reply += orchestrate_transaction_created(user_id, text or "struk", data)
 
         elif media_type in ["audio", "voice"] and media_url:
             async with httpx.AsyncClient() as client:
@@ -478,6 +440,7 @@ async def webhook(request: Request):
                     is_prive=is_prv, user_id=user_id,
                 )
             reply = f"✅ Suara terbaca!\n{len(data)} transaksi tercatat."
+            reply += orchestrate_transaction_created(user_id, text or "voice", data)
 
         elif text:
             intent = _sanitize_intent(text, await detect_intent(text))
@@ -500,7 +463,7 @@ async def webhook(request: Request):
                         )
                     lines = [f"• {d.get('type')} {d.get('category')}: Rp {d.get('amount', 0):,.0f}" for d in data]
                     reply = "🤖 *Admin AI*\n\n✅ Tercatat!\n" + "\n".join(lines)
-                    reply += proactive_logistik_check(user_id, text)
+                    reply += orchestrate_transaction_created(user_id, text, data)
 
             elif intent == "SKOR":
                 df = get_dashboard_data(user_id)

@@ -32,7 +32,7 @@ CROSS JOIN (
     ('indomie', 3500, 20),
     ('gula', 15000, 10),
     ('minyak', 18000, 8),
-    ('kopi', 2500, 15)
+    ('kopi', 3500, 50),
 ) AS v(name, price, stock)
 WHERE lower(u.email) = lower('rafiharliansyah34@gmail.com')
   AND NOT EXISTS (
@@ -40,6 +40,14 @@ WHERE lower(u.email) = lower('rafiharliansyah34@gmail.com')
     WHERE p.user_id::text = u.id::text
       AND lower(p.name) = lower(v.name)
   );
+
+-- 2b) Update kopi jika sudah ada (harga 3500, stok gudang 50)
+UPDATE products p
+SET price = 3500, stock = 50
+FROM auth.users u
+WHERE p.user_id::text = u.id::text
+  AND lower(u.email) = lower('rafiharliansyah34@gmail.com')
+  AND lower(p.name) = 'kopi';
 
 -- 3) Verifikasi — harus ada data di ketiga query ini
 SELECT w.phone, w.user_id, w.label, u.email

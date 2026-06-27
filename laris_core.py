@@ -383,6 +383,27 @@ class LarisCore:
     # --------------------
     # Logistik (cek stok & saran restock)
     # --------------------
+    def find_product_row(self, user_id: str, name_hint: str):
+        """Cari baris produk terdekat (nama fuzzy). Return dict atau None."""
+        hint = (name_hint or "").strip()
+        if not hint:
+            return None
+        uid = self.normalize_user_id(user_id)
+        try:
+            resp = (
+                self.supabase.table("products")
+                .select("id, name, price, stock")
+                .eq("user_id", uid)
+                .ilike("name", f"%{hint}%")
+                .limit(1)
+                .execute()
+            )
+            rows = resp.data or []
+            return rows[0] if rows else None
+        except Exception as exc:
+            print("ERROR find_product_row:", exc)
+            return None
+
     def get_product_stock(self, user_id: str, product: str):
         """Kembalikan (stok, jumlah_baris) dari tabel `products` untuk produk tertentu."""
         try:
@@ -402,11 +423,12 @@ class LarisCore:
 
     def adjust_product_stock(self, user_id: str, product: str, delta: int):
         """Tambah/kurangi stok produk (delta negatif = terjual). Return stok baru atau None."""
+        uid = self.normalize_user_id(user_id)
         try:
             resp = (
                 self.supabase.table("products")
                 .select("id, stock")
-                .eq("user_id", user_id)
+                .eq("user_id", uid)
                 .ilike("name", f"%{product}%")
                 .limit(1)
                 .execute()
@@ -415,19 +437,157 @@ class LarisCore:
             if not rows:
                 return None
             row = rows[0]
-            new_stock = (row.get("stock") or 0) + delta
+            new_stock = max(0, (row.get("stock") or 0) + delta)
             self.supabase.table("products").update({"stock": new_stock}).eq("id", row["id"]).execute()
             return new_stock
         except Exception as exc:
             print("ERROR adjust_product_stock:", exc)
             return None
 
+    def resolve_sale_quantity(
+        self, user_id: str, product_name: str, raw_text: str, amount: int, unit_price: int | None
+    ) -> int:
+        """Hitung unit terjual: dari teks (jual kopi 5) atau nominal / harga (35000 / 3500 = 10)."""
+        parsed = self.ai_logistik_parse(raw_text) or {}
+        parsed_name = (parsed.get("product") or "").strip().lower()
+        target = (product_name or "").strip().lower()
+        qty = max(0, int(parsed.get("qty") or 0))
+
+        # Pakai qty dari AI hanya jika masuk akal (bukan nominal rupiah).
+        if qty > 0 and qty <= 500:
+            if not parsed_name or parsed_name in target or target in parsed_name:
+                return qty
+
+        price = unit_price or 0
+        if not price and target:
+            row = self.find_product_row(user_id, target)
+            price = int(row.get("price") or 0) if row else 0
+
+        if price > 0 and amount > 0:
+            inferred = int(round(amount / price))
+            return max(1, inferred) if inferred > 0 else 0
+        return qty if 0 < qty <= 500 else 0
+
+    def resolve_product_for_sale(self, user_id: str, category: str, raw_text: str):
+        """Cocokkan transaksi ke baris products (nama fuzzy / katalog / teks asli)."""
+        hints = [category]
+        parsed = self.ai_logistik_parse(raw_text) or {}
+        pname = str(parsed.get("product") or "").strip()
+        if pname:
+            hints.append(pname)
+
+        for hint in hints:
+            if not hint:
+                continue
+            row = self.find_product_row(user_id, hint)
+            if row:
+                return row
+
+        uid = self.normalize_user_id(user_id)
+        haystack = f"{category} {raw_text}".lower()
+        try:
+            resp = (
+                self.supabase.table("products")
+                .select("id, name, price, stock")
+                .eq("user_id", uid)
+                .execute()
+            )
+            for row in resp.data or []:
+                name = (row.get("name") or "").strip()
+                if name and name.lower() in haystack:
+                    return row
+        except Exception as exc:
+            print("ERROR resolve_product_for_sale:", exc)
+        return None
+
+    def run_logistik_after_sale(
+        self,
+        user_id: str,
+        transaction: dict,
+        raw_text: str,
+        *,
+        stock_threshold: int = 10,
+        reorder_qty: int = 20,
+    ) -> dict | None:
+        """Logistik AI: kurangi stok gudang setelah penjualan; buat approval jika kritis."""
+        category = str(transaction.get("category") or transaction.get("note") or "").strip()
+        amount = int(transaction.get("amount") or 0)
+        if not category:
+            parsed = self.ai_logistik_parse(raw_text) or {}
+            category = str(parsed.get("product") or "").strip()
+        if not category:
+            return None
+
+        row = self.resolve_product_for_sale(user_id, category, raw_text)
+        if not row:
+            return {
+                "message": (
+                    f"📦 *Logistik AI:* Produk `{category}` belum ada di katalog gudang. "
+                    f"Tambahkan di Supabase/products agar stok terpantau."
+                ),
+                "stock_updated": False,
+            }
+
+        product = row["name"]
+        old_stock = int(row.get("stock") or 0)
+        unit_price = int(row.get("price") or 0)
+        qty = self.resolve_sale_quantity(user_id, product, raw_text, amount, unit_price)
+        if qty <= 0:
+            return {
+                "message": (
+                    f"📦 *Logistik AI:* Penjualan {product} tercatat, "
+                    f"tapi jumlah unit tidak terbaca. Coba: _jual {product} 5_ "
+                    f"atau nominal kelipatan harga Rp {unit_price:,}."
+                ),
+                "stock_updated": False,
+            }
+
+        new_stock = self.adjust_product_stock(user_id, product, -qty)
+        if new_stock is None:
+            return None
+
+        price_txt = f" @ Rp {unit_price:,}" if unit_price else ""
+        msg = (
+            f"📦 *Logistik AI:* Stok *{product}*: {old_stock} → {new_stock} "
+            f"(-{qty} unit{price_txt})"
+        )
+
+        approval_msg = ""
+        if new_stock < stock_threshold:
+            summary = (
+                f"Stok {product} tinggal {new_stock} (ambang {stock_threshold}). "
+                f"Saran pesan {reorder_qty} unit ke supplier."
+            )
+            self.create_approval(
+                user_id,
+                agent_id="logistik",
+                action_type="create_po",
+                summary=summary,
+                payload={
+                    "product": product,
+                    "current_stock": new_stock,
+                    "reorder_qty": reorder_qty,
+                    "unit_price": unit_price,
+                },
+            )
+            approval_msg = "\n⚠️ Stok menipis — buka *Ruang Komando* untuk Setujui/Tolak PO."
+
+        return {
+            "message": msg + approval_msg,
+            "stock_updated": True,
+            "product": product,
+            "qty_sold": qty,
+            "old_stock": old_stock,
+            "new_stock": new_stock,
+        }
+
     def ai_logistik_parse(self, text: str) -> dict:
         """Ekstrak {product, qty} dari teks penjualan, mis. 'jual indomie 5'. None jika gagal."""
         prompt = (
-            f'Dari teks penjualan warung "{text}", ekstrak nama produk dan jumlah unit yang terjual. '
-            'Balas HANYA JSON objek: {"product": "nama produk", "qty": angka}. '
-            'Jika tidak ada produk/jumlah jelas, balas {"product": null, "qty": 0}.'
+            f'Dari teks penjualan warung "{text}", ekstrak nama produk dan jumlah UNIT (bukan rupiah). '
+            'Contoh: "jual kopi 5" → qty 5. "jual kopi 35000" jika 35000 nominal → qty 0. '
+            'Balas HANYA JSON: {"product": "nama", "qty": angka_unit}. '
+            'Jika tidak jelas: {"product": null, "qty": 0}.'
         )
         try:
             res = self.groq_client.chat.completions.create(
