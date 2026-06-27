@@ -18,8 +18,6 @@ class LarisCore:
         self.supabase_key = supabase_key
         self.supabase = create_client(supabase_url, supabase_key)
         self.groq_client = Groq(api_key=groq_api_key)
-        self.multi_tenant = os.environ.get("ENABLE_MULTI_TENANT", "false").lower() == "true"
-        self.tenant_mgr = TenantManager(self.supabase) if self.multi_tenant else None
 
     def set_access_token(self, token: str):
         """Teruskan JWT user login ke PostgREST agar RLS mengenali auth.uid().
