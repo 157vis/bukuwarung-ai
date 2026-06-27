@@ -196,7 +196,15 @@ def render_dashboard(core: LarisCore, user) -> None:
         # Fallback when sidebar is hidden: show compact selector at top
         menu = st.selectbox("Menu", menu_items)
 
-    df = core.get_dashboard_data(user_id)
+    try:
+        df = core.get_dashboard_data(user_id)
+    except Exception as exc:
+        st.error(
+            "Gagal memuat data dashboard. Pastikan tabel database sudah dibuat "
+            "(jalankan `setup_laris_ai.sql` di Supabase)."
+        )
+        st.caption(f"Detail: {str(exc)[:200]}")
+        df = pd.DataFrame(columns=["type", "amount", "created_at", "description"])
     score = core.calculate_laris_score(df)
 
     if menu == "Ruang Komando":
@@ -205,7 +213,7 @@ def render_dashboard(core: LarisCore, user) -> None:
 
         if not core.table_exists("approvals"):
             st.warning(
-                "Tabel 'approvals' belum ada di Supabase. Jalankan `sql/create_approvals.sql` "
+                "Tabel 'approvals' belum ada di Supabase. Jalankan `setup_laris_ai.sql` "
                 "di SQL Editor Supabase untuk mengaktifkan Ruang Komando."
             )
         else:
@@ -237,7 +245,7 @@ def render_dashboard(core: LarisCore, user) -> None:
         st.markdown("---")
         st.subheader("Aktivitas WhatsApp Terbaru")
         if not core.table_exists("wa_messages"):
-            st.caption("Aktifkan log percakapan dengan menjalankan `sql/create_approvals.sql` (tabel 'wa_messages').")
+            st.caption("Aktifkan log percakapan dengan menjalankan `setup_laris_ai.sql` (tabel 'wa_messages').")
         else:
             msgs = core.list_wa_messages(user_id, limit=20)
             if not msgs:
@@ -314,7 +322,7 @@ def render_dashboard(core: LarisCore, user) -> None:
                 else:
                     core.db_insert_transaction(user_id, type_txn, category, int(amount), note, is_prive=is_prive)
                     st.success("Transaksi berhasil dicatat.")
-                    st.experimental_rerun()
+                    st.rerun()
 
         st.markdown("---")
         st.write("Gunakan form di atas untuk mencatat pemasukan atau pengeluaran baru.")
@@ -383,12 +391,12 @@ def render_dashboard(core: LarisCore, user) -> None:
                                 note,
                             )
                             st.success("Transaksi berhasil diperbarui.")
-                            st.experimental_rerun()
+                            st.rerun()
 
                 if st.button("Hapus transaksi ini", key="delete_txn_button"):
                     core.db_delete_transaction(user_id, selected_txn["id"])
                     st.success("Transaksi berhasil dihapus.")
-                    st.experimental_rerun()
+                    st.rerun()
 
     elif menu == "Laporan KUR":
         st.title("Laporan KUR")
@@ -402,7 +410,7 @@ def render_dashboard(core: LarisCore, user) -> None:
             st.metric("Biaya", f"Rp {total_expense:,}")
             st.metric("Laba Bersih", f"Rp {net_profit:,}")
             st.markdown(
-                f"**Insight**: {score['insight']}" 
+                f"**Insight**: {score['insight']}\n\n"
                 f"**Kesehatan**: {score['level'].capitalize()}"
             )
 
@@ -418,7 +426,7 @@ def render_dashboard(core: LarisCore, user) -> None:
             st.caption(f"User ID Anda (untuk referensi ke admin): `{user_id}`")
         elif not core.table_exists("wa_users"):
             st.warning(
-                "Tabel 'wa_users' belum ada di Supabase. Jalankan `sql/setup_laris_ai.sql` "
+                "Tabel 'wa_users' belum ada di Supabase. Jalankan `setup_laris_ai.sql` "
                 "di SQL Editor Supabase terlebih dahulu."
             )
         else:
@@ -533,7 +541,7 @@ def render_dashboard(core: LarisCore, user) -> None:
                         selected_id = warehouses[0].get('id')
             with cols[1]:
                 if st.button("Segarkan Gudang"):
-                    st.experimental_rerun()
+                    st.rerun()
 
             # Inventory entry form
             st.markdown("---")
