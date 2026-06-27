@@ -894,3 +894,125 @@ class LarisCore:
             return res.choices[0].message.content.strip()
         except Exception:
             return "Gagal mengambil saran AI."
+# ============================================================================
+# STEP 4: TenantManager - Handle Multi-Tenant (BELUM DIPAKAI)
+# ============================================================================
+
+class TenantManager:
+    """
+    Manage tenant (usaha) untuk user.
+    Class ini disiapkan untuk multi-tenant support.
+    Status: SIAP, tapi belum dipakai di production.
+    """
+    
+    def _init_(self, supabase_url: str, supabase_key: str):
+        from supabase import create_client
+        self.supabase = create_client(supabase_url, supabase_key)
+    
+    def get_active_tenant(self, user_id: str):
+        """
+        Ambil tenant_id yang sedang aktif untuk user.
+        Return: tenant_id (string) atau None
+        """
+        try:
+            resp = (
+                self.supabase.table("active_tenant_session")
+                .select("tenant_id")
+                .eq("user_id", user_id)
+                .gt("expires_at", datetime.now().isoformat())
+                .limit(1)
+                .execute()
+            )
+            if resp.data:
+                return str(resp.data[0]["tenant_id"])
+            return None
+        except Exception as exc:
+            print("ERROR get_active_tenant:", exc)
+            return None
+    
+    def set_active_tenant(self, user_id: str, tenant_id: str, source: str = "manual"):
+        """
+        Set tenant aktif untuk user (selama 7 hari).
+        """
+        try:
+            expires = (datetime.now() + timedelta(days=7)).isoformat()
+            self.supabase.table("active_tenant_session").upsert({
+                "user_id": user_id,
+                "tenant_id": tenant_id,
+                "source": source,
+                "expires_at": expires
+            }, on_conflict="user_id").execute()
+        except Exception as exc:
+            print("ERROR set_active_tenant:", exc)
+    
+    def get_user_tenants(self, user_id: str) -> list:
+        """
+        Ambil semua tenant yang dimiliki user.
+        Return: list of dict dengan info tenant
+        """
+        try:
+            resp = (
+                self.supabase.table("user_tenants")
+                .select("tenant_id, is_default, is_owner, label, tenants(name, business_type)")
+                .eq("user_id", user_id)
+                .order("is_default", desc=True)
+                .execute()
+            )
+            return resp.data or []
+        except Exception as exc:
+            print("ERROR get_user_tenants:", exc)
+            return []
+    
+    def switch_tenant(self, user_id: str, tenant_id: str) -> bool:
+        """
+        Pindah ke tenant lain (kalau user punya akses).
+        Return: True kalau sukses, False kalau tidak punya akses
+        """
+        try:
+            # Cek apakah user punya akses ke tenant ini
+            resp = (
+                self.supabase.table("user_tenants")
+                .select("id")
+                .eq("user_id", user_id)
+                .eq("tenant_id", tenant_id)
+                .limit(1)
+                .execute()
+            )
+            if not resp.data:
+                return False  # Tidak punya akses
+            
+            # Set sebagai active
+            self.set_active_tenant(user_id, tenant_id, "manual_switch")
+            return True
+        except Exception as exc:
+            print("ERROR switch_tenant:", exc)
+            return False
+    
+    def get_tenant_stats(self, tenant_id: str) -> dict:
+        """
+        Ambil statistik tenant (jumlah transaksi, total omzet, dll).
+        """
+        try:
+            resp = (
+                self.supabase.table("transactions")
+                .select("amount, type")
+                .eq("tenant_id", tenant_id)
+                .execute()
+            )
+            if not resp.data:
+                return {"total_transaksi": 0, "total_pemasukan": 0, "total_pengeluaran": 0, "saldo": 0}
+            
+            total = len(resp.data)
+            pemasukan = sum(row["amount"] for row in resp.data if row["type"] == "pemasukan")
+            pengeluaran = sum(row["amount"] for row in resp.data if row["type"] == "pengeluaran")
+            saldo = pemasukan - pengeluaran
+            
+            return {
+                "total_transaksi": total,
+                "total_pemasukan": pemasukan,
+                "total_pengeluaran": pengeluaran,
+                "saldo": saldo
+            }
+        except Exception as exc:
+            print("ERROR get_tenant_stats:", exc)
+            return {}
