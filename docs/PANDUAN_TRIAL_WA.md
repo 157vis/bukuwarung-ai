@@ -91,14 +91,23 @@ cloudflared tunnel --url http://localhost:8000
 
 Salin URL HTTPS, mis. `https://xxxx.ngrok-free.app`.
 
-### 4d. Daftarkan webhook di provider WA
+### 4d. Daftarkan webhook di Fonnte (PENTING)
 
-| Provider | Webhook URL |
-|---|---|
-| **Fonnte** | `https://xxxx.ngrok-free.app/webhook` |
-| **Wablas** | `https://xxxx.ngrok-free.app/webhook` |
+1. Login [fonnte.com](https://fonnte.com) → menu **Device** → **Edit** device Anda.
+2. Isi **Webhook** (persis, tanpa spasi):
+   ```
+   https://bukuwarung-ai-larisai.up.railway.app/webhook
+   ```
+3. **Autoread = ON** ← wajib, tanpa ini Fonnte tidak mengirim pesan masuk ke webhook.
+4. **Personal = ON** (chat pribadi ke device).
+5. **Quick = OFF** ← wajib OFF, cegah bot baca pesan kiriman sendiri (loop).
+6. **Matikan template Autoreply** (menu Autoreply) — bentrok dengan webhook custom.
+7. Device status **Connected** (hijau).
+8. `WA_API_KEY` di Railway = **token device yang sama** di menu Device Fonnte.
 
-Pastikan device/nomor WA bisnis **terhubung** di dashboard provider.
+> **Autoread ≠ Autoreply.** Autoread harus ON. **Quick harus OFF** (anti-loop). Autoreply template harus OFF.
+
+Setelah simpan, kirim WA `test` → cek Railway Deploy Logs ada baris `DEBUG webhook raw`.
 
 ---
 
@@ -135,7 +144,9 @@ Di **dashboard client trial** (login email trial):
 
 | Masalah | Solusi |
 |---|---|
-| Bot tidak balas | Cek webhook URL, tunnel masih hidup, device WA connect |
+| **Bot balas berulang-ulang (loop kopi)** | Fonnte: **Quick OFF**; deploy bot terbaru (filter echo) |
+| **Railway tidak ada log DEBUG** | Fonnte: **Autoread ON**, webhook URL benar, device Connected |
+| Bot tidak balas | Cek webhook URL, `WA_API_KEY` = token device yang sama |
 | `Nomor belum terdaftar` | Hubungkan nomor di **Pengaturan admin** (`wa_users`) |
 | Transaksi tidak masuk dashboard | Pastikan `user_id` di `wa_users` = auth user client |
 | Logistik tidak buat approval | Jalankan `seed_trial_products.sql`; set `STOCK_THRESHOLD` |

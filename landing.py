@@ -122,4 +122,4 @@ def render_landing():
         """,
         unsafe_allow_html=True,
     )
-    components.html(_load_landing_html(), height=7400, scrolling=True)
+    components.html(_load_landing_html(), height=1000, scrolling=True)

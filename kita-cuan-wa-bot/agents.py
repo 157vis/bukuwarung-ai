@@ -54,3 +54,11 @@ def calculate_cuan_score(df):
 
 def get_ai_advisor_insights(df):
     return core.get_ai_advisor_insights(df)
+
+
+def classify_wa_intent(text: str) -> str:
+    return core.classify_wa_intent(text)
+
+
+def get_ai_piutang_answer(df, question: str) -> str:
+    return core.get_ai_piutang_answer(df, question)

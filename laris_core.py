@@ -32,6 +32,39 @@ class LarisCore:
         except Exception as exc:
             print("ERROR set_access_token:", exc)
 
+    @staticmethod
+    def normalize_user_id(user_id) -> str:
+        return str(user_id).strip() if user_id else ""
+
+    def count_transactions(self, user_id: str) -> tuple[int, str | None]:
+        """Hitung transaksi user (untuk diagnostik dashboard)."""
+        uid = self.normalize_user_id(user_id)
+        if not uid:
+            return 0, "user_id kosong"
+        try:
+            resp = (
+                self.supabase.table("transactions")
+                .select("id", count="exact")
+                .eq("user_id", uid)
+                .execute()
+            )
+            return int(resp.count or 0), None
+        except Exception as exc:
+            return -1, str(exc)[:200]
+
+    def get_dashboard_data(self, user_id: str) -> pd.DataFrame:
+        uid = self.normalize_user_id(user_id)
+        if not uid:
+            return pd.DataFrame()
+        response = (
+            self.supabase.table("transactions")
+            .select("*")
+            .eq("user_id", uid)
+            .order("id", desc=True)
+            .execute()
+        )
+        return pd.DataFrame(response.data) if response.data else pd.DataFrame()
+
     def create_client_account(self, email: str, password: str):
         """Buat akun client baru (Supabase Auth). Return (user_id, error_msg)."""
         try:
@@ -111,16 +144,6 @@ class LarisCore:
         raise ValueError(
             f"Nomor {phone} belum terdaftar. Hubungkan di dashboard atau set WA_DEFAULT_USER_ID."
         )
-
-    def get_dashboard_data(self, user_id: str) -> pd.DataFrame:
-        response = (
-            self.supabase.table("transactions")
-            .select("*")
-            .eq("user_id", user_id)
-            .order("id", desc=True)
-            .execute()
-        )
-        return pd.DataFrame(response.data) if response.data else pd.DataFrame()
 
     def table_exists(self, table_name: str) -> bool:
         try:
@@ -424,11 +447,15 @@ class LarisCore:
     # Log percakapan WhatsApp (opsional, untuk Chat History)
     # --------------------
     def log_wa_message(self, user_id: str, role: str, content: str, phone: str = None, agent_id: str = None):
-        data = {"user_id": user_id, "role": role, "content": content, "phone": phone, "agent_id": agent_id}
+        uid = self.normalize_user_id(user_id)
+        data = {"user_id": uid, "role": role, "content": content, "phone": phone, "agent_id": agent_id}
         try:
-            return self.supabase.table("wa_messages").insert(data).execute()
+            result = self.supabase.table("wa_messages").insert(data).execute()
+            if not getattr(result, "data", None):
+                print("WARN log_wa_message: insert tanpa data balik", data)
+            return result
         except Exception as exc:
-            print("ERROR log_wa_message:", exc)
+            print("ERROR log_wa_message:", exc, "| payload:", {**data, "content": (content or "")[:80]})
             return None
 
     def list_wa_messages(self, user_id: str, limit: int = 30):
@@ -492,11 +519,11 @@ class LarisCore:
 
     def ai_extractor_agent(self, text: str) -> list:
         prompt = (
-            f'Anda akuntan warung Indonesia. Ekstrak teks "{text}" menjadi JSON. '
-            'Balas HANYA objek JSON dengan key "transactions" berisi array. '
-            'Tiap item: {"type":"Pemasukan" atau "Pengeluaran","amount":angka,"category":"...","note":"..."}. '
-            'Jika ada "prive"/"ambil pribadi" set category="Prive". '
-            'Jika tidak ada transaksi jelas, balas {"transactions": []}.'
+            f'Anda akuntan warung Indonesia. Teks user: "{text}"\n\n'
+            "Jika ini PERTANYAAN (skor, saran, siapa belum bayar, dll.) — balas {\"transactions\": []}.\n"
+            "Hanya ekstrak jika user jelas MENCATAT transaksi jual/beli/bayar/piutang dengan nominal.\n"
+            'Balas HANYA JSON: {"transactions":[...]} tiap item '
+            '{"type":"Pemasukan|Pengeluaran","amount":angka,"category":"...","note":"..."}.'
         )
         try:
             res = self.groq_client.chat.completions.create(
@@ -584,6 +611,96 @@ class LarisCore:
         else:
             lv, ins = "low", ["Evaluasi biaya ⚠️", "Rapikan pencatatan 💪", "Kurangi stok mati 📉"]
         return {"score": total, "insight": random.choice(ins), "level": lv}
+
+    def classify_wa_intent(self, text: str) -> str:
+        """Klasifikasi intent pesan WA via Groq (AI utama)."""
+        t = (text or "").strip()
+        if not t:
+            return "LAINNYA"
+        system = (
+            "Anda router intent untuk asisten WhatsApp UMKM Indonesia. "
+            'Balas HANYA JSON: {"intent":"..."} dengan intent salah satu dari: '
+            "CATAT, SKOR, SARAN, PIUTANG, HAPUS, LAINNYA.\n\n"
+            "CATAT = mencatat transaksi baru (jual/beli/bayar dengan nominal, atau catat piutang DENGAN nominal).\n"
+            "SKOR = tanya skor/kesehatan bisnis.\n"
+            "SARAN = minta saran/tips/evaluasi bisnis.\n"
+            "PIUTANG = BERTANYA siapa yang belum bayar, daftar utang/piutang, cek outstanding — BUKAN mencatat.\n"
+            "HAPUS = hapus transaksi terakhir.\n"
+            "LAINNYA = di luar kategori.\n\n"
+            'Contoh PIUTANG: "siapa belum bayar utang", "siapa yang ngutang", "daftar piutang".\n'
+            'Contoh CATAT: "jual kopi 5", "piutang pak budi 50000".\n'
+            "Pertanyaan utang/piutang TANPA nominal = PIUTANG, bukan CATAT."
+        )
+        try:
+            res = self.groq_client.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": t},
+                ],
+                model="openai/gpt-oss-120b",
+                temperature=0,
+                max_tokens=40,
+                response_format={"type": "json_object"},
+            )
+            data = json.loads(res.choices[0].message.content or "{}")
+            intent = str(data.get("intent", "LAINNYA")).strip().upper()
+            valid = {"CATAT", "SKOR", "SARAN", "PIUTANG", "HAPUS", "LAINNYA"}
+            return intent if intent in valid else "LAINNYA"
+        except Exception as exc:
+            print("ERROR classify_wa_intent:", exc)
+            return "LAINNYA"
+
+    def get_ai_piutang_answer(self, df: pd.DataFrame, question: str) -> str:
+        """Jawab pertanyaan piutang/utang dengan AI + data buku kas."""
+        if df.empty:
+            return (
+                "Belum ada data transaksi. Catat dulu piutang pelanggan, "
+                "misalnya: _piutang pak budi 50000_"
+            )
+        piutang = df[df["category"].str.contains("piutang|kasbon", case=False, na=False)]
+        utang = df[
+            df["category"].str.contains("utang|hutang", case=False, na=False)
+            & ~df["category"].str.contains("piutang|kasbon", case=False, na=False)
+        ]
+        if piutang.empty and utang.empty:
+            return (
+                "Belum ada piutang/utang tercatat. "
+                "Catat dulu, misalnya: _piutang pak budi 50000_"
+            )
+
+        def _rows_to_text(frame, label):
+            if frame.empty:
+                return f"{label}: (kosong)"
+            lines = [
+                f"- {row.get('note') or row.get('category')}: Rp {int(row.get('amount') or 0):,}"
+                for _, row in frame.iterrows()
+            ]
+            total = int(frame["amount"].sum())
+            return f"{label} (total Rp {total:,}):\n" + "\n".join(lines)
+
+        data_block = _rows_to_text(piutang, "Piutang (pelanggan berutang ke toko)")
+        data_block += "\n\n" + _rows_to_text(utang, "Utang toko (toko berutang)")
+
+        prompt = (
+            f"Pemilik warung bertanya via WhatsApp:\n\"{question}\"\n\n"
+            f"Data buku kas:\n{data_block}\n\n"
+            "Jawab singkat, jelas, Bahasa Indonesia santai UMKM. "
+            "Sebut nama jika ada. Jangan mengarang di luar data di atas."
+        )
+        try:
+            res = self.groq_client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}],
+                model="openai/gpt-oss-120b",
+                temperature=0.4,
+                max_tokens=350,
+            )
+            return res.choices[0].message.content.strip()
+        except Exception as exc:
+            print("ERROR get_ai_piutang_answer:", exc)
+            if not piutang.empty:
+                lines = [f"• {row['note']}: Rp {row['amount']:,.0f}" for _, row in piutang.iterrows()]
+                return "📋 *Daftar Piutang:*\n" + "\n".join(lines)
+            return "Gagal mengambil jawaban AI. Coba lagi."
 
     def get_ai_advisor_insights(self, df: pd.DataFrame) -> str:
         if df.empty or len(df) < 5:

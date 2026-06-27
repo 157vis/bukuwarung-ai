@@ -37,7 +37,24 @@ def ensure_valid_session() -> bool:
         return False
     token = st.session_state.get("access_token")
     if not token:
-        return True
+        # Tanpa JWT, RLS Supabase memblokir baca data — paksa refresh/login ulang.
+        refresh = st.session_state.get("refresh_token")
+        if not refresh:
+            _clear_session()
+            return False
+        try:
+            res = _client().auth.refresh_session(refresh)
+            session = getattr(res, "session", None)
+            if session and getattr(session, "access_token", None):
+                st.session_state["access_token"] = session.access_token
+                st.session_state["refresh_token"] = getattr(session, "refresh_token", refresh)
+                if getattr(res, "user", None):
+                    st.session_state["user"] = _normalize_user(res.user)
+                return True
+        except Exception as exc:
+            print("ERROR ensure_valid_session (no token):", exc)
+        _clear_session()
+        return False
 
     exp = _decode_exp(token)
     # Masih valid > 60 detik -> tidak perlu panggil server.

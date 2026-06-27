@@ -18,6 +18,25 @@ def agent_label(agent_id) -> str:
     return AGENT_LABELS.get(agent_id, agent_id or "AI")
 
 
+def render_wa_sync_hint(user_id: str, user_email: str | None, df_empty: bool) -> None:
+    """Petunjuk jika data bot WA belum terlihat di dashboard."""
+    if not df_empty:
+        return
+    is_admin = (user_email or "").strip().lower() == SUPER_ADMIN_EMAIL
+    if is_admin:
+        st.warning(
+            "Anda login sebagai **Admin**. Transaksi dari WhatsApp masuk ke akun **client** "
+            "(bukan admin). Login dengan email client trial yang nomornya terhubung di Pengaturan."
+        )
+    st.info(
+        f"**Data WA belum muncul?** Pastikan:\n"
+        f"1. Login pakai email **client** yang nomor WA-nya terdaftar (`wa_users`).\n"
+        f"2. Nomor `082112826851` sudah dihubungkan (jalankan `sql/link_wa_number.sql`).\n"
+        f"3. Setelah kirim WA, buka **Buku Kas** atau refresh halaman.\n\n"
+        f"User ID sesi ini: `{user_id}`"
+    )
+
+
 def get_core() -> LarisCore:
     core = LarisCore(
         st.secrets["SUPABASE_URL"],
@@ -28,7 +47,25 @@ def get_core() -> LarisCore:
     token = st.session_state.get("access_token")
     if token:
         core.set_access_token(token)
+    elif st.session_state.get("user"):
+        st.error("Sesi login tidak lengkap. Klik **Keluar** lalu masuk kembali.")
     return core
+
+
+def render_connection_status(core: LarisCore, user_id: str, user_email: str | None) -> None:
+    """Panel diagnostik singkat — bantu jika Buku Kas kosong."""
+    token_ok = bool(st.session_state.get("access_token"))
+    txn_count, txn_err = core.count_transactions(user_id)
+    with st.expander("🔍 Status koneksi database", expanded=not token_ok or txn_count == 0):
+        st.write(f"**Email login:** `{user_email or '-'}`")
+        st.write(f"**User ID:** `{user_id}`")
+        st.write(f"**Token JWT:** {'✅ ada' if token_ok else '❌ hilang — logout & login ulang'}")
+        if txn_err:
+            st.error(f"Gagal baca transaksi: {txn_err}")
+        else:
+            st.write(f"**Transaksi di database:** {txn_count} baris")
+        if st.button("🔄 Muat ulang data", key="reload_dashboard_data"):
+            st.rerun()
 
 
 def page_config() -> None:
@@ -163,6 +200,8 @@ def render_dashboard(core: LarisCore, user) -> None:
         st.json(user)
         return
 
+    user_id = core.normalize_user_id(user_id)
+
     # Hamburger / toggle menu (restore quick access)
     if 'show_menu' not in st.session_state:
         st.session_state.show_menu = True
@@ -267,6 +306,7 @@ def render_dashboard(core: LarisCore, user) -> None:
 
     elif menu == "Ringkasan":
         st.title("Ringkasan Bisnis")
+        render_wa_sync_hint(user_id, user_email, df.empty)
         col1, col2, col3, col4 = st.columns(4)
         total_income = int(df[df["type"] == "Pemasukan"]["amount"].sum()) if not df.empty else 0
         total_expense = int(df[df["type"] == "Pengeluaran"]["amount"].sum()) if not df.empty else 0
@@ -334,8 +374,10 @@ def render_dashboard(core: LarisCore, user) -> None:
 
     elif menu == "Buku Kas":
         st.title("Buku Kas")
+        render_connection_status(core, user_id, user_email)
         if df.empty:
-            st.info("Buku kas masih kosong. Tambahkan transaksi terlebih dahulu.")
+            render_wa_sync_hint(user_id, user_email, True)
+            st.info("Buku kas masih kosong. Tambahkan transaksi terlebih dahulu atau kirim lewat WhatsApp.")
         else:
             st.markdown("**Ringkasan buku kas terbaru**")
             summary = df.sort_values(by="date", ascending=False).reset_index(drop=True)
