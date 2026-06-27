@@ -19,7 +19,7 @@ Supabase tetap di cloud (database). Railway men-host **2 service** dari repo Git
 
 ## Yang perlu disiapkan
 
-1. Akun **Railway** → https://railway.app (login GitHub `157vis`)
+1. Akun **Railway** → [https://railway.app](https://railway.app) (login GitHub `157vis`)
 2. Repo **157vis/bukuwarung-ai** sudah ter-push (branch `main`)
 3. Key dari Supabase + Groq (sama seperti lokal)
 4. Token **Fonnte/Wablas** (untuk bot WA)
@@ -29,7 +29,7 @@ Supabase tetap di cloud (database). Railway men-host **2 service** dari repo Git
 ## Langkah 1 — Buat project Railway
 
 1. Railway → **New Project** → **Deploy from GitHub repo**
-2. Pilih **`157vis/bukuwarung-ai`**
+2. Pilih `**157vis/bukuwarung-ai`**
 3. Railway akan buat 1 service pertama (kita ubah jadi dashboard)
 
 ---
@@ -37,19 +37,26 @@ Supabase tetap di cloud (database). Railway men-host **2 service** dari repo Git
 ## Langkah 2 — Service 1: Dashboard (Streamlit)
 
 ### Settings → Deploy
-| Setting | Nilai |
-|---|---|
-| **Root Directory** | `/` (kosong / root repo) |
-| **Start Command** | `bash scripts/railway-streamlit.sh` |
+
+
+| Setting            | Nilai                               |
+| ------------------ | ----------------------------------- |
+| **Root Directory** | `/` (kosong / root repo)            |
+| **Start Command**  | `bash scripts/railway-streamlit.sh` |
+
 
 ### Settings → Variables (Environment)
-| Variable | Nilai |
-|---|---|
+
+
+| Variable       | Nilai                                      |
+| -------------- | ------------------------------------------ |
 | `SUPABASE_URL` | `https://tagyexrsuvogrlhcthcp.supabase.co` |
-| `SUPABASE_KEY` | **anon key** Supabase |
-| `GROQ_API_KEY` | `gsk_...` (key valid) |
+| `SUPABASE_KEY` | **anon key** Supabase                      |
+| `GROQ_API_KEY` | `gsk_...` (key valid)                      |
+
 
 ### Settings → Networking
+
 - Klik **Generate Domain** → dapat URL seperti `https://bukuwarung-ai-production.up.railway.app`
 
 Itu URL dashboard publik — buka dari laptop rumah, HP, mana saja.
@@ -61,26 +68,41 @@ Itu URL dashboard publik — buka dari laptop rumah, HP, mana saja.
 Di project Railway yang sama: **+ New Service** → **GitHub Repo** → pilih repo **sama**.
 
 ### Settings → Deploy
-| Setting | Nilai |
-|---|---|
-| **Root Directory** | `/` |
-| **Start Command** | `bash scripts/railway-bot.sh` |
+
+
+| Setting            | Nilai                         |
+| ------------------ | ----------------------------- |
+| **Root Directory** | `/` (root repo — jangan subfolder) |
+| **Start Command**  | `bash scripts/railway-bot.sh` |
+
+Alternatif jika Railway pakai deteksi otomatis `uvicorn main:app`:
+
+```
+uvicorn main:app --host 0.0.0.0 --port $PORT
+```
+
+> Repo root sekarang punya `main.py` shim → memperbaiki error **Could not import module "main"**.
+
 
 ### Settings → Variables
-| Variable | Nilai |
-|---|---|
-| `SUPABASE_URL` | sama dengan dashboard |
-| `SUPABASE_KEY` | **service_role key** (WAJIB untuk bot) |
-| `GROQ_API_KEY` | `gsk_...` |
-| `WA_PROVIDER` | `fonnte` atau `wablas` |
-| `WA_API_KEY` | token provider WA |
-| `STOCK_THRESHOLD` | `5` |
-| `REORDER_QTY` | `20` |
-| `WA_DEFAULT_USER_ID` | (opsional) user_id trial |
+
+
+| Variable             | Nilai                                  |
+| -------------------- | -------------------------------------- |
+| `SUPABASE_URL`       | sama dengan dashboard                  |
+| `SUPABASE_KEY`       | **service_role key** (WAJIB untuk bot) |
+| `GROQ_API_KEY`       | `gsk_...`                              |
+| `WA_PROVIDER`        | `fonnte` atau `wablas`                 |
+| `WA_API_KEY`         | token provider WA                      |
+| `STOCK_THRESHOLD`    | `5`                                    |
+| `REORDER_QTY`        | `20`                                   |
+| `WA_DEFAULT_USER_ID` | (opsional) user_id trial               |
+
 
 ### Settings → Networking
+
 - **Generate Domain** → mis. `https://bukuwarung-ai-bot.up.railway.app`
-- Webhook WA = **`https://<domain-bot>/webhook`**
+- Webhook WA = `**https://<domain-bot>/webhook`**
 
 Daftarkan URL webhook itu di dashboard **Fonnte/Wablas** (tidak perlu ngrok lagi).
 
@@ -119,6 +141,7 @@ Untuk tes lokal (opsional): salin `.streamlit/secrets.toml` + `kita-cuan-wa-bot/
 Folder `site/` (HTML statis) **tidak** dijalankan oleh script Railway di atas.
 
 Pilihan:
+
 - **GitHub Pages** (gratis, bagus untuk SEO) → deploy folder `site/`
 - Atau service Railway ketiga dengan static file server (opsional)
 
@@ -128,23 +151,27 @@ Landing di dalam Streamlit (`static/laris-landing.html`) sudah ikut Service 1.
 
 ## Perbandingan singkat
 
-| Platform | Dashboard | Bot WA | Gratis | Cocok untuk |
-|---|---|---|---|---|
-| **Streamlit Cloud** | ✅ mudah | ❌ terpisah | ✅ | Cepat go-live dashboard saja |
-| **Railway (2 service)** | ✅ | ✅ | trial/kredit | **Semua online, kerja dari rumah** |
-| Lokal + ngrok | ✅ | ✅ | ✅ | Dev sementara |
+
+| Platform                | Dashboard | Bot WA     | Gratis       | Cocok untuk                        |
+| ----------------------- | --------- | ---------- | ------------ | ---------------------------------- |
+| **Streamlit Cloud**     | ✅ mudah   | ❌ terpisah | ✅            | Cepat go-live dashboard saja       |
+| **Railway (2 service)** | ✅         | ✅          | trial/kredit | **Semua online, kerja dari rumah** |
+| Lokal + ngrok           | ✅         | ✅          | ✅            | Dev sementara                      |
+
 
 ---
 
 ## Troubleshooting
 
-| Masalah | Solusi |
-|---|---|
-| Build gagal | Cek **Deploy Logs** di Railway; pastikan `requirements.txt` root + `kita-cuan-wa-bot/requirements.txt` terinstall (Railway pakai root — gabung dependency jika perlu) |
-| Dashboard blank / secrets error | Pastikan 3 env var Service 1 terisi |
-| Bot 502 | Cek start command `bash scripts/railway-bot.sh` |
-| WA webhook tidak terpanggil | URL harus `https://.../webhook` + HTTPS Railway domain |
-| AI tidak jalan | `GROQ_API_KEY` invalid di Variables Railway |
+
+| Masalah                         | Solusi                                                                                                                                                                |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Build gagal                     | Cek **Deploy Logs** di Railway; pastikan `requirements.txt` root + `kita-cuan-wa-bot/requirements.txt` terinstall (Railway pakai root — gabung dependency jika perlu) |
+| Dashboard blank / secrets error | Pastikan 3 env var Service 1 terisi                                                                                                                                   |
+| Bot 502 / `Could not import module "main"` | Root Directory = `/` (bukan `kita-cuan-wa-bot`). Start Command = `bash scripts/railway-bot.sh` atau `uvicorn main:app --host 0.0.0.0 --port $PORT`. Pull/redeploy commit terbaru (ada `main.py` di root). |
+| WA webhook tidak terpanggil     | URL harus `https://.../webhook` + HTTPS Railway domain                                                                                                                |
+| AI tidak jalan                  | `GROQ_API_KEY` invalid di Variables Railway                                                                                                                           |
+
 
 ### Catatan dependency bot
 
