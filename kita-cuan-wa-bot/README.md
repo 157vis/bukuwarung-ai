@@ -95,4 +95,7 @@ Hasil yang diharapkan:
 - Approval PO muncul di **Ruang Komando** dashboard → tombol **Setujui / Tolak**.
 - Percakapan muncul di widget **Aktivitas WhatsApp**.
 
-Format payload simulasi (Fonnte): `{ "from": "62812xxxx", "text": "jual indomie 5" }`
+Format payload Fonnte (resmi): `sender`, `message`, `url`, `extension`, `inboxid`  
+Simulasi curl: `{ "sender": "62812xxxx", "message": "jual indomie 5" }`
+
+> **Penting Fonnte:** matikan **autoreply bawaan** di dashboard Fonnte jika pakai webhook custom — autoreply Fonnte dan webhook saling bentrok.

@@ -4,7 +4,7 @@ import sys
 import base64
 import httpx
 from pathlib import Path
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request
 from dotenv import load_dotenv
 from groq import Groq
 
@@ -102,21 +102,86 @@ async def is_safe_message(text: str) -> bool:
         return True
 
 
-async def send_wa_reply(phone: str, message: str):
+def _normalize_wa_phone(phone: str) -> str:
+    """Normalisasi nomor untuk kirim/baca WA."""
+    p = (phone or "").replace("@s.whatsapp.net", "").strip().lstrip("+")
+    return "".join(ch for ch in p if ch.isdigit())
+
+
+async def _parse_webhook_body(request: Request) -> dict:
+    """Fonnte bisa kirim JSON atau form-urlencoded."""
+    ctype = (request.headers.get("content-type") or "").lower()
+    if "application/json" in ctype:
+        try:
+            return await request.json()
+        except Exception:
+            pass
+    try:
+        form = await request.form()
+        if form:
+            return dict(form)
+    except Exception:
+        pass
+    try:
+        return await request.json()
+    except Exception:
+        return {}
+
+
+def _extract_incoming(body: dict) -> tuple[str, str, str, str, str | None]:
+    """Ambil phone, text, media_type, media_url, inboxid dari payload Fonnte/Wablas."""
     if WA_PROVIDER == "fonnte":
-        async with httpx.AsyncClient() as client:
-            await client.post(
-                "https://api.fonnte.com/send",
-                headers={"Authorization": WA_API_KEY},
-                data={"target": phone, "message": message},
-            )
-    elif WA_PROVIDER == "wablas":
-        async with httpx.AsyncClient() as client:
-            await client.post(
-                "https://solo.wablas.com/api/v2/send-message",
-                headers={"Authorization": f"Bearer {WA_API_KEY}"},
-                json={"data": [{"phone": phone, "message": message}]},
-            )
+        phone = body.get("sender") or body.get("from") or body.get("phone") or ""
+        text = body.get("message") or body.get("text") or ""
+        media_url = body.get("url") or body.get("media_url") or ""
+        ext = str(body.get("extension") or "").lower()
+        inboxid = body.get("inboxid")
+        media_type = ""
+        if media_url:
+            if ext in ("jpg", "jpeg", "png", "webp", "gif", "image"):
+                media_type = "image"
+            elif ext in ("ogg", "opus", "mp3", "m4a", "wav", "audio", "ptt"):
+                media_type = "audio"
+            else:
+                media_type = "image"
+    else:
+        phone = body.get("phone") or body.get("sender") or ""
+        text = body.get("message") or body.get("text") or ""
+        media_type = body.get("type") or body.get("media_type") or ""
+        media_url = body.get("media_url") or body.get("url") or ""
+        inboxid = None
+    return _normalize_wa_phone(phone), text, media_type, media_url, inboxid
+
+
+async def send_wa_reply(phone: str, message: str, inboxid: str | None = None):
+    if not phone or not message:
+        print("WARN send_wa_reply: phone/message kosong")
+        return
+    target = _normalize_wa_phone(phone)
+    try:
+        if WA_PROVIDER == "fonnte":
+            payload = {"target": target, "message": message}
+            if inboxid:
+                payload["inboxid"] = inboxid
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.post(
+                    "https://api.fonnte.com/send",
+                    headers={"Authorization": WA_API_KEY},
+                    data=payload,
+                )
+            print(f"DEBUG fonnte send → {resp.status_code}: {resp.text[:300]}")
+            if resp.status_code >= 400:
+                print("ERROR fonnte send gagal — cek WA_API_KEY & format nomor target")
+        elif WA_PROVIDER == "wablas":
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.post(
+                    "https://solo.wablas.com/api/v2/send-message",
+                    headers={"Authorization": f"Bearer {WA_API_KEY}"},
+                    json={"data": [{"phone": target, "message": message}]},
+                )
+            print(f"DEBUG wablas send → {resp.status_code}: {resp.text[:300]}")
+    except Exception as exc:
+        print("ERROR send_wa_reply:", exc)
 
 
 async def detect_intent(text: str) -> str:
@@ -147,23 +212,15 @@ Jawab satu kata saja:""",
 
 @app.post("/webhook")
 async def webhook(request: Request):
-    body = await request.json()
+    body = await _parse_webhook_body(request)
+    print(f"DEBUG webhook payload keys: {list(body.keys())}")
 
-    if WA_PROVIDER == "fonnte":
-        phone = body.get("from", "")
-        text = body.get("text", "")
-        media_type = body.get("media_type", "")
-        media_url = body.get("media_url", "")
-    else:
-        phone = body.get("phone", "")
-        text = body.get("message", "")
-        media_type = body.get("type", "")
-        media_url = body.get("media_url", "")
+    phone, text, media_type, media_url, inboxid = _extract_incoming(body)
 
     if not phone:
-        raise HTTPException(status_code=400, detail="No phone number")
+        print("ERROR webhook: nomor pengirim tidak ditemukan. Body:", str(body)[:500])
+        return {"status": "error", "detail": "No phone number (cek field sender/message Fonnte)"}
 
-    phone = phone.replace("@s.whatsapp.net", "").strip()
     reply = ""
     user_id = None
 
@@ -260,7 +317,7 @@ async def webhook(request: Request):
     except Exception as e:
         reply = f"❌ Terjadi kesalahan: {str(e)[:200]}"
 
-    await send_wa_reply(phone, reply)
+    await send_wa_reply(phone, reply, inboxid=inboxid)
 
     # Log percakapan untuk widget Chat History di Ruang Komando (best-effort).
     if user_id:
