@@ -2,3 +2,7 @@ streamlit
 pandas
 supabase
 groq
+fastapi
+uvicorn
+httpx
+python-dotenv
