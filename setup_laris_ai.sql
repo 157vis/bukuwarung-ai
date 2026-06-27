@@ -117,48 +117,48 @@ alter table transactions enable row level security;
 drop policy if exists p_own_transactions on transactions;
 create policy p_own_transactions on transactions
   for all to authenticated
-  using (user_id = (auth.uid())::text)
-  with check (user_id = (auth.uid())::text);
+  using ((user_id)::text = (auth.uid())::text)
+  with check ((user_id)::text = (auth.uid())::text);
 
 -- 2b) products
 alter table products enable row level security;
 drop policy if exists p_own_products on products;
 create policy p_own_products on products
   for all to authenticated
-  using (user_id = (auth.uid())::text)
-  with check (user_id = (auth.uid())::text);
+  using ((user_id)::text = (auth.uid())::text)
+  with check ((user_id)::text = (auth.uid())::text);
 
 -- 2c) warehouses
 alter table warehouses enable row level security;
 drop policy if exists p_own_warehouses on warehouses;
 create policy p_own_warehouses on warehouses
   for all to authenticated
-  using (user_id = (auth.uid())::text)
-  with check (user_id = (auth.uid())::text);
+  using ((user_id)::text = (auth.uid())::text)
+  with check ((user_id)::text = (auth.uid())::text);
 
 -- 2d) inventory_entries
 alter table inventory_entries enable row level security;
 drop policy if exists p_own_inventory on inventory_entries;
 create policy p_own_inventory on inventory_entries
   for all to authenticated
-  using (user_id = (auth.uid())::text)
-  with check (user_id = (auth.uid())::text);
+  using ((user_id)::text = (auth.uid())::text)
+  with check ((user_id)::text = (auth.uid())::text);
 
 -- 2e) approvals
 alter table approvals enable row level security;
 drop policy if exists p_own_approvals on approvals;
 create policy p_own_approvals on approvals
   for all to authenticated
-  using (user_id = (auth.uid())::text)
-  with check (user_id = (auth.uid())::text);
+  using ((user_id)::text = (auth.uid())::text)
+  with check ((user_id)::text = (auth.uid())::text);
 
 -- 2f) wa_messages
 alter table wa_messages enable row level security;
 drop policy if exists p_own_wa_messages on wa_messages;
 create policy p_own_wa_messages on wa_messages
   for all to authenticated
-  using (user_id = (auth.uid())::text)
-  with check (user_id = (auth.uid())::text);
+  using ((user_id)::text = (auth.uid())::text)
+  with check ((user_id)::text = (auth.uid())::text);
 
 -- 2g) wa_users: user lihat miliknya, Super Admin kelola semua.
 alter table wa_users enable row level security;
@@ -166,8 +166,8 @@ alter table wa_users enable row level security;
 drop policy if exists p_own_wa_users on wa_users;
 create policy p_own_wa_users on wa_users
   for all to authenticated
-  using (user_id = (auth.uid())::text)
-  with check (user_id = (auth.uid())::text);
+  using ((user_id)::text = (auth.uid())::text)
+  with check ((user_id)::text = (auth.uid())::text);
 
 drop policy if exists p_admin_wa_users on wa_users;
 create policy p_admin_wa_users on wa_users
