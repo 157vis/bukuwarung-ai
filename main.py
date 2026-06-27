@@ -8,7 +8,13 @@ from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parent
-_BOT_MAIN = _ROOT / "kita-cuan-wa-bot" / "main.py"
+_BOT_DIR = _ROOT / "kita-cuan-wa-bot"
+_BOT_MAIN = _BOT_DIR / "main.py"
+
+# Pastikan import agents.py & laris_core.py berhasil saat dimuat via importlib.
+import sys
+sys.path.insert(0, str(_ROOT))
+sys.path.insert(0, str(_BOT_DIR))
 
 _spec = spec_from_file_location("laris_wa_bot_main", _BOT_MAIN)
 if _spec is None or _spec.loader is None:

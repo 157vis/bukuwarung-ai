@@ -8,7 +8,12 @@ from fastapi import FastAPI, Request, HTTPException
 from dotenv import load_dotenv
 from groq import Groq
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+_BOT_DIR = Path(__file__).resolve().parent
+_ROOT_DIR = _BOT_DIR.parent
+# Root repo: brand.py, laris_core.py | Bot dir: agents.py
+sys.path.insert(0, str(_ROOT_DIR))
+sys.path.insert(0, str(_BOT_DIR))
+
 from brand import APP_NAME, WA_BOT_TITLE, SCORE_LABEL
 
 from agents import (
@@ -24,7 +29,7 @@ from agents import (
     core,
 )
 
-load_dotenv()
+load_dotenv(_BOT_DIR / ".env")
 
 app = FastAPI(title=WA_BOT_TITLE)
 
