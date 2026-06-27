@@ -5,6 +5,9 @@ import re
 import sys
 import base64
 import time
+import asyncio
+import random
+from datetime import datetime
 from urllib.parse import parse_qs
 
 import httpx
@@ -39,6 +42,12 @@ from orchestrator import orchestrate_transaction_created
 
 load_dotenv(_BOT_DIR / ".env")
 
+# ═══════════════════════════════════════════════
+# KONFIGURASI NAMA BOT — Ganti di sini!
+# ═══════════════════════════════════════════════
+BOT_NAME = "Laris"          # Nama bot (manusiawi)
+BOT_EMOJI = "🛒"            # Emoji ikon bot
+
 app = FastAPI(title=WA_BOT_TITLE)
 
 _raw_provider = os.environ.get("WA_PROVIDER", "fonnte").lower().strip()
@@ -51,14 +60,14 @@ groq = Groq(api_key=os.environ["GROQ_API_KEY"])
 # Ambang stok kritis: di bawah ini Logistik AI menyarankan PO (butuh approval owner).
 STOCK_THRESHOLD = int(os.environ.get("STOCK_THRESHOLD", "10"))
 REORDER_QTY = int(os.environ.get("REORDER_QTY", "5"))
-BOT_LOGIC_VERSION = "2026-06-27-logistik-orchestrator-v4"
+BOT_LOGIC_VERSION = "2026-06-28-realistic-v5"
 
 # Cegah loop: Fonnte autoread kadang mengirim balasan bot kembali ke webhook.
 _BOT_TEXT_MARKERS = (
     "tercatat!",
     "webhook ok",
     "bot aktif",
-    "maaf, saya belum paham",
+    "belum paham",
     "logistik ai",
     "ruang komando",
     "saran ai",
@@ -66,10 +75,70 @@ _BOT_TEXT_MARKERS = (
     "daftar piutang",
     "struk terbaca",
     "suara terbaca",
-    "terjadi kesalahan",
     "belum terdaftar",
+    "udah dicatat",
+    "masuk buku",
+    "noted!",
+    "skor tokomu",
+    "belum nangkep",
+    "gangguan sebentar",
+    BOT_NAME.lower(),
 )
 _recent_inbound: dict[str, float] = {}
+
+
+# ═══════════════════════════════════════════════
+# HELPER: Realistic Bot Behavior
+# ═══════════════════════════════════════════════
+
+def _bot_header() -> str:
+    """Header pesan bot — pakai nama manusiawi."""
+    return f"{BOT_EMOJI} *{BOT_NAME}*"
+
+
+def _get_greeting() -> str:
+    """Sapaan berdasarkan waktu (WIB)."""
+    hour = datetime.now().hour
+    if 5 <= hour < 11:
+        return "Selamat pagi"
+    elif 11 <= hour < 15:
+        return "Selamat siang"
+    elif 15 <= hour < 18:
+        return "Selamat sore"
+    else:
+        return "Selamat malam"
+
+
+def _random_confirm(data: list[dict]) -> str:
+    """Variasi konfirmasi transaksi supaya tidak monoton."""
+    lines = []
+    for d in data:
+        tipe = d.get("type", "")
+        kat = d.get("category", "")
+        amt = d.get("amount", 0)
+        emoji = "💰" if tipe == "Pemasukan" else "💸"
+        lines.append(f"{emoji} {kat}: Rp {amt:,.0f}")
+    detail = "\n".join(lines)
+
+    total = sum(d.get("amount", 0) for d in data)
+    n = len(data)
+
+    templates = [
+        f"✅ Tercatat!\n{detail}",
+        f"📝 Sip, udah dicatat!\n{detail}",
+        f"👌 Masuk buku!\n{detail}",
+        f"✅ Oke, tercatat ya~\n{detail}",
+        f"📝 Noted!\n{detail}",
+    ]
+    base = random.choice(templates)
+    if n > 1:
+        base += f"\n\nTotal: Rp {total:,.0f} ({n} transaksi)"
+    return base
+
+
+def _random_typing_delay() -> float:
+    """Delay acak supaya terasa seperti orang ngetik."""
+    return random.uniform(0.8, 2.5)
 
 
 async def is_safe_message(text: str) -> bool:
@@ -114,7 +183,7 @@ def _is_outgoing_or_bot_echo(body: dict, phone: str, text: str) -> bool:
     if not t:
         return False
 
-    if t[0] in "✅❌🤔💡🔥📋🗑️📦":
+    if t[0] in "✅❌🤔💡🔥📋🗑️📦🛒📝👌📊📈💪💰💸🎉":
         return True
 
     lower = t.lower()
@@ -376,6 +445,7 @@ async def webhook(request: Request):
         return {
             "status": "webhook_ready",
             "provider": WA_PROVIDER,
+            "bot_name": BOT_NAME,
             "bot_logic_version": BOT_LOGIC_VERSION,
             "hint": "POST dari Fonnte ke URL ini. Tes WA: kirim pesan 'test'",
         }
@@ -397,13 +467,19 @@ async def webhook(request: Request):
         print(f"DEBUG webhook ignored (duplicate): sender={phone} text={text[:80]!r}")
         return {"status": "ignored", "reason": "duplicate"}
 
-    # Tes koneksi cepat — tanpa database/AI (balas dalam hitungan detik).
+    # Tes koneksi cepat — greeting natural sesuai waktu
     if text.lower() in ("test", "ping", "tes", "halo", "hi"):
+        greeting = _get_greeting()
         reply = (
-            f"✅ {APP_NAME} bot aktif!\nWebhook OK.\n"
-            f"Nomor Anda: {_normalize_wa_phone(phone)}\n"
-            f"Coba kirim: jual indomie 5"
+            f"{greeting}! 👋\n\n"
+            f"Aku {BOT_NAME}, asisten pembukuan tokomu~\n\n"
+            f"Mau catat apa hari ini?\n"
+            f"• _jual kopi 15rb_\n"
+            f"• _beli bensin 50rb_\n"
+            f"• _utang budi 100rb_\n\n"
+            f"Atau tanya: _{BOT_NAME.lower()}, gimana bisnis aku?_"
         )
+        await asyncio.sleep(random.uniform(0.5, 1.5))
         await send_wa_reply(phone, reply, inboxid=inboxid)
         logged = _persist_wa_log(phone, text, reply)
         return {"status": "ok", "mode": "ping", "wa_logged": logged}
@@ -423,10 +499,15 @@ async def webhook(request: Request):
                 is_prv = "prive" in str(d.get("category", "")).lower()
                 db_insert_transaction(
                     d.get("type"), d.get("category"), d.get("amount"), d.get("note"),
-                    is_prive=is_prv, user_id=user_id,
+                    is_prv=is_prv, user_id=user_id,
                 )
             total = sum(d.get("amount", 0) for d in data)
-            reply = f"✅ Struk terbaca!\nTotal: Rp {total:,.0f}\n{len(data)} transaksi tercatat."
+            struk_templates = [
+                f"📸 Struk kebaca!\nTotal: Rp {total:,.0f}\n{len(data)} transaksi masuk buku~",
+                f"✅ Sip, struk terbaca!\nTotal: Rp {total:,.0f}\n{len(data)} transaksi tercatat.",
+                f"👌 Oke struknya udah aku baca!\nTotal: Rp {total:,.0f}\n{len(data)} transaksi masuk~",
+            ]
+            reply = f"{_bot_header()}\n\n{random.choice(struk_templates)}"
             reply += orchestrate_transaction_created(user_id, text or "struk", data)
 
         elif media_type in ["audio", "voice"] and media_url:
@@ -437,9 +518,14 @@ async def webhook(request: Request):
                 is_prv = "prive" in str(d.get("category", "")).lower()
                 db_insert_transaction(
                     d.get("type"), d.get("category"), d.get("amount"), d.get("note"),
-                    is_prive=is_prv, user_id=user_id,
+                    is_prv=is_prv, user_id=user_id,
                 )
-            reply = f"✅ Suara terbaca!\n{len(data)} transaksi tercatat."
+            voice_templates = [
+                f"🎤 Suara kebaca!\n{len(data)} transaksi masuk buku~",
+                f"✅ Sip, suaramu aku dengerin!\n{len(data)} transaksi tercatat.",
+                f"👌 Oke voice note-nya udah aku proses!\n{len(data)} transaksi masuk~",
+            ]
+            reply = f"{_bot_header()}\n\n{random.choice(voice_templates)}"
             reply += orchestrate_transaction_created(user_id, text or "voice", data)
 
         elif text:
@@ -449,64 +535,116 @@ async def webhook(request: Request):
             if intent == "CATAT" and _is_likely_record_command(text):
                 data = ai_extractor_agent(text)
                 if not data:
+                    confusions = [
+                        "Hmm, aku belum nangkep transaksinya 🤔",
+                        "Waduh, kurang jelas nih~",
+                        f"{BOT_NAME} bingung bacanya 😅",
+                    ]
                     reply = (
-                        "🤖 *Admin AI*\n\n"
-                        "🤔 Transaksi tidak terbaca.\n"
-                        "Coba: _jual kopi 50rb_ atau _beli minyak 18000_"
+                        f"{_bot_header()}\n\n"
+                        f"{random.choice(confusions)}\n"
+                        f"Coba kirim seperti:\n"
+                        f"• _jual kopi 50rb_\n"
+                        f"• _beli minyak 18000_"
                     )
                 else:
                     for d in data:
                         is_prv = "prive" in str(d.get("category", "")).lower()
                         db_insert_transaction(
                             d.get("type"), d.get("category"), d.get("amount"), d.get("note"),
-                            is_prive=is_prv, user_id=user_id,
+                            is_prv=is_prv, user_id=user_id,
                         )
-                    lines = [f"• {d.get('type')} {d.get('category')}: Rp {d.get('amount', 0):,.0f}" for d in data]
-                    reply = "🤖 *Admin AI*\n\n✅ Tercatat!\n" + "\n".join(lines)
+                    reply = f"{_bot_header()}\n\n{_random_confirm(data)}"
                     reply += orchestrate_transaction_created(user_id, text, data)
 
             elif intent == "SKOR":
                 df = get_dashboard_data(user_id)
                 score = calculate_cuan_score(df)
+                s = score['score']
+                if s >= 80:
+                    emoji = "🔥"
+                    compliment = "Mantap, bisnis kamu sehat banget!"
+                elif s >= 60:
+                    emoji = "👍"
+                    compliment = "Lumayan, tinggal poles dikit lagi!"
+                elif s >= 40:
+                    emoji = "💪"
+                    compliment = "Masih bisa ditingkatkan nih~"
+                else:
+                    emoji = "📈"
+                    compliment = "Yuk perbaiki, aku bantu pantau!"
                 reply = (
-                    f"🤖 *Admin AI*\n\n"
-                    f"🔥 *{SCORE_LABEL}: {score['score']}/100*\n\n_{score['insight']}_"
+                    f"{_bot_header()}\n\n"
+                    f"{compliment}\n\n"
+                    f"{emoji} *{SCORE_LABEL}: {s}/100*\n\n"
+                    f"_{score['insight']}_"
                 )
 
             elif intent == "SARAN":
                 df = get_dashboard_data(user_id)
                 advice = get_ai_advisor_insights(df)
-                reply = f"🤖 *Admin AI*\n\n💡 *Saran bisnis:*\n\n{advice}"
+                intros = [
+                    f"Nih saran buat tokomu dari {BOT_NAME} 💡",
+                    f"Berdasarkan data kamu, coba ini ya~",
+                    f"Aku udah analisa datamu, ini sarannya:",
+                ]
+                intro = random.choice(intros)
+                reply = f"{_bot_header()}\n\n{intro}\n\n{advice}"
 
             elif intent == "PIUTANG":
                 df = get_dashboard_data(user_id)
-                reply = f"🤖 *Admin AI*\n\n{get_ai_piutang_answer(df, text)}"
+                answer = get_ai_piutang_answer(df, text)
+                reply = f"{_bot_header()}\n\n{answer}"
 
             elif intent == "HAPUS":
                 txn = core.delete_last_transaction(user_id)
                 if txn:
-                    reply = f"🤖 *Admin AI*\n\n🗑️ Dihapus: {txn['note']} (Rp {txn['amount']:,.0f})"
+                    reply = (
+                        f"{_bot_header()}\n\n"
+                        f"🗑️ Oke, udah dihapus ya~\n"
+                        f"• {txn['note']} — Rp {txn['amount']:,.0f}"
+                    )
                 else:
-                    reply = "🤖 *Admin AI*\n\nTidak ada transaksi untuk dihapus."
+                    reply = (
+                        f"{_bot_header()}\n\n"
+                        f"Hmm, nggak ada transaksi yg bisa dihapus nih 🤔"
+                    )
 
             else:
+                confusions = [
+                    f"Hmm, {BOT_NAME} belum paham maksudmu 🤔",
+                    "Waduh, kurang ngerti nih~",
+                    f"Maaf, {BOT_NAME.lower()} belum nangkep maksudnya 😅",
+                ]
                 reply = (
-                    f"🤖 *Admin AI*\n\n"
-                    f"🤔 Maaf, saya belum paham.\n\n"
-                    f"Contoh perintah:\n"
+                    f"{_bot_header()}\n\n"
+                    f"{random.choice(confusions)}\n\n"
+                    f"Coba kirim seperti:\n"
                     f"• _jual kopi 50rb_\n"
+                    f"• _beli beras 25rb_\n"
+                    f"• _utang budi 100rb_\n"
                     f"• _berapa skor_\n"
-                    f"• _ada saran bisnis_\n"
-                    f"• _siapa yang belum bayar_\n"
-                    f"• _hapus transaksi terakhir_"
+                    f"• _saran bisnis_\n"
+                    f"• _siapa belum bayar_\n"
+                    f"• _hapus_"
                 )
 
         else:
-            reply = f"Kirim teks, foto struk, atau voice note ke {APP_NAME}! 😊"
+            reply = (
+                f"{_bot_header()}\n\n"
+                f"Kirim teks, foto struk, atau voice note ya~ 😊"
+            )
 
     except Exception as e:
-        reply = f"❌ Terjadi kesalahan: {str(e)[:200]}"
+        print(f"ERROR webhook: {e}")
+        reply = (
+            f"{_bot_header()}\n\n"
+            f"😅 Waduh, ada gangguan sebentar.\n"
+            f"Coba kirim lagi ya~"
+        )
 
+    # Typing delay — biar terasa natural seperti orang ngetik
+    await asyncio.sleep(_random_typing_delay())
     await send_wa_reply(phone, reply, inboxid=inboxid)
 
     _persist_wa_log(phone, text, reply, user_id=user_id)
@@ -518,6 +656,7 @@ async def webhook(request: Request):
 async def health():
     return {
         "status": f"{APP_NAME} WA Bot is running",
+        "bot_name": BOT_NAME,
         "provider": WA_PROVIDER,
         "bot_logic_version": BOT_LOGIC_VERSION,
         "wa_key_set": bool(WA_API_KEY),
