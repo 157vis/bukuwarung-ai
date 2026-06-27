@@ -13,11 +13,14 @@ from groq import Groq
 
 
 class LarisCore:
-    def __init__(self, supabase_url: str, supabase_key: str, groq_api_key: str):
+    def _init_(self, supabase_url: str, supabase_key: str, groq_api_key: str):
         self.supabase_url = supabase_url
         self.supabase_key = supabase_key
         self.supabase = create_client(supabase_url, supabase_key)
         self.groq_client = Groq(api_key=groq_api_key)
+        # --- STEP 5: Multi-Tenant Support ---
+        self.multi_tenant = os.environ.get("ENABLE_MULTI_TENANT", "false").lower() == "true"
+        self.tenant_mgr = TenantManager(supabase_url, supabase_key)
 
     def set_access_token(self, token: str):
         """Teruskan JWT user login ke PostgREST agar RLS mengenali auth.uid().
@@ -36,35 +39,65 @@ class LarisCore:
     def normalize_user_id(user_id) -> str:
         return str(user_id).strip() if user_id else ""
 
+def _get_active_tenant(self, user_id: str):
+        """Ambil tenant_id aktif untuk user. Return UUID string atau None."""
+        if not self.multi_tenant:
+            return None
+        try:
+            tenant_id = self.tenant_mgr.get_active_tenant(user_id)
+            if tenant_id:
+                return tenant_id
+            # Fallback: ambil tenant default dari user_tenants
+            resp = (
+                self.supabase.table("user_tenants")
+                .select("tenant_id")
+                .eq("user_id", user_id)
+                .eq("is_default", True)
+                .limit(1)
+                .execute()
+            )
+            if resp.data:
+                fallback_id = str(resp.data[0]["tenant_id"])
+                # Cache ke active_tenant_session supaya tidak query ulang
+                self.tenant_mgr.set_active_tenant(user_id, fallback_id, "auto_fallback")
+                return fallback_id
+            return None
+        except Exception as exc:
+            print("WARN _get_active_tenant:", exc)
+            return None
+    
     def count_transactions(self, user_id: str) -> tuple[int, str | None]:
         """Hitung transaksi user (untuk diagnostik dashboard)."""
         uid = self.normalize_user_id(user_id)
         if not uid:
             return 0, "user_id kosong"
         try:
-            resp = (
-                self.supabase.table("transactions")
-                .select("id", count="exact")
-                .eq("user_id", uid)
-                .execute()
-            )
+            query = self.supabase.table("transactions").select("id", count="exact")
+            tenant_id = self._get_active_tenant(uid)
+            if tenant_id:
+                query = query.eq("tenant_id", tenant_id)
+                print(f"DEBUG count_transactions: filter by tenant_id={tenant_id}")
+            else:
+                query = query.eq("user_id", uid)
+            resp = query.execute()
             return int(resp.count or 0), None
         except Exception as exc:
             return -1, str(exc)[:200]
 
-    def get_dashboard_data(self, user_id: str) -> pd.DataFrame:
+   def get_dashboard_data(self, user_id: str) -> pd.DataFrame:
         uid = self.normalize_user_id(user_id)
         if not uid:
             return pd.DataFrame()
-        response = (
-            self.supabase.table("transactions")
-            .select("*")
-            .eq("user_id", uid)
-            .order("id", desc=True)
-            .execute()
-        )
+        query = self.supabase.table("transactions").select("*")
+        tenant_id = self._get_active_tenant(uid)
+        if tenant_id:
+            query = query.eq("tenant_id", tenant_id)
+            print(f"DEBUG get_dashboard_data: filter by tenant_id={tenant_id}")
+        else:
+            query = query.eq("user_id", uid)
+        response = query.order("id", desc=True).execute()
         return pd.DataFrame(response.data) if response.data else pd.DataFrame()
-
+       
     def create_client_account(self, email: str, password: str):
         """Buat akun client baru (Supabase Auth). Return (user_id, error_msg)."""
         try:
@@ -188,6 +221,15 @@ class LarisCore:
             "is_prive": is_prive,
             "user_id": user_id,
         }
+        # STEP 5: Selalu tambah tenant_id (tidak peduli flag)
+        try:
+            tenant_id = self._get_active_tenant(user_id)
+            if tenant_id:
+                data["tenant_id"] = tenant_id
+                print(f"DEBUG db_insert: tenant_id={tenant_id}")
+        except Exception as exc:
+            print("WARN db_insert tenant_id skip:", exc)
+            
         # Temporary debug logging for troubleshooting missing transactions
         try:
             print("DEBUG db_insert_transaction: input=", {
