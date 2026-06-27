@@ -190,6 +190,36 @@ class LarisCore:
             pass
         return insert_result
 
+    def recalculate_running_balance(self, user_id):
+        """Hitung ulang running_balance semua transaksi user (urut kronologis/id asc).
+
+        Wajib dipanggil setelah edit/hapus agar saldo berjalan tetap konsisten.
+        """
+        try:
+            resp = (
+                self.supabase.table("transactions")
+                .select("id, type, amount")
+                .eq("user_id", user_id)
+                .order("id", desc=False)
+                .execute()
+            )
+            rows = resp.data or []
+            balance = 0
+            for r in rows:
+                amt = r.get("amount") or 0
+                balance = balance + amt if r.get("type") == "Pemasukan" else balance - amt
+                (
+                    self.supabase.table("transactions")
+                    .update({"running_balance": balance})
+                    .eq("id", r["id"])
+                    .eq("user_id", user_id)
+                    .execute()
+                )
+            return balance
+        except Exception as exc:
+            print("ERROR recalculate_running_balance:", exc)
+            return None
+
     def db_update_transaction(self, user_id, txn_id, type_txn, category, amount, note):
         (
             self.supabase.table("transactions")
@@ -198,6 +228,8 @@ class LarisCore:
             .eq("user_id", user_id)
             .execute()
         )
+        # Saldo bisa berubah karena tipe/nominal diedit -> hitung ulang.
+        self.recalculate_running_balance(user_id)
 
     def db_delete_transaction(self, user_id, txn_id):
         (
@@ -207,6 +239,8 @@ class LarisCore:
             .eq("user_id", user_id)
             .execute()
         )
+        # Hapus satu baris menggeser saldo semua transaksi sesudahnya -> hitung ulang.
+        self.recalculate_running_balance(user_id)
 
     # --------------------
     # Warehouses / Inventory

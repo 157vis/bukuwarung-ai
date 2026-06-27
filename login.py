@@ -1,6 +1,68 @@
+import base64
+import json
+import time
+
 import streamlit as st
 from supabase import create_client
 from brand import LOGIN_BRAND_HTML
+
+
+def _client():
+    return create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
+
+
+def _decode_exp(token: str) -> int:
+    """Baca klaim exp dari JWT (tanpa verifikasi tanda tangan) untuk cek kedaluwarsa. 0 jika gagal."""
+    try:
+        payload = token.split(".")[1]
+        payload += "=" * (-len(payload) % 4)
+        data = json.loads(base64.urlsafe_b64decode(payload))
+        return int(data.get("exp", 0))
+    except Exception:
+        return 0
+
+
+def _clear_session():
+    for key in ("user", "access_token", "refresh_token"):
+        st.session_state.pop(key, None)
+
+
+def ensure_valid_session() -> bool:
+    """Pastikan sesi login valid. Refresh token bila hampir kedaluwarsa.
+
+    Return True jika user tetap login (valid/berhasil refresh), False jika harus login ulang.
+    Hemat: hanya memanggil server saat token mendekati kedaluwarsa (cek exp offline).
+    """
+    if not st.session_state.get("user"):
+        return False
+    token = st.session_state.get("access_token")
+    if not token:
+        return True
+
+    exp = _decode_exp(token)
+    # Masih valid > 60 detik -> tidak perlu panggil server.
+    if exp and (exp - time.time()) > 60:
+        return True
+
+    refresh = st.session_state.get("refresh_token")
+    if not refresh:
+        _clear_session()
+        return False
+
+    try:
+        res = _client().auth.refresh_session(refresh)
+        session = getattr(res, "session", None)
+        if session and getattr(session, "access_token", None):
+            st.session_state["access_token"] = session.access_token
+            st.session_state["refresh_token"] = getattr(session, "refresh_token", refresh)
+            if getattr(res, "user", None):
+                st.session_state["user"] = _normalize_user(res.user)
+            return True
+    except Exception as exc:
+        print("ERROR ensure_valid_session refresh:", exc)
+
+    _clear_session()
+    return False
 
 
 def _normalize_user(user):
@@ -38,10 +100,7 @@ def _normalize_user(user):
 
 def show_login_page():
     """Halaman login/register multi-tenant"""
-    supabase = create_client(
-        st.secrets["SUPABASE_URL"],
-        st.secrets["SUPABASE_KEY"]
-    )
+    supabase = _client()
     
     if st.session_state.get("user"):
         st.session_state["show_login"] = False
@@ -75,6 +134,7 @@ def show_login_page():
                 if getattr(res, "user", None):
                     st.session_state["user"] = _normalize_user(res.user)
                     st.session_state["access_token"] = getattr(res.session, "access_token", None)
+                    st.session_state["refresh_token"] = getattr(res.session, "refresh_token", None)
                     st.session_state["show_login"] = False
                     st.rerun()
                 else:
@@ -89,7 +149,11 @@ def get_current_user():
     return st.session_state.get("user")
 
 def logout():
-    st.session_state.pop("user", None)
-    st.session_state.pop("access_token", None)
+    # Invalidasi token di server auth, lalu bersihkan sesi lokal.
+    try:
+        _client().auth.sign_out()
+    except Exception as exc:
+        print("ERROR logout sign_out:", exc)
+    _clear_session()
     st.session_state.pop("show_login", None)
     st.rerun()

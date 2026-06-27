@@ -4,7 +4,7 @@ import pandas as pd
 from brand import APP_NAME, PAGE_ICON, PAGE_TITLE, DASHBOARD_TITLE, DEMO_QUERY
 from demo_dashboard import render_demo_dashboard
 from landing import render_landing
-from login import show_login_page, get_current_user, logout
+from login import show_login_page, get_current_user, logout, ensure_valid_session
 from laris_core import LarisCore
 
 
@@ -611,7 +611,11 @@ def main() -> None:
         return
 
     if st.session_state.get("user"):
-        render_dashboard(get_core(), get_current_user())
+        if ensure_valid_session():
+            render_dashboard(get_core(), get_current_user())
+        else:
+            st.warning("Sesi Anda telah berakhir. Silakan masuk kembali.")
+            render_home()
     else:
         render_home()
 
