@@ -1,7 +1,10 @@
 # main.py — Bot WhatsApp laris.AI
+import json
 import os
 import sys
 import base64
+from urllib.parse import parse_qs
+
 import httpx
 from pathlib import Path
 from fastapi import FastAPI, Request
@@ -33,8 +36,10 @@ load_dotenv(_BOT_DIR / ".env")
 
 app = FastAPI(title=WA_BOT_TITLE)
 
-WA_PROVIDER = os.environ.get("WA_PROVIDER", "fonnte")
-WA_API_KEY = os.environ["WA_API_KEY"]
+_raw_provider = os.environ.get("WA_PROVIDER", "fonnte").lower().strip()
+# Toleransi typo "fonte" dari user
+WA_PROVIDER = "fonnte" if _raw_provider in ("fonnte", "fonte") else _raw_provider
+WA_API_KEY = os.environ.get("WA_API_KEY", "")
 SAFEGUARD_MODEL = "openai/gpt-oss-safeguard-20b"
 groq = Groq(api_key=os.environ["GROQ_API_KEY"])
 
@@ -110,29 +115,40 @@ def _normalize_wa_phone(phone: str) -> str:
 
 async def _parse_webhook_body(request: Request) -> dict:
     """Fonnte bisa kirim JSON atau form-urlencoded."""
+    raw = await request.body()
+    print(f"DEBUG webhook raw ({len(raw)} bytes): {raw[:1000]!r}")
     ctype = (request.headers.get("content-type") or "").lower()
-    if "application/json" in ctype:
+
+    if raw:
+        if "application/json" in ctype or raw[:1] in (b"{", b"["):
+            try:
+                return json.loads(raw)
+            except Exception as exc:
+                print("WARN json parse:", exc)
+        if "application/x-www-form-urlencoded" in ctype or (b"=" in raw and b"&" in raw):
+            try:
+                parsed = parse_qs(raw.decode("utf-8", errors="replace"), keep_blank_values=True)
+                return {k: (v[0] if isinstance(v, list) and v else v) for k, v in parsed.items()}
+            except Exception as exc:
+                print("WARN urlencoded parse:", exc)
+
+    if "multipart/form-data" in ctype:
         try:
-            return await request.json()
-        except Exception:
-            pass
-    try:
-        form = await request.form()
-        if form:
-            return dict(form)
-    except Exception:
-        pass
-    try:
-        return await request.json()
-    except Exception:
-        return {}
+            form = await request.form()
+            if form:
+                return {k: (v if isinstance(v, str) else getattr(v, "filename", str(v))) for k, v in form.items()}
+        except Exception as exc:
+            print("WARN multipart parse:", exc)
+
+    return {}
 
 
 def _extract_incoming(body: dict) -> tuple[str, str, str, str, str | None]:
     """Ambil phone, text, media_type, media_url, inboxid dari payload Fonnte/Wablas."""
     if WA_PROVIDER == "fonnte":
-        phone = body.get("sender") or body.get("from") or body.get("phone") or ""
-        text = body.get("message") or body.get("text") or ""
+        # Chat pribadi: sender. Grup WA: member = pengirim asli.
+        phone = body.get("member") or body.get("sender") or body.get("from") or body.get("phone") or ""
+        text = (body.get("message") or body.get("text") or "").strip()
         media_url = body.get("url") or body.get("media_url") or ""
         ext = str(body.get("extension") or "").lower()
         inboxid = body.get("inboxid")
@@ -156,6 +172,9 @@ def _extract_incoming(body: dict) -> tuple[str, str, str, str, str | None]:
 async def send_wa_reply(phone: str, message: str, inboxid: str | None = None):
     if not phone or not message:
         print("WARN send_wa_reply: phone/message kosong")
+        return
+    if not WA_API_KEY:
+        print("ERROR send_wa_reply: WA_API_KEY kosong di Railway Variables")
         return
     target = _normalize_wa_phone(phone)
     try:
@@ -210,8 +229,15 @@ Jawab satu kata saja:""",
         return "LAINNYA"
 
 
-@app.post("/webhook")
+@app.api_route("/webhook", methods=["GET", "POST"])
 async def webhook(request: Request):
+    if request.method == "GET":
+        return {
+            "status": "webhook_ready",
+            "provider": WA_PROVIDER,
+            "hint": "POST dari Fonnte ke URL ini. Tes WA: kirim pesan 'test'",
+        }
+
     body = await _parse_webhook_body(request)
     print(f"DEBUG webhook payload keys: {list(body.keys())}")
 
@@ -220,6 +246,12 @@ async def webhook(request: Request):
     if not phone:
         print("ERROR webhook: nomor pengirim tidak ditemukan. Body:", str(body)[:500])
         return {"status": "error", "detail": "No phone number (cek field sender/message Fonnte)"}
+
+    # Tes koneksi cepat — tanpa database/AI (balas dalam hitungan detik).
+    if text.lower() in ("test", "ping", "tes", "halo", "hi"):
+        reply = f"✅ {APP_NAME} bot aktif!\nWebhook OK.\nCoba kirim: jual indomie 5"
+        await send_wa_reply(phone, reply, inboxid=inboxid)
+        return {"status": "ok", "mode": "ping"}
 
     reply = ""
     user_id = None
@@ -254,62 +286,60 @@ async def webhook(request: Request):
             reply = f"✅ Suara terbaca!\n{len(data)} transaksi tercatat."
 
         elif text:
-            if not await is_safe_message(text):
-                reply = "⚠️ Pesan tidak dapat diproses. Silakan kirim transaksi atau pertanyaan seputar keuangan warung."
-            else:
-                intent = await detect_intent(text)
+            intent = await detect_intent(text)
+            if any(kw in text.lower() for kw in ("jual", "beli", "bayar", "utang", "piutang", "prive")):
+                intent = "CATAT"
 
-                if intent == "CATAT":
-                    data = ai_extractor_agent(text)
-                    for d in data:
-                        is_prv = "prive" in str(d.get("category", "")).lower()
-                        db_insert_transaction(
-                            d.get("type"), d.get("category"), d.get("amount"), d.get("note"),
-                            is_prive=is_prv, user_id=user_id,
-                        )
-                    lines = [f"• {d.get('type')} {d.get('category')}: Rp {d.get('amount', 0):,.0f}" for d in data]
-                    reply = "✅ Tercatat!\n" + "\n".join(lines)
-                    # Kolaborasi: Logistik AI cek stok & buat approval bila kritis.
-                    reply += proactive_logistik_check(user_id, text)
-
-                elif intent == "SKOR":
-                    df = get_dashboard_data(user_id)
-                    score = calculate_cuan_score(df)
-                    reply = f"🔥 *{SCORE_LABEL}: {score['score']}/100*\n\n_{score['insight']}_"
-
-                elif intent == "SARAN":
-                    df = get_dashboard_data(user_id)
-                    advice = get_ai_advisor_insights(df)
-                    reply = f"💡 *Saran AI:*\n\n{advice}"
-
-                elif intent == "PIUTANG":
-                    df = get_dashboard_data(user_id)
-                    piutang = df[df["category"].str.contains("piutang|kasbon", case=False, na=False)]
-                    if piutang.empty:
-                        reply = "✅ Tidak ada piutang tercatat."
-                    else:
-                        lines = [f"• {row['note']}: Rp {row['amount']:,.0f}" for _, row in piutang.iterrows()]
-                        total = piutang["amount"].sum()
-                        reply = f"📋 *Daftar Piutang:*\n" + "\n".join(lines) + f"\n\n*Total: Rp {total:,.0f}*"
-
-                elif intent == "HAPUS":
-                    txn = core.delete_last_transaction(user_id)
-                    if txn:
-                        reply = f"🗑️ Dihapus: {txn['note']} (Rp {txn['amount']:,.0f})"
-                    else:
-                        reply = "Tidak ada transaksi untuk dihapus."
-
-                else:
-                    reply = (
-                        f"🤔 Maaf, saya belum paham.\n\n"
-                        f"Coba kirim:\n"
-                        f"• Transaksi: _Jual kopi 50rb_\n"
-                        f"• Skor: _Berapa {SCORE_LABEL.lower()}?_\n"
-                        f"• Saran: _Ada saran bisnis?_\n"
-                        f"• Piutang: _Siapa yang belum bayar?_\n"
-                        f"• Hapus: _Hapus transaksi terakhir_\n"
-                        f"• Atau kirim foto struk / voice note!"
+            if intent == "CATAT":
+                data = ai_extractor_agent(text)
+                for d in data:
+                    is_prv = "prive" in str(d.get("category", "")).lower()
+                    db_insert_transaction(
+                        d.get("type"), d.get("category"), d.get("amount"), d.get("note"),
+                        is_prive=is_prv, user_id=user_id,
                     )
+                lines = [f"• {d.get('type')} {d.get('category')}: Rp {d.get('amount', 0):,.0f}" for d in data]
+                reply = "✅ Tercatat!\n" + "\n".join(lines)
+                reply += proactive_logistik_check(user_id, text)
+
+            elif intent == "SKOR":
+                df = get_dashboard_data(user_id)
+                score = calculate_cuan_score(df)
+                reply = f"🔥 *{SCORE_LABEL}: {score['score']}/100*\n\n_{score['insight']}_"
+
+            elif intent == "SARAN":
+                df = get_dashboard_data(user_id)
+                advice = get_ai_advisor_insights(df)
+                reply = f"💡 *Saran AI:*\n\n{advice}"
+
+            elif intent == "PIUTANG":
+                df = get_dashboard_data(user_id)
+                piutang = df[df["category"].str.contains("piutang|kasbon", case=False, na=False)]
+                if piutang.empty:
+                    reply = "✅ Tidak ada piutang tercatat."
+                else:
+                    lines = [f"• {row['note']}: Rp {row['amount']:,.0f}" for _, row in piutang.iterrows()]
+                    total = piutang["amount"].sum()
+                    reply = f"📋 *Daftar Piutang:*\n" + "\n".join(lines) + f"\n\n*Total: Rp {total:,.0f}*"
+
+            elif intent == "HAPUS":
+                txn = core.delete_last_transaction(user_id)
+                if txn:
+                    reply = f"🗑️ Dihapus: {txn['note']} (Rp {txn['amount']:,.0f})"
+                else:
+                    reply = "Tidak ada transaksi untuk dihapus."
+
+            else:
+                reply = (
+                    f"🤔 Maaf, saya belum paham.\n\n"
+                    f"Coba kirim:\n"
+                    f"• Transaksi: _Jual kopi 50rb_\n"
+                    f"• Skor: _Berapa {SCORE_LABEL.lower()}?_\n"
+                    f"• Saran: _Ada saran bisnis?_\n"
+                    f"• Piutang: _Siapa yang belum bayar?_\n"
+                    f"• Hapus: _Hapus transaksi terakhir_\n"
+                    f"• Atau kirim foto struk / voice note!"
+                )
 
         else:
             reply = f"Kirim teks, foto struk, atau voice note ke {APP_NAME}! 😊"
@@ -330,4 +360,11 @@ async def webhook(request: Request):
 
 @app.get("/")
 async def health():
-    return {"status": f"{APP_NAME} WA Bot is running 🔥"}
+    return {
+        "status": f"{APP_NAME} WA Bot is running",
+        "provider": WA_PROVIDER,
+        "wa_key_set": bool(WA_API_KEY),
+        "supabase_set": bool(os.environ.get("SUPABASE_URL")),
+        "groq_set": bool(os.environ.get("GROQ_API_KEY")),
+        "webhook": "/webhook",
+    }
