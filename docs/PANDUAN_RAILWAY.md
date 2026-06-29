@@ -72,16 +72,10 @@ Di project Railway yang sama: **+ New Service** → **GitHub Repo** → pilih re
 
 | Setting            | Nilai                         |
 | ------------------ | ----------------------------- |
-| **Root Directory** | `/` (root repo — jangan subfolder) |
+| **Root Directory** | `/` (root repo) |
 | **Start Command**  | `bash scripts/railway-bot.sh` |
 
-Alternatif jika Railway pakai deteksi otomatis `uvicorn main:app`:
-
-```
-uvicorn main:app --host 0.0.0.0 --port $PORT
-```
-
-> Repo root sekarang punya `main.py` shim → memperbaiki error **Could not import module "main"**.
+> **Satu file bot:** `kita-cuan-wa-bot/main.py` — script di atas otomatis `cd` ke folder itu lalu jalankan `uvicorn main:app`. Jangan pakai `main.py` di root repo (sudah dihapus).
 
 
 ### Settings → Variables
@@ -168,7 +162,7 @@ Landing di dalam Streamlit (`static/laris-landing.html`) sudah ikut Service 1.
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Build gagal                     | Cek **Deploy Logs** di Railway; pastikan `requirements.txt` root + `kita-cuan-wa-bot/requirements.txt` terinstall (Railway pakai root — gabung dependency jika perlu) |
 | Dashboard blank / secrets error | Pastikan 3 env var Service 1 terisi                                                                                                                                   |
-| Bot 502 / `Could not import module "main"` | Root Directory = `/` (bukan `kita-cuan-wa-bot`). Start Command = `bash scripts/railway-bot.sh` atau `uvicorn main:app --host 0.0.0.0 --port $PORT`. Pull/redeploy commit terbaru (ada `main.py` di root). |
+| Bot 502 / `Could not import module "main"` | Start Command = `bash scripts/railway-bot.sh` (bukan `uvicorn main:app` dari root). File bot: `kita-cuan-wa-bot/main.py`. |
 | WA webhook tidak terpanggil     | URL harus `https://.../webhook` + HTTPS Railway domain                                                                                                                |
 | AI tidak jalan                  | `GROQ_API_KEY` invalid di Variables Railway                                                                                                                           |
 

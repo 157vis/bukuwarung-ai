@@ -3,6 +3,8 @@
 Bot WhatsApp yang reuse `laris_core.py` (Supabase + Groq). Satu sumber logika bisnis
 dengan dashboard Streamlit, jadi data WA dan dashboard selalu sinkron.
 
+**Entry point bot:** `main.py` di folder ini (satu-satunya — jangan buat salinan di root repo).
+
 ## Arsitektur singkat
 
 ```

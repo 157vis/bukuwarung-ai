@@ -28,7 +28,12 @@ Ringkas:
 2. Salin `.streamlit/secrets.toml.example` → `.streamlit/secrets.toml` (isi Supabase anon + Groq)
 3. Salin `kita-cuan-wa-bot/.env.example` → `kita-cuan-wa-bot/.env` (isi service_role + WA + Groq)
 4. Jalankan dashboard: `streamlit run app.py`
-5. Jalankan bot (opsional lokal): `cd kita-cuan-wa-bot && uvicorn main:app --reload`
+5. Jalankan bot (opsional lokal):
+   ```bash
+   cd kita-cuan-wa-bot
+   uvicorn main:app --reload
+   ```
+   File bot **hanya satu:** `kita-cuan-wa-bot/main.py`
 
 > File rahasia (`.env`, `secrets.toml`) **tidak** di-upload ke GitHub. Setiap laptop perlu salin dari contoh + isi key sendiri.
 
@@ -81,7 +86,7 @@ bukuwarung-ai/
 ├── app.py                 # Dashboard Streamlit
 ├── laris_core.py          # Logika bisnis bersama (Supabase + Groq)
 ├── kita-cuan-wa-bot/      # FastAPI webhook WhatsApp
-│   ├── main.py
+│   ├── main.py            # ← SATU-SATUNYA file bot (jangan duplikat di root)
 │   └── orchestrator.py    # Admin AI → Logistik AI
 ├── sql/                   # Script Supabase
 ├── docs/                  # Panduan

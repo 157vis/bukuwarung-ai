@@ -95,6 +95,8 @@ cd kita-cuan-wa-bot
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
+> File bot hanya **`kita-cuan-wa-bot/main.py`** — tidak ada salinan di folder root.
+
 Bot production sudah jalan di Railway — laptop biasanya hanya edit kode + push, tidak perlu jalankan bot lokal.
 
 ---
