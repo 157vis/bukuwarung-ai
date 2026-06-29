@@ -1,0 +1,19 @@
+[
+  {
+    "bank": "BCA",
+    "account_number": "1234567890",
+    "account_name": "Warung Berkah",
+    "type": "transfer"
+  },
+  {
+    "provider": "GoPay",
+    "account_number": "081234567890",
+    "account_name": "Warung Berkah",
+    "type": "ewallet"
+  },
+  {
+    "provider": "QRIS",
+    "account_number": "QRIS-WARUNG-BERKAH",
+    "type": "qris"
+  }
+]

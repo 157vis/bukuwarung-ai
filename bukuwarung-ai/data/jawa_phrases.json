@@ -1,0 +1,7 @@
+{
+  "greetings": ["Halo", "Piye kabare", "Sugeng enjing", "Sugeng siang"],
+  "thanks": ["Matur nuwun", "Suwun", "Nuwun sewu"],
+  "yes": ["Iyo", "Inggih", "Nggih"],
+  "please": ["Monggo", "Tulung", "Mangga"],
+  "keywords": ["piye", "opo", "kowe", "monggo", "matur", "sugeng", "nuwun", "inggih", "nggih", "kabare", "arep", "gawe"]
+}

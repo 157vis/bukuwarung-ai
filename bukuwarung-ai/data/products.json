@@ -1,0 +1,5 @@
+[
+  {"name": "kopi", "price": 3500, "stock": 50},
+  {"name": "indomie", "price": 3500, "stock": 20},
+  {"name": "gula", "price": 15000, "stock": 10}
+]

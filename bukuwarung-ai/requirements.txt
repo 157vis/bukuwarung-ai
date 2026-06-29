@@ -1,0 +1,12 @@
+# BukuWarung-AI — production dependencies (Railway + portable USB)
+fastapi>=0.115.0,<1.0
+uvicorn[standard]>=0.30.0,<1.0
+python-dotenv>=1.0.0
+pydantic>=2.7.0,<3.0
+httpx>=0.27.0,<0.29.0
+numpy>=1.26.0,<3.0
+supabase>=2.4.0,<3.0
+
+# Dev / test (optional di production, ringan)
+pytest>=7.4.0
+pytest-asyncio>=0.23.0
