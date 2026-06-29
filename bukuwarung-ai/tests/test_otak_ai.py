@@ -32,9 +32,32 @@ class FailingDB:
         raise ConnectionError("supabase down")
 
 
+class RLSBlockedDB:
+    """Simulasi error RLS Supabase saat insert."""
+
+    def table(self, name: str) -> Any:
+        chain = MagicMock()
+        chain.insert.return_value.execute.side_effect = Exception(
+            "new row violates row-level security policy for table otak_memories"
+        )
+        chain.select.return_value.eq.return_value.neq.return_value.order.return_value.limit.return_value.execute.return_value = MagicMock(
+            data=[]
+        )
+        return chain
+
+
 @pytest.fixture
 def otak_local() -> OtakAI:
     return OtakAI(FailingDB(), MockEmbed())
+
+
+@pytest.mark.asyncio
+async def test_simpan_memory_rls_fallback() -> None:
+    """RLS Supabase tidak boleh menggagalkan pipeline webhook."""
+    otak = OtakAI(RLSBlockedDB(), MockEmbed())
+    saved = await otak.simpan_memory("toko_rafih:62811", {"content": "User: halo"})
+    assert saved["content"].startswith("User:")
+    assert otak._use_local_only is True
 
 
 @pytest.mark.asyncio

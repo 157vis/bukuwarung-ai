@@ -78,6 +78,33 @@ def test_webhook_ignored_no_text(client):
     mock_orch.process.assert_not_awaited()
 
 
+def test_webhook_ignored_bot_echo(client):
+    tc, mock_orch = client
+    resp = tc.post(
+        "/webhook-whatsapp",
+        json={
+            "sender": "628123456789",
+            "message": "Maaf, ada gangguan sebentar. Coba kirim lagi ya",
+            "client_id": "toko_test",
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "ignored"
+    assert resp.json()["reason"] == "outgoing echo"
+    mock_orch.process.assert_not_awaited()
+
+
+def test_webhook_ignored_from_me(client):
+    tc, mock_orch = client
+    resp = tc.post(
+        "/webhook-whatsapp",
+        json={"sender": "628123456789", "message": "halo", "fromMe": "true"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["reason"] == "outgoing echo"
+    mock_orch.process.assert_not_awaited()
+
+
 def test_feedback_endpoint(client):
     tc, mock_orch = client
     resp = tc.post(

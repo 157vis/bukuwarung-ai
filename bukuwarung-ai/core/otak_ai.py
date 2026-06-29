@@ -115,7 +115,7 @@ class OtakAI:
                 saved = self._normalize_row(rows[0])
                 logger.info("Memory tersimpan user=%s id=%s", pelanggan_id, saved.get("id"))
                 return saved
-        except (OSError, ValueError, KeyError, AttributeError) as exc:
+        except Exception as exc:
             logger.error("simpan_memory Supabase gagal: %s — fallback lokal", exc)
             self._use_local_only = True
 
@@ -152,7 +152,7 @@ class OtakAI:
             rows = [self._normalize_row(r) for r in (result.data or [])]
             logger.info("ambil_memory user=%s count=%d", pelanggan_id, len(rows))
             return rows
-        except (OSError, ValueError, KeyError, AttributeError, httpx.HTTPError) as exc:
+        except Exception as exc:
             logger.error("ambil_memory gagal: %s — fallback lokal", exc)
             self._use_local_only = True
             return self._local_fallback.get(pelanggan_id, [])
@@ -191,7 +191,7 @@ class OtakAI:
             if result.data:
                 logger.info("update_memory id=%s", memory_id)
                 return self._normalize_row(result.data[0])
-        except (OSError, ValueError, KeyError, AttributeError) as exc:
+        except Exception as exc:
             logger.error("update_memory gagal: %s", exc)
 
         for memories in self._local_fallback.values():
@@ -245,7 +245,7 @@ class OtakAI:
                         )
                     )
                     pool = [self._normalize_row(r) for r in (result.data or [])]
-                except (OSError, ValueError, KeyError, AttributeError) as exc:
+                except Exception as exc:
                     logger.error("cari pool gagal: %s", exc)
                     pool = []
 

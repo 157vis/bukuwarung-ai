@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import sys
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -44,6 +45,20 @@ _orchestrator: Orchestrator | None = None
 _client_registry = None
 _rate_limiter = RateLimiter(max_requests=60, window_seconds=60.0)
 _shutting_down = False
+
+# Anti-loop: abaikan echo balasan bot / pesan error berulang (Fonnte Quick ON)
+BOT_ECHO_MARKERS = (
+    "gangguan sebentar",
+    "ada gangguan",
+    "ada kendala teknis",
+    "coba kirim lagi",
+    "selamat datang! kami siap bantu",
+    "mohon maaf atas ketidaknyamanannya",
+)
+ERROR_REPLY_COOLDOWN_SEC = 120.0
+DEDUP_WINDOW_SEC = 30.0
+_recent_inbound: dict[str, float] = {}
+_recent_error_sent: dict[str, float] = {}
 
 
 # ---------------------------------------------------------------------------
@@ -226,10 +241,56 @@ def _resolve_fonnte_token(client_config: ClientConfig | None) -> str | None:
     return token or None
 
 
-def _is_outgoing_echo(body: dict[str, Any], phone: str) -> bool:
-    """Abaikan echo pesan keluar (Fonnte Quick ON / balasan bot)."""
+def _is_outgoing_echo(body: dict[str, Any], phone: str, text: str = "") -> bool:
+    """Abaikan pesan keluar / echo balasan bot (Fonnte Quick ON)."""
     device = _normalize_digits(body.get("device"))
-    return bool(device and phone and device == phone)
+    sender = _normalize_digits(phone)
+    if device and sender and device == sender:
+        return True
+
+    for key in ("fromMe", "from_me", "isme", "is_me", "outgoing", "isOutgoing"):
+        val = str(body.get(key) or "").lower()
+        if val in ("1", "true", "yes", "outgoing"):
+            return True
+
+    lower = (text or "").strip().lower()
+    if lower and any(marker in lower for marker in BOT_ECHO_MARKERS):
+        return True
+    return False
+
+
+def _is_duplicate_inbound(body: dict[str, Any], phone: str, text: str) -> bool:
+    """Debounce webhook identik dalam beberapa detik."""
+    ts = str(body.get("timestamp") or body.get("id") or body.get("message_id") or "")
+    key = f"{_normalize_digits(phone)}:{ts}:{text.strip().lower()[:160]}"
+    now = time.time()
+    stale = [k for k, t0 in _recent_inbound.items() if now - t0 > DEDUP_WINDOW_SEC]
+    for k in stale:
+        _recent_inbound.pop(k, None)
+    if key in _recent_inbound:
+        return True
+    _recent_inbound[key] = now
+    return False
+
+
+async def _send_error_once(
+    phone: str,
+    *,
+    token: str | None,
+    inboxid: str | None,
+) -> bool:
+    """Kirim pesan error maksimal sekali per nomor per cooldown — cegah loop WA."""
+    key = _normalize_digits(phone)
+    now = time.time()
+    last = _recent_error_sent.get(key, 0.0)
+    if key and now - last < ERROR_REPLY_COOLDOWN_SEC:
+        logger.warning("error reply suppressed (cooldown) user=%s", key)
+        return False
+    fallback = "Maaf, ada gangguan sebentar. Coba kirim lagi ya 🙏"
+    sent = await send_message(phone, fallback, token=token, inboxid=inboxid)
+    if sent and key:
+        _recent_error_sent[key] = now
+    return sent
 
 
 def _client_key(request: Request, user_id: str = "") -> str:
@@ -358,8 +419,11 @@ async def webhook_whatsapp_client(client_id: str, request: Request) -> WebhookRe
         logger.info("webhook ignored client=%s keys=%s", client_id, list(body.keys()))
         return WebhookResponse(status="ignored", reason="no phone or text")
 
-    if _is_outgoing_echo(body, phone):
+    if _is_outgoing_echo(body, phone, text):
         return WebhookResponse(status="ignored", reason="outgoing echo")
+
+    if _is_duplicate_inbound(body, phone, text):
+        return WebhookResponse(status="ignored", reason="duplicate")
 
     registry = get_registry()
     client_config = await registry.get(client_id)
@@ -381,9 +445,7 @@ async def webhook_whatsapp_client(client_id: str, request: Request) -> WebhookRe
         raise
     except Exception as exc:
         logger.exception("webhook error client=%s: %s", client_id, exc)
-        token = _resolve_fonnte_token(client_config)
-        fallback = "Maaf, ada gangguan sebentar. Coba kirim lagi ya 🙏"
-        await send_message(phone, fallback, token=token, inboxid=inboxid)
+        await _send_error_once(phone, token=_resolve_fonnte_token(client_config), inboxid=inboxid)
         return JSONResponse(status_code=500, content={"status": "error", "detail": str(exc)[:120]})
 
 
@@ -398,8 +460,11 @@ async def webhook_whatsapp(request: Request) -> WebhookResponse | JSONResponse:
         logger.info("webhook ignored: no phone/text body_keys=%s", list(body.keys()))
         return WebhookResponse(status="ignored", reason="no phone or text")
 
-    if _is_outgoing_echo(body, phone):
+    if _is_outgoing_echo(body, phone, text):
         return WebhookResponse(status="ignored", reason="outgoing echo")
+
+    if _is_duplicate_inbound(body, phone, text):
+        return WebhookResponse(status="ignored", reason="duplicate")
 
     registry = get_registry()
     client_config = await registry.get(client_id)
@@ -421,8 +486,7 @@ async def webhook_whatsapp(request: Request) -> WebhookResponse | JSONResponse:
         raise
     except Exception as exc:
         logger.exception("webhook error: %s", exc)
-        fallback = "Maaf, ada gangguan sebentar. Coba kirim lagi ya 🙏"
-        await send_message(phone, fallback, token=_resolve_fonnte_token(client_config), inboxid=inboxid)
+        await _send_error_once(phone, token=_resolve_fonnte_token(client_config), inboxid=inboxid)
         return JSONResponse(status_code=500, content={"status": "error", "detail": str(exc)[:120]})
 
 
