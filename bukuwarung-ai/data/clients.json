@@ -1,0 +1,24 @@
+{
+  "toko_rafih": {
+    "name": "Toko Rafih",
+    "fonnte_token": "",
+    "owner_phones": ["6285789974981"],
+    "profile_key": "ramah_warm",
+    "products": [
+      {"name": "kopi", "price": 3500, "stock": 50},
+      {"name": "indomie", "price": 3500, "stock": 20},
+      {"name": "gula", "price": 15000, "stock": 10},
+      {"name": "minyak", "price": 18000, "stock": 8}
+    ],
+    "payment_methods": [
+      {"bank": "BCA", "account_number": "1234567890", "account_name": "Toko Rafih", "type": "transfer"},
+      {"provider": "GoPay", "account_number": "085789974981", "account_name": "Toko Rafih", "type": "ewallet"},
+      {"provider": "QRIS", "account_number": "QRIS-TOKO-RAFIH", "type": "qris"}
+    ],
+    "is_active": true,
+    "metadata": {
+      "whatsapp_display": "085789974981",
+      "webhook_path": "/webhook-whatsapp/toko_rafih"
+    }
+  }
+}

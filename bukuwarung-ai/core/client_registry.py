@@ -141,14 +141,16 @@ class ClientRegistry:
                 self._index(self._from_dict(client_id, raw))
 
     def _read_json_file(self) -> dict[str, Any]:
-        path = CLIENTS_JSON if CLIENTS_JSON.is_file() else CLIENTS_EXAMPLE
-        try:
-            if path.is_file():
-                data = json.loads(path.read_text(encoding="utf-8"))
-                return data if isinstance(data, dict) else {}
-        except (OSError, json.JSONDecodeError) as exc:
-            logger.warning("baca clients json gagal: %s", exc)
-        return {}
+        merged: dict[str, Any] = {}
+        for path in (CLIENTS_EXAMPLE, CLIENTS_JSON):
+            try:
+                if path.is_file():
+                    data = json.loads(path.read_text(encoding="utf-8"))
+                    if isinstance(data, dict):
+                        merged.update(data)
+            except (OSError, json.JSONDecodeError) as exc:
+                logger.warning("baca clients json gagal %s: %s", path.name, exc)
+        return merged
 
     def _index(self, cfg: ClientConfig) -> None:
         self._cache[cfg.client_id] = cfg
