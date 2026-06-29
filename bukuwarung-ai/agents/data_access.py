@@ -18,9 +18,19 @@ DATA_DIR = PROJECT_ROOT / "data"
 TABLE_ORDERS = "orders"
 
 
-def load_products() -> list[dict[str, Any]]:
-    """Muat katalog dari data/products.json."""
+def load_products(client_id: str | None = None, override: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+    """Muat katalog — override per client atau data/products.json."""
+    if override:
+        return override
     path = DATA_DIR / "products.json"
+    if client_id:
+        client_path = DATA_DIR / "clients" / client_id / "products.json"
+        if client_path.is_file():
+            try:
+                data = json.loads(client_path.read_text(encoding="utf-8"))
+                return data if isinstance(data, list) else []
+            except (OSError, json.JSONDecodeError) as exc:
+                logger.warning("load_products client=%s gagal: %s", client_id, exc)
     try:
         if path.is_file():
             data = json.loads(path.read_text(encoding="utf-8"))
@@ -28,6 +38,24 @@ def load_products() -> list[dict[str, Any]]:
     except (OSError, json.JSONDecodeError) as exc:
         logger.warning("load_products gagal: %s", exc)
     return []
+
+
+def products_from_context(context: Any) -> list[dict[str, Any]]:
+    """Ambil produk dari metadata context (multi-client) atau fallback global."""
+    meta = getattr(context, "metadata", {}) or {}
+    custom = meta.get("products")
+    if isinstance(custom, list) and custom:
+        return custom
+    client_id = getattr(context, "client_id", None)
+    return load_products(client_id)
+
+
+def payment_from_context(context: Any) -> list[dict[str, Any]]:
+    meta = getattr(context, "metadata", {}) or {}
+    custom = meta.get("payment_methods")
+    if isinstance(custom, list) and custom:
+        return custom
+    return load_payment_methods()
 
 
 def load_payment_methods() -> list[dict[str, Any]]:

@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from agents.base_agent import AgentContext, BaseAgent
-from agents.data_access import OrderStore, load_products
+from agents.data_access import OrderStore, products_from_context
 
 HANDLE_INTENTS = frozenset({"admin", "laporan", "owner", "statistik"})
 
@@ -78,7 +78,7 @@ class AdminAgent(BaseAgent):
         stats = await self._orders.daily_stats(context.client_id)
 
         if any(w in lower for w in ("best", "laris", "terlaris")):
-            products = load_products()
+            products = products_from_context(context)
             if products:
                 top = sorted(products, key=lambda p: int(p.get("stock", 0)), reverse=True)[:3]
                 names = ", ".join(f"{p['name']} (stok {p.get('stock')})" for p in top)

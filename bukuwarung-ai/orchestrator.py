@@ -9,6 +9,7 @@ from typing import Any
 
 from agents.base_agent import AgentContext, BaseAgent
 from config import get_settings
+from core.client_registry import ClientConfig
 from core.otak_ai import OtakAI
 from core.personality import PersonalityEngine
 from core.semantic_router import RouteResult, SemanticRouter
@@ -105,7 +106,14 @@ class Orchestrator:
     def stats(self) -> OrchestratorStats:
         return self._stats
 
-    async def handle_message(self, user_id: str, message: str, client_id: str) -> str:
+    async def handle_message(
+        self,
+        user_id: str,
+        message: str,
+        client_id: str,
+        *,
+        client_config: ClientConfig | None = None,
+    ) -> str:
         """Pipeline lengkap 8 langkah — return teks balasan final.
 
         Args:
@@ -119,6 +127,21 @@ class Orchestrator:
         t0 = time.perf_counter()
         text = (message or "").strip()
         agent_id = "cs"
+        mem_key = client_config.memory_scope(user_id) if client_config else user_id
+        owners = (
+            list(client_config.owner_phone_set)
+            if client_config
+            else list(get_settings().owner_phone_set)
+        )
+        is_owner = user_id in (
+            client_config.owner_phone_set if client_config else get_settings().owner_phone_set
+        )
+
+        if client_config:
+            self._personality.set_local_brand(
+                client_id,
+                {"profile_key": client_config.profile_key, "client_id": client_id},
+            )
 
         try:
             # 1. Terima message (sudah di argumen)
@@ -129,51 +152,59 @@ class Orchestrator:
             # Sentimen marah → eskalasi human (edge case)
             if self._is_angry(text):
                 self._stats.escalations += 1
-                self._clarify_counts.pop(user_id, None)
+                self._clarify_counts.pop(mem_key, None)
                 final = await self._personality.adapt_tone(
                     ESCALATE_PROMPT,
                     await self._personality.get_personality(client_id),
                     user_lang=user_lang,
                 )
-                await self._save_interaction(user_id, text, final, "support", "escalate")
+                await self._save_interaction(mem_key, text, final, "support", "escalate")
                 self._last_agent_id = "support"
                 self._last_intent = "escalate"
                 self._record_stats("support", t0)
                 return final
 
             # 3. Semantic routing
-            otak_ctx = await self._otak.bangun_context(user_id, text)
+            otak_ctx = await self._otak.bangun_context(mem_key, text)
             route = await self._router.route(text, context=otak_ctx)
 
             # Intent unclear → klarifikasi max 2x
             if route.confidence < CLARIFY_THRESHOLD:
-                count = self._clarify_counts.get(user_id, 0) + 1
-                self._clarify_counts[user_id] = count
+                count = self._clarify_counts.get(mem_key, 0) + 1
+                self._clarify_counts[mem_key] = count
                 self._stats.clarifications += 1
                 if count <= MAX_CLARIFY_ATTEMPTS:
                     personality = await self._personality.get_personality(client_id)
                     final = await self._personality.adapt_tone(
                         CLARIFY_PROMPT, personality, user_lang=user_lang
                     )
-                    await self._save_interaction(user_id, text, final, "cs", "clarify")
+                    await self._save_interaction(mem_key, text, final, "cs", "clarify")
                     self._last_agent_id = "cs"
                     self._last_intent = "clarify"
                     self._record_stats("cs", t0)
                     return final
-                # Setelah 2x → fallback CS, reset counter
-                self._clarify_counts.pop(user_id, None)
+                self._clarify_counts.pop(mem_key, None)
                 route = RouteResult("cs", "clarify_fallback", 0.5, "max clarify → cs")
-
             else:
-                self._clarify_counts.pop(user_id, None)
+                self._clarify_counts.pop(mem_key, None)
 
             # 4. Personality config + agent selection
             personality = await self._personality.get_personality(client_id)
             agent = self._resolve_agent(route)
             agent_id = agent.agent_id
 
-            owners = list(get_settings().owner_phone_set)
-            is_owner = user_id in get_settings().owner_phone_set
+            meta: dict[str, Any] = {
+                "intent": route.intent,
+                "route": route.reason,
+                "confidence": route.confidence,
+                "is_owner": is_owner,
+                "owners": owners,
+            }
+            if client_config:
+                if client_config.products:
+                    meta["products"] = client_config.products
+                if client_config.payment_methods:
+                    meta["payment_methods"] = client_config.payment_methods
 
             ctx = AgentContext(
                 client_id=client_id,
@@ -182,13 +213,7 @@ class Orchestrator:
                 otak_context=otak_ctx,
                 personality=personality,
                 user_lang=user_lang,
-                metadata={
-                    "intent": route.intent,
-                    "route": route.reason,
-                    "confidence": route.confidence,
-                    "is_owner": is_owner,
-                    "owners": owners,
-                },
+                metadata=meta,
             )
 
             # 5. Agent process
@@ -198,7 +223,7 @@ class Orchestrator:
             final = await self._personality.adapt_tone(raw, personality, user_lang=user_lang)
 
             # 7. Simpan ke memory
-            await self._save_interaction(user_id, text, final, agent_id, route.intent)
+            await self._save_interaction(mem_key, text, final, agent_id, route.intent)
 
             # 8. Return
             self._last_agent_id = agent_id
@@ -229,7 +254,7 @@ class Orchestrator:
             final = await self._personality.adapt_tone(
                 FALLBACK_ERROR, personality, user_lang=user_lang
             )
-            await self._save_interaction(user_id, text, final, "cs", "error")
+            await self._save_interaction(mem_key, text, final, "cs", "error")
             self._last_agent_id = "cs"
             self._last_intent = "error"
             self._record_stats("cs", t0)
@@ -241,9 +266,12 @@ class Orchestrator:
         client_id: str,
         user_id: str,
         message: str,
+        client_config: ClientConfig | None = None,
     ) -> OrchestratorResult:
         """Adapter kompatibel dengan API lama."""
-        text = await self.handle_message(user_id, message, client_id)
+        text = await self.handle_message(
+            user_id, message, client_id, client_config=client_config
+        )
         return OrchestratorResult(
             text=text,
             agent_id=self._last_agent_id,

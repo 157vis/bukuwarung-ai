@@ -22,6 +22,7 @@ if str(_ROOT) not in sys.path:
 
 from agents import build_agents
 from config import PROJECT_ROOT, ensure_data_dir, get_settings
+from core.client_registry import ClientConfig, get_client_registry
 from core.otak_ai import OtakAI
 from core.personality import PersonalityEngine
 from core.semantic_router import SemanticRouter
@@ -38,8 +39,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.0.1"
 _orchestrator: Orchestrator | None = None
+_client_registry = None
 _rate_limiter = RateLimiter(max_requests=60, window_seconds=60.0)
 _shutting_down = False
 
@@ -124,6 +126,13 @@ def _build_orchestrator() -> Orchestrator:
     router = SemanticRouter(llm)
     agents = build_agents(otak, personality, llm)
     return Orchestrator(otak, router, personality, agents)
+
+
+def get_registry():
+    global _client_registry
+    if _client_registry is None:
+        _client_registry = get_client_registry(_get_db())
+    return _client_registry
 
 
 def get_orchestrator() -> Orchestrator:
@@ -236,7 +245,9 @@ async def root() -> dict[str, Any]:
     return {
         "status": "running",
         "health": "/health",
-        "webhook": "/webhook-whatsapp",
+        "webhook": "/webhook-whatsapp/{client_id}",
+        "webhook_legacy": "/webhook-whatsapp",
+        "clients": "/clients",
         "stats": "/stats",
         "version": APP_VERSION,
     }
@@ -264,8 +275,90 @@ async def feedback(req: FeedbackRequest, request: Request) -> FeedbackResponse:
     return FeedbackResponse(status="ok", memory_id=req.memory_id, rating=rating)
 
 
+@app.get("/clients")
+async def list_clients() -> dict[str, Any]:
+    """Daftar client aktif (multi-tenant)."""
+    registry = get_registry()
+    clients = await registry.list_active()
+    return {
+        "count": len(clients),
+        "clients": [
+            {"client_id": c.client_id, "name": c.name, "profile_key": c.profile_key}
+            for c in clients
+        ],
+    }
+
+
+async def _process_webhook(
+    *,
+    client_id: str,
+    phone: str,
+    text: str,
+    inboxid: str | None,
+    client_config: ClientConfig | None,
+) -> WebhookResponse | JSONResponse:
+    orch = get_orchestrator()
+    fonnte_token = None
+    if client_config and client_config.fonnte_token:
+        fonnte_token = client_config.fonnte_token
+    elif not client_config:
+        fonnte_token = get_settings().fonnte_token or None
+
+    result = await orch.process(
+        client_id=client_id,
+        user_id=phone,
+        message=text,
+        client_config=client_config,
+    )
+    sent = await send_message(phone, result.text, token=fonnte_token, inboxid=inboxid)
+    return WebhookResponse(
+        status="ok" if sent else "ok_unsent",
+        agent=result.agent_id,
+        intent=result.intent,
+    )
+
+
+@app.post("/webhook-whatsapp/{client_id}", response_model=WebhookResponse)
+async def webhook_whatsapp_client(client_id: str, request: Request) -> WebhookResponse | JSONResponse:
+    """Webhook per toko — RECOMMENDED untuk banyak client."""
+    _check_shutdown()
+    body = await _parse_body(request)
+    phone, text, inboxid, _ = _extract_webhook_fields(body)
+    phone = phone or "".join(c for c in str(body.get("member") or body.get("sender") or "") if c.isdigit())
+    text = text or str(body.get("message") or body.get("text") or "").strip()
+
+    if not phone or not text:
+        return WebhookResponse(status="ignored", reason="no phone or text")
+
+    registry = get_registry()
+    client_config = await registry.get(client_id)
+    if not client_config or not client_config.is_active:
+        raise HTTPException(status_code=404, detail=f"Client '{client_id}' tidak ditemukan atau nonaktif")
+
+    _check_rate_limit(request, f"{client_id}:{phone}")
+    logger.info("webhook in client=%s user=%s msg=%r", client_id, phone, text[:80])
+
+    try:
+        return await _process_webhook(
+            client_id=client_id,
+            phone=phone,
+            text=text,
+            inboxid=inboxid,
+            client_config=client_config,
+        )
+    except HTTPException:
+        raise
+    except (httpx.HTTPError, RuntimeError, ValueError) as exc:
+        logger.exception("webhook error client=%s: %s", client_id, exc)
+        token = client_config.fonnte_token or get_settings().fonnte_token
+        fallback = "Maaf, ada gangguan sebentar. Coba kirim lagi ya 🙏"
+        await send_message(phone, fallback, token=token or None, inboxid=inboxid)
+        return JSONResponse(status_code=500, content={"status": "error", "detail": str(exc)[:120]})
+
+
 @app.post("/webhook-whatsapp", response_model=WebhookResponse)
 async def webhook_whatsapp(request: Request) -> WebhookResponse | JSONResponse:
+    """Webhook legacy — client_id dari body atau default APP_NAME."""
     _check_shutdown()
     body = await _parse_body(request)
     phone, text, inboxid, client_id = _extract_webhook_fields(body)
@@ -274,24 +367,29 @@ async def webhook_whatsapp(request: Request) -> WebhookResponse | JSONResponse:
         logger.info("webhook ignored: no phone/text body_keys=%s", list(body.keys()))
         return WebhookResponse(status="ignored", reason="no phone or text")
 
+    registry = get_registry()
+    client_config = await registry.get(client_id)
+    if not client_config:
+        client_config = ClientConfig(client_id=client_id, name=client_id)
+
     _check_rate_limit(request, phone)
     logger.info("webhook in user=%s client=%s msg=%r", phone, client_id, text[:80])
 
     try:
-        orch = get_orchestrator()
-        result = await orch.process(client_id=client_id, user_id=phone, message=text)
-        sent = await send_message(phone, result.text, inboxid=inboxid)
-        return WebhookResponse(
-            status="ok" if sent else "ok_unsent",
-            agent=result.agent_id,
-            intent=result.intent,
+        return await _process_webhook(
+            client_id=client_id,
+            phone=phone,
+            text=text,
+            inboxid=inboxid,
+            client_config=client_config,
         )
     except HTTPException:
         raise
     except (httpx.HTTPError, RuntimeError, ValueError) as exc:
         logger.exception("webhook error: %s", exc)
         fallback = "Maaf, ada gangguan sebentar. Coba kirim lagi ya 🙏"
-        await send_message(phone, fallback, inboxid=inboxid)
+        token = (client_config.fonnte_token if client_config else None) or get_settings().fonnte_token
+        await send_message(phone, fallback, token=token or None, inboxid=inboxid)
         return JSONResponse(status_code=500, content={"status": "error", "detail": str(exc)[:120]})
 
 

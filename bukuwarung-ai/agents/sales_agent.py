@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from agents.base_agent import AgentContext, BaseAgent
-from agents.data_access import load_products
+from agents.data_access import products_from_context
 
 HANDLE_INTENTS = frozenset({"sales", "product", "price"})
 
@@ -41,8 +41,8 @@ class SalesAgent(BaseAgent):
     def can_handle(self, intent: str) -> bool:
         return intent.lower() in HANDLE_INTENTS
 
-    def _catalog_text(self) -> str:
-        products = load_products()
+    def _catalog_text(self, context: AgentContext) -> str:
+        products = products_from_context(context)
         if not products:
             return "Katalog kosong."
         lines = []
@@ -53,9 +53,9 @@ class SalesAgent(BaseAgent):
             lines.append(f"- {name}: Rp {price:,} (stok {stock})".replace(",", "."))
         return "\n".join(lines)
 
-    def _find_product(self, message: str) -> dict[str, Any] | None:
+    def _find_product(self, message: str, context: AgentContext) -> dict[str, Any] | None:
         lower = message.lower()
-        for p in load_products():
+        for p in products_from_context(context):
             if str(p.get("name", "")).lower() in lower:
                 return p
         return None
@@ -66,11 +66,11 @@ class SalesAgent(BaseAgent):
         context: AgentContext,
         personality: dict[str, Any],
     ) -> str:
-        catalog = self._catalog_text()
-        product = self._find_product(message)
+        catalog = self._catalog_text(context)
+        product = self._find_product(message, context)
         lower = message.lower()
 
-        if not load_products():
+        if not products_from_context(context):
             return "Maaf Bu, katalog produk sedang diperbarui. Coba lagi sebentar ya 🙏"
 
         if product:

@@ -6,7 +6,7 @@ import re
 from typing import Any
 
 from agents.base_agent import AgentContext, AgentResponse, BaseAgent
-from agents.data_access import OrderStore, load_products
+from agents.data_access import OrderStore, products_from_context
 
 HANDLE_INTENTS = frozenset({"order", "pesan", "beli"})
 
@@ -58,10 +58,10 @@ class OrderAgent(BaseAgent):
     def can_handle(self, intent: str) -> bool:
         return intent.lower() in HANDLE_INTENTS
 
-    def _match_items(self, message: str) -> list[dict[str, Any]]:
+    def _match_items(self, message: str, context: AgentContext) -> list[dict[str, Any]]:
         items: list[dict[str, Any]] = []
         lower = message.lower()
-        for p in load_products():
+        for p in products_from_context(context):
             name = str(p.get("name", "")).lower()
             if name and name in lower:
                 qty_m = re.search(rf"{re.escape(name)}\s*(\d+)", lower)
@@ -107,7 +107,7 @@ class OrderAgent(BaseAgent):
             self._last_data["action"] = "update"
             return EXAMPLE_RESPONSES[2]
 
-        items = self._match_items(message)
+        items = self._match_items(message, context)
         if not items and amount:
             items = [{"name": "custom", "qty": 1, "price": amount}]
         if not items:

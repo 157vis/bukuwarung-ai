@@ -59,6 +59,16 @@ curl https://<domain>/stats
 
 Kirim WA: `halo` → harus dapat balasan otomatis.
 
+## Multi-client (banyak toko)
+
+Satu Railway → banyak UMKM. Lihat **[docs/MULTI_CLIENT_SETUP.md](docs/MULTI_CLIENT_SETUP.md)**.
+
+Ringkas:
+1. Jalankan `sql/create_clients.sql`
+2. Insert row per toko di tabel `clients`
+3. Fonnte webhook: `/webhook-whatsapp/toko_berkah`
+4. Cek: `GET /clients`
+
 ## Pre-deploy checklist
 
 Lihat `docs/PRE_DEPLOY_CHECKLIST.md`.

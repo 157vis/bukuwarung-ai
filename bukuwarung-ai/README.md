@@ -81,9 +81,11 @@ POST /webhook-whatsapp
 ## Connect Fonnte
 
 1. Login [fonnte.com](https://fonnte.com) → hubungkan device WA
-2. Set **Webhook URL**: `https://<domain-anda>/webhook-whatsapp`
-3. Method: **POST**
-4. Test kirim pesan dari HP
+2. **Multi-client (recommended):** `https://<domain>/webhook-whatsapp/{client_id}`
+3. **Single client:** `https://<domain>/webhook-whatsapp`
+4. Method: **POST**
+
+Panduan banyak client: [docs/MULTI_CLIENT_SETUP.md](docs/MULTI_CLIENT_SETUP.md)
 
 ### Test lokal dengan ngrok
 

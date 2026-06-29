@@ -6,7 +6,7 @@ import re
 from typing import Any
 
 from agents.base_agent import AgentContext, BaseAgent
-from agents.data_access import OrderStore, load_payment_methods
+from agents.data_access import OrderStore, payment_from_context
 
 HANDLE_INTENTS = frozenset({"payment", "bayar", "transfer"})
 
@@ -45,8 +45,8 @@ class PaymentAgent(BaseAgent):
     def can_handle(self, intent: str) -> bool:
         return intent.lower() in HANDLE_INTENTS
 
-    def _methods_text(self) -> str:
-        methods = load_payment_methods()
+    def _methods_text(self, context: AgentContext) -> str:
+        methods = payment_from_context(context)
         if not methods:
             return EXAMPLE_RESPONSES[0]
         lines = []
@@ -70,7 +70,7 @@ class PaymentAgent(BaseAgent):
         personality: dict[str, Any],
     ) -> str:
         lower = message.lower()
-        methods = self._methods_text()
+        methods = self._methods_text(context)
 
         if any(w in lower for w in ("sudah bayar", "sudah transfer", "bukti")):
             amount_m = re.search(r"(\d[\d.,]*)\s*(rb|ribu)?", lower.replace(".", ""))

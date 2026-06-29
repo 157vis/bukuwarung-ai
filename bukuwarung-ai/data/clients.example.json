@@ -1,0 +1,31 @@
+{
+  "toko_berkah": {
+    "name": "Warung Berkah",
+    "fonnte_token": "",
+    "owner_phones": ["6281234567890"],
+    "profile_key": "ramah_warm",
+    "products": [
+      {"name": "kopi", "price": 3500, "stock": 50},
+      {"name": "indomie", "price": 3500, "stock": 20},
+      {"name": "gula", "price": 15000, "stock": 10}
+    ],
+    "payment_methods": [
+      {"bank": "BCA", "account_number": "1234567890", "account_name": "Warung Berkah", "type": "transfer"}
+    ],
+    "is_active": true
+  },
+  "toko_segar": {
+    "name": "Toko Segar",
+    "fonnte_token": "",
+    "owner_phones": ["6289876543210"],
+    "profile_key": "jawa_ngoko",
+    "products": [
+      {"name": "beras", "price": 12000, "stock": 100},
+      {"name": "minyak", "price": 18000, "stock": 30}
+    ],
+    "payment_methods": [
+      {"provider": "GoPay", "account_number": "081234567890", "account_name": "Toko Segar", "type": "ewallet"}
+    ],
+    "is_active": true
+  }
+}
