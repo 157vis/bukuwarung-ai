@@ -110,6 +110,126 @@ class LarisCore:
         data = {"phone": normalized, "user_id": user_id, "label": label}
         return self.supabase.table("wa_users").upsert(data, on_conflict="phone").execute()
 
+    @staticmethod
+    def slugify_client_id(label: str, email: str = "") -> str:
+        """Buat client_id aman untuk BukuWarung dari nama usaha atau email."""
+        raw = (label or email.split("@")[0] or "toko").lower()
+        slug = re.sub(r"[^a-z0-9]+", "_", raw).strip("_")
+        return (slug[:40] or "toko_client")
+
+    def upsert_bukuwarung_client(
+        self,
+        *,
+        client_id: str,
+        name: str,
+        wa_cs: str,
+        wa_catat: str,
+        user_id: str,
+        bukuwarung_base_url: str,
+        catat_bot_base_url: str,
+    ) -> tuple[bool, str | None]:
+        """Daftarkan / update client di tabel BukuWarung-AI (clients)."""
+        if not self.table_exists("clients"):
+            return False, "Tabel clients belum ada. Jalankan bukuwarung-ai/sql/create_clients.sql"
+        cs = self.normalize_phone(wa_cs)
+        catat = self.normalize_phone(wa_catat)
+        bw_base = (bukuwarung_base_url or "").rstrip("/")
+        catat_base = (catat_bot_base_url or "").rstrip("/")
+        metadata = {
+            "user_id": str(user_id),
+            "wa_cs": cs,
+            "wa_catat": catat,
+            "whatsapp_cs_display": wa_cs.strip(),
+            "whatsapp_catat_display": wa_catat.strip(),
+            "webhook_cs": f"{bw_base}/webhook-whatsapp/{client_id}" if bw_base else "",
+            "webhook_catat": f"{catat_base}/webhook" if catat_base else "",
+            "pattern": "dual_number_3",
+        }
+        row = {
+            "client_id": client_id,
+            "name": name or client_id,
+            "fonnte_token": "",
+            "owner_phones": [catat],
+            "profile_key": "ramah_warm",
+            "products": [],
+            "payment_methods": [],
+            "is_active": True,
+            "metadata": metadata,
+        }
+        try:
+            self.supabase.table("clients").upsert(row, on_conflict="client_id").execute()
+            if self.table_exists("brand_voices"):
+                self.supabase.table("brand_voices").upsert(
+                    {
+                        "client_id": client_id,
+                        "profile_key": "ramah_warm",
+                        "greeting_style": "hangat",
+                        "emoji_usage": 2,
+                        "formality_level": 1,
+                        "language_mix": "id",
+                    },
+                    on_conflict="client_id",
+                ).execute()
+            return True, None
+        except Exception as exc:
+            logger.error("upsert_bukuwarung_client: %s", exc)
+            return False, str(exc)[:200]
+
+    def setup_dual_wa_client(
+        self,
+        user_id: str,
+        *,
+        wa_cs: str,
+        wa_catat: str,
+        label: str,
+        client_id: str | None = None,
+        email: str = "",
+        bukuwarung_base_url: str = "",
+        catat_bot_base_url: str = "",
+    ) -> dict:
+        """Pola 3: nomor CS (pelanggan) + nomor Catat (owner) dalam satu langkah."""
+        cid = (client_id or "").strip() or self.slugify_client_id(label, email)
+        name = (label or cid).strip()
+        catat_norm = self.normalize_phone(wa_catat)
+        self.link_wa_number(user_id, wa_catat, f"{name} | AI Catat")
+        ok, err = self.upsert_bukuwarung_client(
+            client_id=cid,
+            name=name,
+            wa_cs=wa_cs,
+            wa_catat=wa_catat,
+            user_id=user_id,
+            bukuwarung_base_url=bukuwarung_base_url,
+            catat_bot_base_url=catat_bot_base_url,
+        )
+        bw_base = (bukuwarung_base_url or "").rstrip("/")
+        catat_base = (catat_bot_base_url or "").rstrip("/")
+        return {
+            "client_id": cid,
+            "user_id": user_id,
+            "wa_cs": self.normalize_phone(wa_cs),
+            "wa_catat": catat_norm,
+            "webhook_cs": f"{bw_base}/webhook-whatsapp/{cid}" if bw_base else "",
+            "webhook_catat": f"{catat_base}/webhook" if catat_base else "",
+            "bukuwarung_ok": ok,
+            "bukuwarung_error": err,
+        }
+
+    def list_bukuwarung_clients(self) -> list[dict] | None:
+        """Admin: daftar client BukuWarung dari tabel clients."""
+        if not self.table_exists("clients"):
+            return []
+        try:
+            resp = (
+                self.supabase.table("clients")
+                .select("client_id,name,owner_phones,metadata,is_active")
+                .order("client_id")
+                .execute()
+            )
+            return resp.data or []
+        except Exception as exc:
+            logger.error("list_bukuwarung_clients: %s", exc)
+            return None
+
     def list_wa_numbers(self, user_id: str):
         try:
             resp = self.supabase.table("wa_users").select("*").eq("user_id", user_id).order("id", desc=True).execute()

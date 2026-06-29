@@ -23,6 +23,13 @@ drop policy if exists bukuwarung_clients_all on clients;
 create policy bukuwarung_clients_all on clients
   for all using (true) with check (true);
 
+-- Super Admin dashboard (Streamlit JWT) boleh kelola clients
+drop policy if exists p_admin_clients on clients;
+create policy p_admin_clients on clients
+  for all to authenticated
+  using ((auth.jwt() ->> 'email') = 'rafihrr1@gmail.com')
+  with check ((auth.jwt() ->> 'email') = 'rafihrr1@gmail.com');
+
 -- Verifikasi
 select tablename, policyname from pg_policies
 where tablename in ('otak_memories', 'brand_voices', 'clients')

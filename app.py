@@ -16,6 +16,20 @@ AGENT_LABELS = {"admin": "Admin AI", "logistik": "Logistik AI"}
 # Hanya email ini yang boleh menambah & mengedit client baru.
 SUPER_ADMIN_EMAIL = "rafihrr1@gmail.com"
 
+# Default deploy production (bisa override di secrets.toml)
+DEFAULT_BUKUWARUNG_URL = "https://bukuwarung-ai-larisai.up.railway.app"
+DEFAULT_CATAT_BOT_URL = "https://bukuwarung-ai-larisai.up.railway.app"
+
+
+def _bot_base_urls() -> tuple[str, str]:
+    """URL webhook BukuWarung CS & bot AI Catat dari secrets atau default."""
+    try:
+        bw = st.secrets.get("BUKUWARUNG_BASE_URL", DEFAULT_BUKUWARUNG_URL)
+        catat = st.secrets.get("CATAT_BOT_BASE_URL", DEFAULT_CATAT_BOT_URL)
+    except (KeyError, FileNotFoundError):
+        bw, catat = DEFAULT_BUKUWARUNG_URL, DEFAULT_CATAT_BOT_URL
+    return str(bw).rstrip("/"), str(catat).rstrip("/")
+
 
 def agent_label(agent_id) -> str:
     return AGENT_LABELS.get(agent_id, agent_id or "AI")
@@ -481,33 +495,115 @@ def render_dashboard(core: LarisCore, user) -> None:
             )
         else:
             st.success(f"Mode Admin Super aktif: {user_email}")
+            bw_url, catat_url = _bot_base_urls()
 
-            # 1) Buat client baru (akun + nomor WA sekaligus)
-            st.subheader("➕ Tambah Client Baru")
+            st.info(
+                "**Pola 3 — Dua nomor terpisah**\n\n"
+                "| Peran | Field form | Device Fonnte | Webhook |\n"
+                "|-------|------------|---------------|--------|\n"
+                "| **CS Pelanggan** | ① Nomor WA CS | Device #1 | BukuWarung `/webhook-whatsapp/{client_id}` |\n"
+                "| **AI Catat** | ② Nomor HP Owner | Device #2 (bot catat) | `kita-cuan-wa-bot` `/webhook` |\n\n"
+                "② = HP owner yang **mengirim** perintah `jual/beli` (terdaftar di `wa_users`). "
+                "Pasang device Fonnte #2 ke URL bot **AI Catat** (bisa beda deploy dari BukuWarung)."
+            )
+
+            # 1) Buat client baru (akun + dua nomor WA sekaligus)
+            st.subheader("➕ Tambah Client Baru (2 Nomor WA)")
             with st.form("create_client_form"):
                 c_email = st.text_input("Email Client")
                 c_pass = st.text_input("Password Sementara", type="password")
-                c_phone = st.text_input("Nomor WhatsApp (opsional)", placeholder="0812xxxxxxxx")
-                c_label = st.text_input("Nama Usaha / Label (opsional)")
-                if st.form_submit_button("Buat Client"):
+                c_label = st.text_input("Nama Usaha / Label")
+                c_client_id = st.text_input(
+                    "Client ID BukuWarung (opsional)",
+                    placeholder="toko_rafih — otomatis dari nama jika kosong",
+                )
+                c_phone_cs = st.text_input(
+                    "① Nomor WA CS (Pelanggan)",
+                    placeholder="0857xxxxxxxx — device Fonnte untuk CS toko",
+                    help="Pelanggan chat nomor ini → balasan CS BukuWarung.",
+                )
+                c_phone_catat = st.text_input(
+                    "② Nomor HP Owner (AI Catat)",
+                    placeholder="0812xxxxxxxx — HP owner kirim jual/beli",
+                    help="Owner kirim 'jual kopi 50rb' dari HP ini → tercatat di Buku Kas.",
+                )
+                if st.form_submit_button("Buat Client + Hubungkan 2 Nomor"):
                     if not c_email.strip() or len(c_pass) < 6:
                         st.error("Email wajib & password minimal 6 karakter.")
+                    elif not c_phone_cs.strip() or not c_phone_catat.strip():
+                        st.error("Nomor WA CS dan nomor AI Catat wajib diisi.")
                     else:
                         new_id, err = core.create_client_account(c_email.strip(), c_pass)
                         if err:
                             st.error(f"Gagal membuat client: {err}")
                         else:
-                            if c_phone.strip():
-                                try:
-                                    core.link_wa_number(new_id, c_phone, c_label or None)
-                                except Exception as e:
-                                    st.warning(f"Akun dibuat, tapi gagal hubungkan WA: {str(e)[:120]}")
-                            st.success(f"Client dibuat! user_id: {new_id}")
-                            st.rerun()
+                            try:
+                                setup = core.setup_dual_wa_client(
+                                    new_id,
+                                    wa_cs=c_phone_cs.strip(),
+                                    wa_catat=c_phone_catat.strip(),
+                                    label=c_label.strip() or c_email.split("@")[0],
+                                    client_id=c_client_id.strip() or None,
+                                    email=c_email.strip(),
+                                    bukuwarung_base_url=bw_url,
+                                    catat_bot_base_url=catat_url,
+                                )
+                                st.success(f"Client dibuat! `user_id`: `{new_id}` · `client_id`: `{setup['client_id']}`")
+                                if setup["bukuwarung_ok"]:
+                                    st.markdown(
+                                        f"**Webhook Fonnte CS:** `{setup['webhook_cs']}`  \n"
+                                        f"**Webhook Fonnte AI Catat:** `{setup['webhook_catat']}`"
+                                    )
+                                else:
+                                    st.warning(
+                                        f"Akun & nomor Catat OK, tapi tabel clients gagal: "
+                                        f"{setup.get('bukuwarung_error')}. "
+                                        f"Jalankan `bukuwarung-ai/sql/fix_rls_bukuwarung.sql` di Supabase."
+                                    )
+                                st.rerun()
+                            except Exception as e:
+                                st.warning(f"Akun dibuat, setup WA gagal: {str(e)[:150]}")
 
-            # 2) Hubungkan / petakan nomor WA ke client (berdasarkan user_id)
+            # 2) Hubungkan / update dua nomor untuk client yang sudah ada
             st.markdown("---")
-            st.subheader("🔗 Hubungkan Nomor WA ke Client")
+            st.subheader("🔗 Update Dua Nomor WA Client")
+            with st.form("link_dual_wa_form"):
+                target_uid = st.text_input("User ID Client")
+                wa_cs = st.text_input("① Nomor WA CS (Pelanggan)", placeholder="0857xxxxxxxx")
+                wa_catat = st.text_input("② Nomor HP Owner (AI Catat)", placeholder="0812xxxxxxxx")
+                wa_label = st.text_input("Nama Usaha / Label")
+                link_client_id = st.text_input("Client ID BukuWarung (opsional)")
+                if st.form_submit_button("Simpan Dua Nomor"):
+                    if not target_uid.strip() or not wa_cs.strip() or not wa_catat.strip():
+                        st.error("User ID, nomor CS, dan nomor Catat wajib diisi.")
+                    else:
+                        try:
+                            setup = core.setup_dual_wa_client(
+                                target_uid.strip(),
+                                wa_cs=wa_cs.strip(),
+                                wa_catat=wa_catat.strip(),
+                                label=wa_label.strip() or target_uid.strip()[:8],
+                                client_id=link_client_id.strip() or None,
+                                bukuwarung_base_url=bw_url,
+                                catat_bot_base_url=catat_url,
+                            )
+                            st.success(
+                                f"Terhubung · CS `{setup['wa_cs']}` · Catat `{setup['wa_catat']}` · "
+                                f"client_id `{setup['client_id']}`"
+                            )
+                            st.code(
+                                f"Webhook CS:\n{setup['webhook_cs']}\n\nWebhook AI Catat:\n{setup['webhook_catat']}",
+                                language="text",
+                            )
+                            if not setup["bukuwarung_ok"]:
+                                st.warning(setup.get("bukuwarung_error"))
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Gagal: {str(e)[:150]}")
+
+            # 3) Hubungkan nomor tunggal (legacy)
+            st.markdown("---")
+            st.subheader("🔗 Hubungkan Nomor WA (satu nomor / legacy)")
             with st.form("link_client_wa_form"):
                 target_uid = st.text_input("User ID Client")
                 wa_phone = st.text_input("Nomor WhatsApp", placeholder="0812xxxxxxxx")
@@ -523,15 +619,31 @@ def render_dashboard(core: LarisCore, user) -> None:
                         except Exception as e:
                             st.error(f"Gagal menghubungkan: {str(e)[:150]}")
 
-            # 3) Daftar semua client (mapping WA) + edit/hapus
+            # 4) Daftar semua client (mapping WA + BukuWarung)
             st.markdown("---")
             st.subheader("📋 Semua Client Terdaftar")
+            bw_clients = core.list_bukuwarung_clients()
+            if bw_clients:
+                st.markdown("**BukuWarung CS (tabel clients)**")
+                for c in bw_clients:
+                    meta = c.get("metadata") or {}
+                    cs_disp = meta.get("whatsapp_cs_display") or meta.get("wa_cs") or "—"
+                    catat_disp = meta.get("whatsapp_catat_display") or meta.get("wa_catat") or "—"
+                    active = "✅" if c.get("is_active") else "⏸️"
+                    st.markdown(
+                        f"{active} **{c.get('name')}** (`{c.get('client_id')}`)  \n"
+                        f"① CS: `{cs_disp}` · ② Catat: `{catat_disp}`  \n"
+                        f"Webhook CS: `{meta.get('webhook_cs', '—')}`"
+                    )
+                st.markdown("---")
+
             numbers = core.list_all_wa_numbers()
             if numbers is None:
                 st.error("Gagal memuat data. Pastikan tabel 'wa_users' tersedia.")
             elif not numbers:
-                st.info("Belum ada client/nomor WA terdaftar.")
+                st.info("Belum ada nomor AI Catat di wa_users.")
             else:
+                st.markdown("**AI Catat (tabel wa_users)**")
                 for n in numbers:
                     c1, c2 = st.columns([5, 1])
                     label = f" — {n.get('label')}" if n.get('label') else ""
