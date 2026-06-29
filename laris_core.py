@@ -412,7 +412,10 @@ class LarisCore:
             "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
         }
         try:
-            return self.supabase.table("inventory_entries").insert(data).execute()
+            res = self.supabase.table("inventory_entries").insert(data).execute()
+            # Sinkronkan stok agregat ke tabel products agar dashboard & logistik satu sumber data.
+            self.sync_product_from_inventory(user_id, barang, int(qty_in or 0), int(qty_out or 0))
+            return res
         except Exception as exc:
             logger.error("add_inventory_entry: %s", exc)
             return None
@@ -426,6 +429,61 @@ class LarisCore:
             return resp.data or []
         except Exception as exc:
             logger.error("list_inventory: %s", exc)
+            return None
+
+    def sync_product_from_inventory(self, user_id: str, barang: str, qty_in: int, qty_out: int) -> int | None:
+        """Update/insert stok produk berdasarkan entri gudang."""
+        name = (barang or "").strip()
+        if not name:
+            return None
+        delta = int(qty_in or 0) - int(qty_out or 0)
+        uid = self.normalize_user_id(user_id)
+        try:
+            current = (
+                self.supabase.table("products")
+                .select("id, name, stock")
+                .eq("user_id", uid)
+                .ilike("name", name)
+                .limit(1)
+                .execute()
+            )
+            rows = current.data or []
+            if rows:
+                row = rows[0]
+                new_stock = max(0, int(row.get("stock") or 0) + delta)
+                (
+                    self.supabase.table("products")
+                    .update({"stock": new_stock})
+                    .eq("id", row["id"])
+                    .execute()
+                )
+                return new_stock
+
+            # Jika produk belum ada, buat baru dari aktivitas gudang.
+            init_stock = max(0, delta)
+            (
+                self.supabase.table("products")
+                .insert({"user_id": uid, "name": name, "stock": init_stock})
+                .execute()
+            )
+            return init_stock
+        except Exception as exc:
+            logger.error("sync_product_from_inventory: %s", exc)
+            return None
+
+    def list_products(self, user_id: str):
+        """Daftar produk + stok terkini."""
+        try:
+            resp = (
+                self.supabase.table("products")
+                .select("id, name, stock, created_at")
+                .eq("user_id", user_id)
+                .order("name", desc=False)
+                .execute()
+            )
+            return resp.data or []
+        except Exception as exc:
+            logger.error("list_products: %s", exc)
             return None
 
     # --------------------

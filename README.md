@@ -1,6 +1,6 @@
-# laris.AI — Buku Kas UMKM + Bot WhatsApp
+# laris.AI — AI Multi-Agent UMKM + Bot WhatsApp
 
-Dashboard **Streamlit** + **bot WhatsApp** (Fonnte) dengan multi-agent AI: Admin, Logistik, Advisor.
+Dashboard **Streamlit** + **bot WhatsApp** (Fonnte) dengan AI Multi-Agent untuk operasional UMKM.
 
 | Komponen | Folder / file | Deploy |
 |----------|---------------|--------|
@@ -10,6 +10,40 @@ Dashboard **Streamlit** + **bot WhatsApp** (Fonnte) dengan multi-agent AI: Admin
 | Landing SEO | `site/` | Static hosting (opsional) |
 
 **Repo GitHub:** [github.com/157vis/bukuwarung-ai](https://github.com/157vis/bukuwarung-ai) — branch `main`
+
+---
+
+## AI Multi-Agent & kegunaannya
+
+| Agent | Fungsi utama | Dipakai di menu |
+|---|---|---|
+| `Admin AI` | Catat pemasukan/pengeluaran, ringkasan keuangan, Laris Score | `Ringkasan`, `Buku Kas`, `Laporan KUR` |
+| `Logistik AI` | Pantau stok, saran restock, buat approval | `Ruang Komando`, `Gudang` |
+| `CS AI` | Jawab pertanyaan pelanggan, sapaan, info umum | WhatsApp CS |
+| `Support AI` | Triage komplain/masalah, eskalasi kasus sensitif | WhatsApp CS |
+| `Order AI` | Proses order dari chat pelanggan | WhatsApp CS |
+| `Payment AI` | Konfirmasi metode & status pembayaran | WhatsApp CS |
+| `Sales AI` | Rekomendasi produk/promo | WhatsApp CS |
+
+### Cara kerja Admin + Support (ringkas)
+
+1. Pesan masuk WhatsApp dipetakan ke intent oleh router.
+2. Jika intent operasional/komplain, `CS/Support AI` merespons.
+3. Jika pesan berisi transaksi owner (`jual`, `beli`, nominal), `Admin AI` mencatat ke `transactions`.
+4. Jika stok kritis, `Logistik AI` membuat approval di `approvals`.
+5. Owner mengecek/menyetujui di **Ruang Komando**.
+
+---
+
+## Paket harga (seragam dengan landing)
+
+| Paket | Harga | Aktivasi AI | Setup nomor |
+|---|---:|---|---|
+| Starter | Rp 99.000/bulan | Admin AI (fokus pencatatan) | 1 nomor WA |
+| Growth | Rp 249.000/bulan | Admin, Logistik, Order, Payment | 2 nomor WA (CS + Catat) |
+| Pro Multi-Outlet | Rp 499.000/bulan | Semua AI (CS, Sales, Order, Payment, Support, Admin, Logistik) | Multi user/outlet |
+
+Biaya setup awal: **Rp 199.000** (sekali bayar) untuk onboarding + mapping WhatsApp.
 
 ---
 

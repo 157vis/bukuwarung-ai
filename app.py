@@ -769,6 +769,18 @@ def render_dashboard(core: LarisCore, user) -> None:
                     inv_df['date'] = pd.to_datetime(inv_df['date'])
                 st.dataframe(inv_df.head(30))
 
+            st.markdown("---")
+            st.subheader("Produk Terkoneksi dari Gudang")
+            st.caption("Setiap entri gudang otomatis sinkron ke tabel produk (`products`).")
+            products = core.list_products(user_id)
+            if products is None:
+                st.warning("Gagal memuat tabel produk.")
+            elif not products:
+                st.info("Belum ada produk tersinkron. Tambah entri gudang terlebih dahulu.")
+            else:
+                prod_df = pd.DataFrame(products)
+                st.dataframe(prod_df, use_container_width=True)
+
 
 def main() -> None:
     page_config()
