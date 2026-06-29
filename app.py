@@ -18,7 +18,7 @@ SUPER_ADMIN_EMAIL = "rafihrr1@gmail.com"
 
 # Default deploy production (bisa override di secrets.toml)
 DEFAULT_BUKUWARUNG_URL = "https://bukuwarung-ai-larisai.up.railway.app"
-DEFAULT_CATAT_BOT_URL = "https://bukuwarung-ai-larisai.up.railway.app"
+DEFAULT_CATAT_BOT_URL = "https://kita-cuan-wa-bot-larisai.up.railway.app"
 
 
 def _bot_base_urls() -> tuple[str, str]:
