@@ -9,13 +9,29 @@ Rafi.env
 
 # Python
 .venv/
+venv/
+env/
 __pycache__/
 *.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
 
 # Editor / OS
 .vscode/
 .cursor/
 .DS_Store
+Thumbs.db
+desktop.ini
+*.log
+*.bak
+
+# Streamlit cache
+.streamlit/cache/
 
 # Stack Next.js lama (tidak dipakai untuk Streamlit)
 laris-ai/

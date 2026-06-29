@@ -156,7 +156,7 @@ def _clear_demo_mode() -> None:
     st.session_state.pop("demo_mode", None)
     try:
         st.query_params.clear()
-    except Exception:
+    except (AttributeError, TypeError, KeyError):
         pass
 
 

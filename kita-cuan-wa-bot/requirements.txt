@@ -1,7 +1,2 @@
-fastapi
-uvicorn
-httpx
-python-dotenv
-groq
-supabase
-pandas
+# Bot WA memakai requirements root — jangan duplikasi versi di sini.
+-r ../requirements.txt

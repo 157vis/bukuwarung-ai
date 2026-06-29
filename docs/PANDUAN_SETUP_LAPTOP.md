@@ -29,6 +29,33 @@ Login GitHub jika diminta (browser atau Personal Access Token).
 
 ---
 
+## 1b. Flashdisk / HDD external (portable)
+
+Project **tidak** memakai path absolut (`C:\`, `D:\`, dll). Semua path relatif ke folder project via `paths.py`.
+
+```powershell
+# Contoh: copy folder ke flashdisk E:
+E:
+cd E:\bukuwarungai
+python -m venv .venv
+.\.venv\Scripts\pip install -r requirements.txt
+```
+
+Jalankan tanpa mengubah drive letter:
+
+```powershell
+.\scripts\run-dashboard.ps1   # Dashboard Streamlit
+.\scripts\run-bot.ps1         # Bot WA (opsional lokal)
+```
+
+Salin file rahasia ke flashdisk (sekali):
+- `.streamlit\secrets.toml` (dari `secrets.toml.example`)
+- `kita-cuan-wa-bot\.env` (dari `.env.example`)
+
+> **Tips:** Jangan commit `.env` / `secrets.toml` ke git. Bawa flashdisk ke komputer lain → jalankan script di atas.
+
+---
+
 ## 2. Python & dependensi
 
 ```bash

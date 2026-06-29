@@ -4,7 +4,11 @@ import time
 
 import streamlit as st
 from supabase import create_client
+
 from brand import LOGIN_BRAND_HTML
+from log_config import get_logger
+
+logger = get_logger(__name__)
 
 
 def _client():
@@ -18,7 +22,7 @@ def _decode_exp(token: str) -> int:
         payload += "=" * (-len(payload) % 4)
         data = json.loads(base64.urlsafe_b64decode(payload))
         return int(data.get("exp", 0))
-    except Exception:
+    except (json.JSONDecodeError, ValueError, IndexError, TypeError):
         return 0
 
 
@@ -51,8 +55,8 @@ def ensure_valid_session() -> bool:
                 if getattr(res, "user", None):
                     st.session_state["user"] = _normalize_user(res.user)
                 return True
-        except Exception as exc:
-            print("ERROR ensure_valid_session (no token):", exc)
+        except (OSError, ValueError, KeyError, AttributeError) as exc:
+            logger.warning("ensure_valid_session (no token): %s", exc)
         _clear_session()
         return False
 
@@ -75,8 +79,8 @@ def ensure_valid_session() -> bool:
             if getattr(res, "user", None):
                 st.session_state["user"] = _normalize_user(res.user)
             return True
-    except Exception as exc:
-        print("ERROR ensure_valid_session refresh:", exc)
+    except (OSError, ValueError, KeyError, AttributeError) as exc:
+        logger.warning("ensure_valid_session refresh: %s", exc)
 
     _clear_session()
     return False
@@ -169,8 +173,8 @@ def logout():
     # Invalidasi token di server auth, lalu bersihkan sesi lokal.
     try:
         _client().auth.sign_out()
-    except Exception as exc:
-        print("ERROR logout sign_out:", exc)
+    except (OSError, ValueError, KeyError, AttributeError) as exc:
+        logger.warning("logout sign_out: %s", exc)
     _clear_session()
     st.session_state.pop("show_login", None)
     st.rerun()

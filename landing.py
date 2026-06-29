@@ -8,8 +8,7 @@ import streamlit.components.v1 as components
 from brand import APP_NAME, APP_TAGLINE, LANDING_LOGO_HTML, LOGIN_QUERY, DEMO_QUERY
 
 _LANDING_CANDIDATES = (
-    Path(__file__).parent / "static" / "laris-landing.html",
-    Path(__file__).parent / "Laris-AI.html",
+    Path(__file__).resolve().parent / "static" / "laris-landing.html",
 )
 
 
@@ -46,7 +45,10 @@ def _render_fallback_landing() -> None:
 
 
 def _load_landing_html() -> str:
-    html = _landing_path().read_text(encoding="utf-8")  # type: ignore[union-attr]
+    path = _landing_path()
+    if path is None:
+        return ""
+    html = path.read_text(encoding="utf-8")
 
     html = html.replace("<title>Laris.AI —", f"<title>{APP_NAME} —")
     html = html.replace(

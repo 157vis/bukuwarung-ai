@@ -6,6 +6,9 @@ from demo_dashboard import render_demo_dashboard
 from landing import render_landing
 from login import show_login_page, get_current_user, logout, ensure_valid_session
 from laris_core import LarisCore
+from log_config import get_logger
+
+logger = get_logger(__name__)
 
 
 AGENT_LABELS = {"admin": "Admin AI", "logistik": "Logistik AI"}
@@ -563,8 +566,8 @@ def render_dashboard(core: LarisCore, user) -> None:
         # List warehouses
         try:
             warehouses = core.list_warehouses(user_id)
-        except BaseException as exc:
-            print("ERROR app.render_dashboard list_warehouses:", exc)
+        except (OSError, ValueError, KeyError, AttributeError) as exc:
+            logger.error("list_warehouses: %s", exc)
             warehouses = None
 
         st.subheader("Daftar Gudang")

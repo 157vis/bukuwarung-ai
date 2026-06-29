@@ -1,15 +1,21 @@
 """Logika bisnis bersama — dipakai app Streamlit & bot WhatsApp."""
 
-import re
-import json
+from __future__ import annotations
+
 import base64
-import random
+import json
 import os
+import random
+import re
 from datetime import datetime, timedelta
 
 import pandas as pd
-from supabase import create_client
 from groq import Groq
+from supabase import create_client
+
+from log_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class LarisCore:
@@ -30,7 +36,7 @@ class LarisCore:
         try:
             self.supabase.postgrest.auth(token)
         except Exception as exc:
-            print("ERROR set_access_token:", exc)
+            logger.error("set_access_token: %s", exc)
 
     @staticmethod
     def normalize_user_id(user_id) -> str:
@@ -84,7 +90,7 @@ class LarisCore:
             resp = self.supabase.table("wa_users").select("*").order("id", desc=True).execute()
             return resp.data or []
         except Exception as exc:
-            print("ERROR list_all_wa_numbers:", exc)
+            logger.error("list_all_wa_numbers: %s", exc)
             return None
 
     @staticmethod
@@ -109,7 +115,7 @@ class LarisCore:
             resp = self.supabase.table("wa_users").select("*").eq("user_id", user_id).order("id", desc=True).execute()
             return resp.data or []
         except Exception as exc:
-            print("ERROR list_wa_numbers:", exc)
+            logger.error("list_wa_numbers: %s", exc)
             return None
 
     def unlink_wa_number(self, user_id: str, phone: str):
@@ -150,7 +156,7 @@ class LarisCore:
             resp = self.supabase.table(table_name).select("id").limit(1).execute()
             return resp is not None
         except BaseException as exc:
-            print(f"ERROR table_exists({table_name}):", exc)
+            logger.error("table_exists(%s): %s", table_name, exc)
             return False
 
     def db_insert_transaction(
@@ -188,30 +194,7 @@ class LarisCore:
             "is_prive": is_prive,
             "user_id": user_id,
         }
-        # Temporary debug logging for troubleshooting missing transactions
-        try:
-            print("DEBUG db_insert_transaction: input=", {
-                "user_id": user_id,
-                "type": type_txn,
-                "category": category,
-                "amount": amount,
-                "note": note,
-                "is_prive": is_prive,
-            })
-            print("DEBUG db_insert_transaction: last_balance=", last_balance, "new_balance=", new_balance, "receipt_no=", receipt_no)
-        except Exception:
-            pass
-
-        insert_result = self.supabase.table("transactions").insert(data).execute()
-
-        try:
-            # Log response details (data, count, error if present)
-            print("DEBUG db_insert_transaction: insert_result.data=", getattr(insert_result, "data", None))
-            print("DEBUG db_insert_transaction: insert_result.count=", getattr(insert_result, "count", None))
-            print("DEBUG db_insert_transaction: insert_result.error=", getattr(insert_result, "error", None))
-        except Exception:
-            pass
-        return insert_result
+        return self.supabase.table("transactions").insert(data).execute()
 
     def recalculate_running_balance(self, user_id):
         """Hitung ulang running_balance semua transaksi user (urut kronologis/id asc).
@@ -240,7 +223,7 @@ class LarisCore:
                 )
             return balance
         except Exception as exc:
-            print("ERROR recalculate_running_balance:", exc)
+            logger.error("recalculate_running_balance: %s", exc)
             return None
 
     def db_update_transaction(self, user_id, txn_id, type_txn, category, amount, note):
@@ -277,7 +260,7 @@ class LarisCore:
             resp = self.supabase.table("warehouses").select("*").eq("user_id", user_id).order("id", desc=False).execute()
             return resp.data or []
         except BaseException as exc:
-            print("ERROR list_warehouses:", exc)
+            logger.error("list_warehouses: %s", exc)
             return None
 
     def update_warehouse(self, user_id: str, warehouse_id: int, **fields):
@@ -286,7 +269,7 @@ class LarisCore:
                 self.supabase.table("warehouses").update(fields).eq("id", warehouse_id).eq("user_id", user_id).execute()
             )
         except BaseException as exc:
-            print("ERROR update_warehouse:", exc)
+            logger.error("update_warehouse: %s", exc)
             return None
 
     def delete_warehouse(self, user_id: str, warehouse_id: int):
@@ -295,7 +278,7 @@ class LarisCore:
                 self.supabase.table("warehouses").delete().eq("id", warehouse_id).eq("user_id", user_id).execute()
             )
         except BaseException as exc:
-            print("ERROR delete_warehouse:", exc)
+            logger.error("delete_warehouse: %s", exc)
             return None
 
     def add_inventory_entry(self, user_id: str, warehouse_id: int, barang: str, qty_in: int = 0, qty_out: int = 0, note: str = None):
@@ -309,15 +292,9 @@ class LarisCore:
             "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
         }
         try:
-            insert_result = self.supabase.table("inventory_entries").insert(data).execute()
-            try:
-                print("DEBUG add_inventory_entry:", data)
-                print("DEBUG add_inventory_entry result:", getattr(insert_result, "data", None), getattr(insert_result, "error", None))
-            except Exception:
-                pass
-            return insert_result
+            return self.supabase.table("inventory_entries").insert(data).execute()
         except Exception as exc:
-            print("ERROR add_inventory_entry:", exc)
+            logger.error("add_inventory_entry: %s", exc)
             return None
 
     def list_inventory(self, user_id: str, warehouse_id: int = None):
@@ -328,7 +305,7 @@ class LarisCore:
             resp = q.order("id", desc=True).execute()
             return resp.data or []
         except Exception as exc:
-            print("ERROR list_inventory:", exc)
+            logger.error("list_inventory: %s", exc)
             return None
 
     # --------------------
@@ -347,7 +324,7 @@ class LarisCore:
         try:
             return self.supabase.table("approvals").insert(data).execute()
         except Exception as exc:
-            print("ERROR create_approval:", exc)
+            logger.error("create_approval: %s", exc)
             return None
 
     def list_pending_approvals(self, user_id: str):
@@ -362,7 +339,7 @@ class LarisCore:
             )
             return resp.data or []
         except Exception as exc:
-            print("ERROR list_pending_approvals:", exc)
+            logger.error("list_pending_approvals: %s", exc)
             return None
 
     def update_approval_status(self, user_id: str, approval_id, status: str):
@@ -377,7 +354,7 @@ class LarisCore:
                 .execute()
             )
         except Exception as exc:
-            print("ERROR update_approval_status:", exc)
+            logger.error("update_approval_status: %s", exc)
             return None
 
     # --------------------
@@ -401,7 +378,7 @@ class LarisCore:
             rows = resp.data or []
             return rows[0] if rows else None
         except Exception as exc:
-            print("ERROR find_product_row:", exc)
+            logger.error("find_product_row: %s", exc)
             return None
 
     def get_product_stock(self, user_id: str, product: str):
@@ -418,7 +395,7 @@ class LarisCore:
             stock = sum((r.get("stock") or 0) for r in rows)
             return stock, len(rows)
         except Exception as exc:
-            print("ERROR get_product_stock:", exc)
+            logger.error("get_product_stock: %s", exc)
             return 0, 0
 
     def adjust_product_stock(self, user_id: str, product: str, delta: int):
@@ -441,7 +418,7 @@ class LarisCore:
             self.supabase.table("products").update({"stock": new_stock}).eq("id", row["id"]).execute()
             return new_stock
         except Exception as exc:
-            print("ERROR adjust_product_stock:", exc)
+            logger.error("adjust_product_stock: %s", exc)
             return None
 
     def resolve_sale_quantity(
@@ -497,7 +474,7 @@ class LarisCore:
                 if name and name.lower() in haystack:
                     return row
         except Exception as exc:
-            print("ERROR resolve_product_for_sale:", exc)
+            logger.error("resolve_product_for_sale: %s", exc)
         return None
 
     def run_logistik_after_sale(
@@ -612,10 +589,10 @@ class LarisCore:
         try:
             result = self.supabase.table("wa_messages").insert(data).execute()
             if not getattr(result, "data", None):
-                print("WARN log_wa_message: insert tanpa data balik", data)
+                logger.warning("log_wa_message: insert tanpa data balik %s", data)
             return result
         except Exception as exc:
-            print("ERROR log_wa_message:", exc, "| payload:", {**data, "content": (content or "")[:80]})
+            logger.error("log_wa_message: %s | payload: %s", exc, {**data, "content": (content or "")[:80]})
             return None
 
     def list_wa_messages(self, user_id: str, limit: int = 30):
@@ -631,7 +608,7 @@ class LarisCore:
             rows = resp.data or []
             return list(reversed(rows))
         except Exception as exc:
-            print("ERROR list_wa_messages:", exc)
+            logger.error("list_wa_messages: %s", exc)
             return []
 
     def delete_last_transaction(self, user_id):
@@ -664,7 +641,7 @@ class LarisCore:
         try:
             data = json.loads(content)
         except Exception as exc:
-            print("ERROR parse transaksi (json):", exc, "| raw:", str(content)[:160])
+            logger.error("parse transaksi (json): %s | raw: %s", exc, str(content)[:160])
             return []
         if isinstance(data, list):
             return [d for d in data if isinstance(d, dict)]
@@ -694,7 +671,7 @@ class LarisCore:
             )
             return self._parse_transactions(res.choices[0].message.content)
         except Exception as exc:
-            print("ERROR ai_extractor_agent:", exc)
+            logger.error("ai_extractor_agent: %s", exc)
             return []
 
     def vision_extractor_agent_from_b64(self, b64: str) -> list:
@@ -724,7 +701,7 @@ class LarisCore:
             )
             return self._parse_transactions(res.choices[0].message.content)
         except Exception as exc:
-            print("ERROR vision_extractor_agent:", exc)
+            logger.error("vision_extractor_agent: %s", exc)
             return []
 
     def vision_extractor_agent_from_upload(self, uploaded_file) -> list:
@@ -807,7 +784,7 @@ class LarisCore:
             valid = {"CATAT", "SKOR", "SARAN", "PIUTANG", "HAPUS", "LAINNYA"}
             return intent if intent in valid else "LAINNYA"
         except Exception as exc:
-            print("ERROR classify_wa_intent:", exc)
+            logger.error("classify_wa_intent: %s", exc)
             return "LAINNYA"
 
     def get_ai_piutang_answer(self, df: pd.DataFrame, question: str) -> str:
@@ -856,7 +833,7 @@ class LarisCore:
             )
             return res.choices[0].message.content.strip()
         except Exception as exc:
-            print("ERROR get_ai_piutang_answer:", exc)
+            logger.error("get_ai_piutang_answer: %s", exc)
             if not piutang.empty:
                 lines = [f"• {row['note']}: Rp {row['amount']:,.0f}" for _, row in piutang.iterrows()]
                 return "📋 *Daftar Piutang:*\n" + "\n".join(lines)

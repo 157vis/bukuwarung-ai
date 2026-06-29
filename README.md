@@ -37,6 +37,16 @@ Ringkas:
 
 > File rahasia (`.env`, `secrets.toml`) **tidak** di-upload ke GitHub. Setiap laptop perlu salin dari contoh + isi key sendiri.
 
+### Portable (flashdisk / HDD)
+
+```powershell
+pip install -r requirements.txt
+.\scripts\run-dashboard.ps1
+.\scripts\run-bot.ps1
+```
+
+Modul `paths.py` mengatur path relatif — tidak ada hardcode drive letter.
+
 ---
 
 ## SQL Supabase (sekali)
@@ -83,6 +93,8 @@ Cek versi bot live: buka `https://bukuwarung-ai-larisai.up.railway.app/` → fie
 
 ```
 bukuwarung-ai/
+├── paths.py               # Root project — portable path helper
+├── log_config.py          # Logging terpusat
 ├── app.py                 # Dashboard Streamlit
 ├── laris_core.py          # Logika bisnis bersama (Supabase + Groq)
 ├── kita-cuan-wa-bot/      # FastAPI webhook WhatsApp

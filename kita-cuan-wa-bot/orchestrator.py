@@ -2,16 +2,11 @@
 
 from __future__ import annotations
 
-import os
-from pathlib import Path
-import sys
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
 from agents import core
+from config import REORDER_QTY, STOCK_THRESHOLD
+from log_config import get_logger
 
-STOCK_THRESHOLD = int(os.environ.get("STOCK_THRESHOLD", "10"))
-REORDER_QTY = int(os.environ.get("REORDER_QTY", "20"))
+logger = get_logger(__name__)
 
 
 def orchestrate_transaction_created(
@@ -22,10 +17,7 @@ def orchestrate_transaction_created(
     stock_threshold: int | None = None,
     reorder_qty: int | None = None,
 ) -> str:
-    """Setelah Admin AI menyimpan transaksi, jalankan Logistik AI untuk tiap penjualan.
-
-    Return teks tambahan untuk balasan WA (bisa kosong).
-    """
+    """Setelah Admin AI menyimpan transaksi, jalankan Logistik AI untuk tiap penjualan."""
     threshold = stock_threshold if stock_threshold is not None else STOCK_THRESHOLD
     reorder = reorder_qty if reorder_qty is not None else REORDER_QTY
     notes: list[str] = []
