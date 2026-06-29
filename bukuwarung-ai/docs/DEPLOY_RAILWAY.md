@@ -14,8 +14,20 @@ Panduan deploy bot multi-agent WhatsApp ke [Railway](https://railway.app).
 ### 1. Buat project Railway
 
 1. **New Project** → **Deploy from GitHub repo**
-2. Pilih repo → set **Root Directory** = `bukuwarung-ai` (jika monorepo)
-3. Railway mendeteksi `Procfile` / `railway.json` otomatis
+2. Pilih repo `157vis/bukuwarung-ai`
+3. **PENTING — Root Directory:** set ke `bukuwarung-ai` (bukan root repo `/`)
+
+> Jika Root Directory salah (`/`), Railway akan error:  
+> `Could not import module "main"` — karena `main.py` ada di folder `bukuwarung-ai/`.
+
+**Alternatif** (Root Directory tetap `/`):
+
+| Setting | Nilai |
+|---------|-------|
+| Root Directory | `/` |
+| Start Command | `bash scripts/railway-bukuwarung-ai.sh` |
+
+Railway mendeteksi `Procfile` / `railway.json` di dalam folder `bukuwarung-ai/` hanya jika root = `bukuwarung-ai`.
 
 ### 2. Environment variables
 
@@ -77,6 +89,7 @@ Lihat `docs/PRE_DEPLOY_CHECKLIST.md`.
 
 | Masalah | Solusi |
 |---------|--------|
+| `Could not import module "main"` | **Root Directory** = `bukuwarung-ai` ATAU Start Command = `bash scripts/railway-bukuwarung-ai.sh` |
 | Build gagal | Cek `runtime.txt` Python 3.11, `requirements.txt` valid |
 | 502 Bad Gateway | Pastikan start command `uvicorn main:app --host 0.0.0.0 --port $PORT` |
 | Health check fail | Buka `/health` — pastikan app boot tanpa crash |

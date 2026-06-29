@@ -32,7 +32,7 @@ CROSS JOIN (
     ('indomie', 3500, 20),
     ('gula', 15000, 10),
     ('minyak', 18000, 8),
-    ('kopi', 3500, 50),
+    ('kopi', 3500, 50)
 ) AS v(name, price, stock)
 WHERE lower(u.email) = lower('rafiharliansyah34@gmail.com')
   AND NOT EXISTS (
