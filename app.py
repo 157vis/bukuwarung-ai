@@ -241,16 +241,20 @@ def render_dashboard(core: LarisCore, user) -> None:
 
     user_id = core.normalize_user_id(user_id)
 
-    # Hamburger / toggle menu (restore quick access)
+    # Header actions: hamburger + logout selalu terlihat
     if 'show_menu' not in st.session_state:
         st.session_state.show_menu = True
 
-    col1, col2 = st.columns([1, 19])
+    col1, col2, col3 = st.columns([1, 16, 3])
     with col1:
         if st.button('\u2630', key='hamburger_button', help='Tampilkan atau sembunyikan menu'):
             st.session_state.show_menu = not st.session_state.show_menu
     with col2:
         pass
+    with col3:
+        if st.button("Logout", key="top_logout_button", use_container_width=True):
+            logout()
+            st.rerun()
 
     warehouse_enabled = core.table_exists("warehouses")
 
