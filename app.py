@@ -121,43 +121,65 @@ def inject_dashboard_style() -> None:
     st.markdown(
         """
         <style>
-            /* Latar utama: gradient halus + aksen radial lembut */
+            /* Latar utama: lebih terang & kontras agar nyaman di dark mode */
             .stApp {
                 background:
-                    radial-gradient(1200px 600px at 85% -10%, rgba(124,58,237,0.18), transparent 60%),
-                    radial-gradient(900px 500px at -10% 110%, rgba(30,64,175,0.18), transparent 55%),
-                    linear-gradient(160deg, #0b1220 0%, #0f172a 45%, #111827 100%);
-                color: #e5e7eb;
+                    radial-gradient(1100px 600px at 90% -10%, rgba(99,102,241,0.30), transparent 60%),
+                    radial-gradient(1000px 550px at -10% 110%, rgba(56,189,248,0.24), transparent 58%),
+                    linear-gradient(160deg, #101a2d 0%, #17233a 48%, #1b2a45 100%);
+                color: #f8fafc;
             }
-            /* Sidebar glassmorphism */
+            /* Sidebar: lebih terang + teks lebih jelas */
             section[data-testid="stSidebar"] > div {
-                background: rgba(17, 24, 39, 0.72);
+                background: rgba(30, 41, 59, 0.88);
                 backdrop-filter: blur(10px);
-                border-right: 1px solid rgba(148,163,184,0.15);
+                border-right: 1px solid rgba(148,163,184,0.28);
             }
-            /* Heading */
+            section[data-testid="stSidebar"] * {
+                color: #e2e8f0 !important;
+            }
+            /* Heading + teks umum */
             h1, h2, h3, h4 { color: #f8fafc !important; letter-spacing: 0.2px; }
+            p, li, label, span, div, .stMarkdown, .stCaption {
+                color: #e2e8f0;
+            }
             /* Metric & expander jadi kartu kaca */
             div[data-testid="stMetric"],
             div[data-testid="stExpander"],
             div[data-testid="stForm"] {
-                background: rgba(255,255,255,0.04);
-                border: 1px solid rgba(148,163,184,0.15);
+                background: rgba(255,255,255,0.10);
+                border: 1px solid rgba(148,163,184,0.30);
                 border-radius: 16px;
                 padding: 1rem 1.1rem;
-                box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+                box-shadow: 0 10px 28px rgba(2,6,23,0.35);
             }
-            div[data-testid="stMetricValue"] { color: #f8fafc; }
+            div[data-testid="stMetricValue"] { color: #ffffff; }
+            /* Input/select lebih terbaca */
+            .stTextInput input,
+            .stNumberInput input,
+            .stTextArea textarea {
+                background: rgba(15, 23, 42, 0.78) !important;
+                color: #f8fafc !important;
+                border: 1px solid rgba(148,163,184,0.35) !important;
+            }
+            div[data-baseweb="select"] > div,
+            .stMultiSelect div[data-baseweb="select"] > div {
+                background: rgba(15, 23, 42, 0.78) !important;
+                border-color: rgba(148,163,184,0.35) !important;
+            }
             /* Tombol primer bergaya brand */
             .stButton > button[kind="primary"] {
-                background: linear-gradient(135deg, #7c3aed, #1e40af);
-                border: none; border-radius: 12px; font-weight: 700;
+                background: linear-gradient(135deg, #6366f1, #0ea5e9);
+                border: none;
+                border-radius: 12px;
+                font-weight: 700;
+                color: white;
             }
             .stButton > button { border-radius: 12px; }
             /* Dataframe sedikit transparan */
             div[data-testid="stDataFrame"] {
                 border-radius: 14px; overflow: hidden;
-                border: 1px solid rgba(148,163,184,0.15);
+                border: 1px solid rgba(148,163,184,0.30);
             }
         </style>
         """,

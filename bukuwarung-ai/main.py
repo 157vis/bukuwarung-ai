@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+import re
 import sys
 import time
 from contextlib import asynccontextmanager
@@ -59,6 +61,8 @@ ERROR_REPLY_COOLDOWN_SEC = 120.0
 DEDUP_WINDOW_SEC = 30.0
 _recent_inbound: dict[str, float] = {}
 _recent_error_sent: dict[str, float] = {}
+TXN_CMD_INCOME = ("jual", "pemasukan", "masuk", "terima", "bayar masuk")
+TXN_CMD_EXPENSE = ("beli", "pengeluaran", "keluar", "bayar", "belanja")
 
 
 # ---------------------------------------------------------------------------
@@ -293,6 +297,120 @@ async def _send_error_once(
     return sent
 
 
+async def _resolve_dashboard_user_id(phone: str) -> str | None:
+    """Map nomor WA ke user_id dashboard (tabel wa_users)."""
+    normalized = _normalize_digits(phone)
+    if not normalized:
+        return None
+    db = _get_db()
+    try:
+        result = await asyncio.to_thread(
+            lambda: (
+                db.table("wa_users")
+                .select("user_id")
+                .eq("phone", normalized)
+                .limit(1)
+                .execute()
+            )
+        )
+        rows = result.data or []
+        if rows:
+            return str(rows[0].get("user_id") or "")
+    except Exception as exc:
+        logger.warning("resolve dashboard user gagal phone=%s: %s", normalized, exc)
+    return None
+
+
+async def _log_wa_message(
+    *,
+    user_id: str | None,
+    phone: str,
+    role: str,
+    content: str,
+    agent_id: str | None = None,
+) -> None:
+    """Simpan log chat ke wa_messages agar terlihat di Ruang Komando."""
+    if not user_id or not content.strip():
+        return
+    db = _get_db()
+    row: dict[str, Any] = {
+        "user_id": str(user_id),
+        "phone": _normalize_digits(phone),
+        "role": role,
+        "content": content[:1200],
+    }
+    if agent_id and role == "assistant":
+        row["agent_id"] = agent_id
+    try:
+        await asyncio.to_thread(lambda: db.table("wa_messages").insert(row).execute())
+    except Exception as exc:
+        logger.warning("log wa_messages gagal user=%s: %s", user_id, exc)
+
+
+def _parse_amount(text: str) -> int | None:
+    """Ambil nominal dari teks: 50rb, 50.000, 50000."""
+    cleaned = (text or "").lower().replace(".", "").replace(",", "")
+    m = re.search(r"(\d+)\s*(rb|ribu|k)?", cleaned)
+    if not m:
+        return None
+    val = int(m.group(1))
+    if m.group(2) in ("rb", "ribu", "k"):
+        val *= 1000
+    return val if val > 0 else None
+
+
+async def _record_dashboard_transaction_if_any(
+    *,
+    user_id: str | None,
+    text: str,
+) -> None:
+    """Catat transaksi sederhana ke transactions dari chat owner."""
+    if not user_id:
+        return
+    lower = (text or "").lower()
+    txn_type = None
+    if any(k in lower for k in TXN_CMD_INCOME):
+        txn_type = "Pemasukan"
+    elif any(k in lower for k in TXN_CMD_EXPENSE):
+        txn_type = "Pengeluaran"
+    if not txn_type:
+        return
+    amount = _parse_amount(lower)
+    if not amount:
+        return
+
+    category = "Penjualan" if txn_type == "Pemasukan" else "Belanja"
+    note = text[:200]
+    db = _get_db()
+    try:
+        prev = await asyncio.to_thread(
+            lambda: (
+                db.table("transactions")
+                .select("running_balance")
+                .eq("user_id", user_id)
+                .order("id", desc=True)
+                .limit(1)
+                .execute()
+            )
+        )
+        last_balance = float((prev.data or [{}])[0].get("running_balance") or 0)
+        new_balance = last_balance + amount if txn_type == "Pemasukan" else last_balance - amount
+        row = {
+            "user_id": user_id,
+            "date": time.strftime("%Y-%m-%d %H:%M"),
+            "type": txn_type,
+            "category": category,
+            "amount": amount,
+            "note": note,
+            "running_balance": new_balance,
+            "is_prive": False,
+        }
+        await asyncio.to_thread(lambda: db.table("transactions").insert(row).execute())
+        logger.info("auto-catat transaction user=%s type=%s amount=%s", user_id, txn_type, amount)
+    except Exception as exc:
+        logger.warning("auto-catat transaction gagal user=%s: %s", user_id, exc)
+
+
 def _client_key(request: Request, user_id: str = "") -> str:
     forwarded = request.headers.get("x-forwarded-for", "")
     ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else "unknown")
@@ -387,6 +505,9 @@ async def _process_webhook(
 ) -> WebhookResponse | JSONResponse:
     orch = get_orchestrator()
     fonnte_token = _resolve_fonnte_token(client_config)
+    dashboard_user_id = await _resolve_dashboard_user_id(phone)
+    await _log_wa_message(user_id=dashboard_user_id, phone=phone, role="user", content=text)
+    await _record_dashboard_transaction_if_any(user_id=dashboard_user_id, text=text)
 
     result = await orch.process(
         client_id=client_id,
@@ -395,6 +516,13 @@ async def _process_webhook(
         client_config=client_config,
     )
     sent = await send_message(phone, result.text, token=fonnte_token, inboxid=inboxid)
+    await _log_wa_message(
+        user_id=dashboard_user_id,
+        phone=phone,
+        role="assistant",
+        content=result.text,
+        agent_id=result.agent_id,
+    )
     reason = None
     if not sent and not fonnte_token:
         reason = "fonnte_token_missing"
