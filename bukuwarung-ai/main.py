@@ -57,6 +57,7 @@ class HealthResponse(BaseModel):
     version: str
     configured: bool
     shutting_down: bool = False
+    missing_env: list[str] = Field(default_factory=list)
 
 
 class WebhookResponse(BaseModel):
@@ -198,12 +199,37 @@ async def _parse_body(request: Request) -> dict[str, Any]:
 
 
 def _extract_webhook_fields(body: dict[str, Any]) -> tuple[str, str, str | None, str]:
-    phone = str(body.get("member") or body.get("sender") or body.get("phone") or body.get("user_id") or "")
-    text = str(body.get("message") or body.get("text") or "").strip()
+    phone = str(
+        body.get("member")
+        or body.get("sender")
+        or body.get("from")
+        or body.get("phone")
+        or body.get("user_id")
+        or ""
+    )
+    text = str(body.get("message") or body.get("text") or body.get("pesan") or "").strip()
     inboxid = body.get("inboxid")
     client_id = str(body.get("client_id") or get_settings().app_name)
     phone = "".join(c for c in phone if c.isdigit())
     return phone, text, str(inboxid) if inboxid else None, client_id
+
+
+def _normalize_digits(value: Any) -> str:
+    return "".join(c for c in str(value or "") if c.isdigit())
+
+
+def _resolve_fonnte_token(client_config: ClientConfig | None) -> str | None:
+    """Token per-client, fallback ke FONNTE_TOKEN global di Railway."""
+    per_client = (client_config.fonnte_token if client_config else "") or ""
+    global_token = get_settings().fonnte_token or ""
+    token = (per_client or global_token).strip()
+    return token or None
+
+
+def _is_outgoing_echo(body: dict[str, Any], phone: str) -> bool:
+    """Abaikan echo pesan keluar (Fonnte Quick ON / balasan bot)."""
+    device = _normalize_digits(body.get("device"))
+    return bool(device and phone and device == phone)
 
 
 def _client_key(request: Request, user_id: str = "") -> str:
@@ -237,6 +263,7 @@ async def health() -> HealthResponse:
         version=APP_VERSION,
         configured=settings.is_configured,
         shutting_down=_shutting_down,
+        missing_env=settings.validate_required(),
     )
 
 
@@ -298,11 +325,7 @@ async def _process_webhook(
     client_config: ClientConfig | None,
 ) -> WebhookResponse | JSONResponse:
     orch = get_orchestrator()
-    fonnte_token = None
-    if client_config and client_config.fonnte_token:
-        fonnte_token = client_config.fonnte_token
-    elif not client_config:
-        fonnte_token = get_settings().fonnte_token or None
+    fonnte_token = _resolve_fonnte_token(client_config)
 
     result = await orch.process(
         client_id=client_id,
@@ -311,10 +334,16 @@ async def _process_webhook(
         client_config=client_config,
     )
     sent = await send_message(phone, result.text, token=fonnte_token, inboxid=inboxid)
+    reason = None
+    if not sent and not fonnte_token:
+        reason = "fonnte_token_missing"
+    elif not sent:
+        reason = "fonnte_send_failed"
     return WebhookResponse(
         status="ok" if sent else "ok_unsent",
         agent=result.agent_id,
         intent=result.intent,
+        reason=reason,
     )
 
 
@@ -324,11 +353,13 @@ async def webhook_whatsapp_client(client_id: str, request: Request) -> WebhookRe
     _check_shutdown()
     body = await _parse_body(request)
     phone, text, inboxid, _ = _extract_webhook_fields(body)
-    phone = phone or "".join(c for c in str(body.get("member") or body.get("sender") or "") if c.isdigit())
-    text = text or str(body.get("message") or body.get("text") or "").strip()
 
     if not phone or not text:
+        logger.info("webhook ignored client=%s keys=%s", client_id, list(body.keys()))
         return WebhookResponse(status="ignored", reason="no phone or text")
+
+    if _is_outgoing_echo(body, phone):
+        return WebhookResponse(status="ignored", reason="outgoing echo")
 
     registry = get_registry()
     client_config = await registry.get(client_id)
@@ -348,11 +379,11 @@ async def webhook_whatsapp_client(client_id: str, request: Request) -> WebhookRe
         )
     except HTTPException:
         raise
-    except (httpx.HTTPError, RuntimeError, ValueError) as exc:
+    except Exception as exc:
         logger.exception("webhook error client=%s: %s", client_id, exc)
-        token = client_config.fonnte_token or get_settings().fonnte_token
+        token = _resolve_fonnte_token(client_config)
         fallback = "Maaf, ada gangguan sebentar. Coba kirim lagi ya 🙏"
-        await send_message(phone, fallback, token=token or None, inboxid=inboxid)
+        await send_message(phone, fallback, token=token, inboxid=inboxid)
         return JSONResponse(status_code=500, content={"status": "error", "detail": str(exc)[:120]})
 
 
@@ -366,6 +397,9 @@ async def webhook_whatsapp(request: Request) -> WebhookResponse | JSONResponse:
     if not phone or not text:
         logger.info("webhook ignored: no phone/text body_keys=%s", list(body.keys()))
         return WebhookResponse(status="ignored", reason="no phone or text")
+
+    if _is_outgoing_echo(body, phone):
+        return WebhookResponse(status="ignored", reason="outgoing echo")
 
     registry = get_registry()
     client_config = await registry.get(client_id)
@@ -385,11 +419,10 @@ async def webhook_whatsapp(request: Request) -> WebhookResponse | JSONResponse:
         )
     except HTTPException:
         raise
-    except (httpx.HTTPError, RuntimeError, ValueError) as exc:
+    except Exception as exc:
         logger.exception("webhook error: %s", exc)
         fallback = "Maaf, ada gangguan sebentar. Coba kirim lagi ya 🙏"
-        token = (client_config.fonnte_token if client_config else None) or get_settings().fonnte_token
-        await send_message(phone, fallback, token=token or None, inboxid=inboxid)
+        await send_message(phone, fallback, token=_resolve_fonnte_token(client_config), inboxid=inboxid)
         return JSONResponse(status_code=500, content={"status": "error", "detail": str(exc)[:120]})
 
 
