@@ -229,20 +229,6 @@ def get_query_flag(name: str) -> bool:
 def render_home() -> None:
     from landing import render_landing as _landing
 
-    col_brand, col_demo, col_cta = st.columns([4, 1, 1])
-    with col_brand:
-        st.markdown(f"### {APP_NAME}")
-    with col_demo:
-        if st.button("Lihat Demo", use_container_width=True):
-            st.session_state["demo_mode"] = True
-            st.session_state.pop("show_login", None)
-            st.rerun()
-    with col_cta:
-        if st.button("Masuk ke Dashboard", type="primary", use_container_width=True):
-            st.session_state.pop("demo_mode", None)
-            st.session_state["show_login"] = True
-            st.rerun()
-    st.caption(f"Publik bisa mencoba dashboard contoh lewat {DEMO_QUERY}")
     _landing()
 
 

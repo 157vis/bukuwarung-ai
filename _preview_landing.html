@@ -1,225 +1,10 @@
-/* Streamlit × Dasher 1.0.0 — tema visual */
-
-html, body, [class*="css"] {
-  font-family: "Public Sans", "Inter", system-ui, sans-serif !important;
-}
-
-.stApp {
-  background-color: var(--ds-body-bg, #f9fafb) !important;
-}
-
-header[data-testid="stHeader"] { display: none !important; }
-footer { visibility: hidden; }
-
-/* ============================================================
-   SIDEBAR — Dasher #miniSidebar expanded
-   ============================================================ */
-section[data-testid="stSidebar"] {
-  width: 264px !important;
-  min-width: 264px !important;
-  background-color: var(--ds-navbar-bg, #ffffff) !important;
-  border-right: 1px dashed var(--ds-gray-300, #dfe3e8) !important;
-}
-
-section[data-testid="stSidebar"] > div {
-  background-color: var(--ds-navbar-bg, #ffffff) !important;
-  padding-top: 0.25rem !important;
-}
-
-section[data-testid="stSidebar"] .stMarkdown,
-section[data-testid="stSidebar"] label,
-section[data-testid="stSidebar"] p,
-section[data-testid="stSidebar"] small {
-  color: var(--ds-gray-700, #454f5b) !important;
-}
-
-section[data-testid="stSidebar"] hr {
-  border-color: var(--ds-gray-300, #dfe3e8) !important;
-  margin: 0.6rem 0 !important;
-}
-
-/* Brand logo Dasher */
-section[data-testid="stSidebar"] .brand-logo {
-  padding: 0.5rem 0.85rem 0.85rem 0.85rem;
-  position: sticky;
-  top: 0;
-  background-color: var(--ds-navbar-bg, #fff);
-  z-index: 2;
-  border-bottom: 1px dashed var(--ds-gray-300, #dfe3e8);
-}
-
-/* Nav heading */
-section[data-testid="stSidebar"] .nav-heading small {
-  letter-spacing: 1px;
-  font-size: 0.7rem;
-}
-
-/* Placeholder visual ikon (karena st.button tidak mendukung icon) */
-section[data-testid="stSidebar"] .laris-nav-item {
-  display: none; /* hanya semantik jika diperlukan */
-}
-
-/* Tombol menu — Dasher-style */
-section[data-testid="stSidebar"] .stButton > button {
-  width: 100% !important;
-  text-align: left !important;
-  justify-content: flex-start !important;
-  border-radius: 0.5rem !important;
-  font-weight: 500 !important;
-  padding: 0.55rem 0.85rem !important;
-  border: none !important;
-  box-shadow: none !important;
-  margin: 0.15rem 0.5rem !important;
-  width: calc(100% - 1rem) !important;
-  font-size: 0.92rem !important;
-}
-
-section[data-testid="stSidebar"] .stButton > button[kind="secondary"] {
-  background: transparent !important;
-  color: var(--ds-gray-600, #637381) !important;
-}
-
-section[data-testid="stSidebar"] .stButton > button[kind="secondary"]:hover {
-  background-color: var(--ds-gray-100, #f9fafb) !important;
-  color: var(--ds-gray-800, #1c252e) !important;
-}
-
-section[data-testid="stSidebar"] .stButton > button[kind="primary"] {
-  background-color: var(--ds-primary-bg-subtle, #c8fad6) !important;
-  color: var(--ds-primary-text-emphasis, #007867) !important;
-}
-
-/* ============================================================
-   AREA KONTEN UTAMA
-   ============================================================ */
-.main .block-container {
-  padding-top: 0.5rem !important;
-  padding-left: 1.5rem !important;
-  padding-right: 1.5rem !important;
-  max-width: 100% !important;
-}
-
-.laris-dasher-topbar {
-  margin: 0 0 1.5rem 0;
-  padding: 1rem 1.25rem;
-  background: var(--ds-card-bg, #ffffff);
-  border: 1px solid var(--ds-gray-200, #f4f6f8);
-  border-radius: 1rem;
-  box-shadow: 0 1px 2px rgba(28,37,46,0.04);
-}
-
-.laris-dasher-topbar h2 {
-  font-size: 1.35rem;
-  font-weight: 700;
-  margin: 0;
-  color: var(--ds-gray-900, #141a21);
-}
-
-.laris-page-badge {
-  background: var(--ds-primary-bg-subtle, #c8fad6);
-  color: var(--ds-primary-text-emphasis, #007867);
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 0.25rem 0.6rem;
-  border-radius: 999px;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-}
-
-.laris-user-chip {
-  background: var(--ds-gray-50, #fcfdfd);
-  border: 1px solid var(--ds-gray-200, #f4f6f8);
-  border-radius: 0.75rem;
-  padding: 0.4rem 0.85rem;
-}
-
-/* ============================================================
-   KARTU, METRIK, FORM (Dasher card-lg)
-   ============================================================ */
-div[data-testid="stMetric"],
-div[data-testid="stExpander"],
-div[data-testid="stForm"],
-div[data-testid="stChatMessage"],
-div[data-testid="stVerticalBlockBorderWrapper"],
-.laris-card {
-  border-radius: 1rem !important;
-  border: 1px solid var(--ds-gray-200, #f4f6f8) !important;
-  background-color: var(--ds-card-bg, #fff) !important;
-  box-shadow: 0 1px 3px rgba(28,37,46,0.05) !important;
-}
-
-.stTextInput input,
-.stNumberInput input,
-.stTextArea textarea,
-div[data-baseweb="select"] > div {
-  border-radius: 0.5rem !important;
-  border-color: var(--ds-gray-200, #f4f6f8) !important;
-}
-
-/* Tombol primer Dasher */
-.stButton > button[kind="primary"] {
-  background-color: var(--ds-primary, #00a76f) !important;
-  border-color: var(--ds-primary, #00a76f) !important;
-  border-radius: 0.5rem !important;
-  font-weight: 600 !important;
-  box-shadow: 0 1px 2px rgba(0,167,111,0.3) !important;
-}
-
-.stButton > button[kind="primary"]:hover {
-  background-color: var(--ds-primary-600, #008f5f) !important;
-  border-color: var(--ds-primary-600, #008f5f) !important;
-}
-
-div[data-testid="stDataFrame"] {
-  border-radius: 1rem;
-  overflow: hidden;
-  border: 1px solid var(--ds-gray-200, #f4f6f8);
-  background: var(--ds-card-bg, #fff);
-}
-
-/* ============================================================
-   LOGIN
-   ============================================================ */
-.laris-dasher-login .block-container {
-  max-width: 480px !important;
-  padding-top: 3rem !important;
-}
-
-.laris-dasher-login .laris-login-brand {
-  text-align: center;
-  margin-bottom: 1.25rem;
-}
-
-.laris-dasher-login .laris-login-brand h1 {
-  font-size: 1.85rem;
-  font-weight: 700;
-  margin-bottom: 0.35rem;
-}
-
-.laris-dasher-login div[data-testid="stForm"] {
-  border: none !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-  background: transparent !important;
-}
-
-/* Hero gradient (bg-gradient-mixed Dasher) */
-.bg-gradient-mixed {
-  background: linear-gradient(94.82deg, #ffe9d5 1.11%, #c8fad6 99.11%) !important;
-}
-
-/* Cards icon shapes */
-.laris-card-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.25rem;
-  flex-shrink: 0;
-}
-
+<!doctype html>
+<html lang="id"><head>
+<meta charset="utf-8"><title>Preview Landing laris.AI</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
+<style>
+body { margin:0; padding:0; }
 /* ============================================================
    LANDING PAGE (single-page, single-layout — no Streamlit widgets)
    ============================================================ */
@@ -637,3 +422,203 @@ div[data-testid="stDataFrame"] {
   .laris-stats-inner { grid-template-columns: 1fr 1fr; }
   .laris-cta-card { padding: 1.5rem; }
 }
+</style></head>
+<body>
+
+    <div class="laris-navbar">
+      <div class="laris-navbar-inner">
+        <a href="#" class="laris-navbar-brand">
+          <span class="laris-brand-dot"></span>
+          <strong>laris.AI</strong>
+          <small class="text-muted ms-2">AI Multi-Agent untuk UMKM Indonesia</small>
+        </a>
+        <nav class="laris-navbar-links d-none d-md-flex">
+          <a href="#fitur">Fitur</a>
+          <a href="#alur">Alur</a>
+          <a href="#cta">Mulai</a>
+        </nav>
+        <div class="laris-navbar-cta d-flex gap-2">
+          <a href="?demo=1" target="_parent" class="btn btn-ghost">Demo</a>
+          <a href="?login=1" target="_parent" class="btn btn-solid">Masuk</a>
+        </div>
+      </div>
+    </div>
+    
+
+    <section class="laris-hero">
+      <div class="laris-hero-inner">
+        <span class="laris-pill">🚀 UMKM-First · Multi-Agent</span>
+        <h1 class="laris-h1">Catat jualan lewat <span class="laris-h1-accent">WhatsApp</span>,<br/>dashboard otomatis terisi.</h1>
+        <p class="laris-lead">
+          laris.AI adalah partner AI untuk toko, warung, dan UMKM Indonesia.
+          Cukup kirim pesan <em>"jual kopi 50rb"</em>, Admin AI langsung catat ke Buku Kas,
+          Logistik AI pantau stok, dan Dashboard Dasher Anda terisi secara real-time.
+        </p>
+        <div class="laris-hero-cta">
+          <a href="?demo=1" target="_parent" class="btn btn-solid btn-lg">
+            <i class="ti ti-flask"></i> Buka Dashboard Demo
+          </a>
+          <a href="?login=1" target="_parent" class="btn btn-ghost btn-lg">
+            <i class="ti ti-login"></i> Masuk Akun
+          </a>
+        </div>
+        <div class="laris-hero-meta">
+          <span>✅ Setup gratis via Supabase</span>
+          <span>✅ RLS Multi-Tenant aman</span>
+          <span>✅ AI Groq & OpenRouter</span>
+        </div>
+      </div>
+      <div class="laris-hero-visual d-none d-lg-block">
+        <div class="laris-phone-frame">
+          <div class="laris-phone-header">
+            <div class="laris-phone-dots"><span></span><span></span><span></span></div>
+            <small>WA Owner · Catat Transaksi</small>
+          </div>
+          <div class="laris-phone-body">
+            <div class="laris-msg laris-msg-user">jual kopi 50rb, indomie 5 bungkus</div>
+            <div class="laris-msg laris-msg-bot">
+              ✅ <strong>2 transaksi</strong> tercatat.<br/>
+              • Kopi · Rp50.000<br/>
+              • Indomie x5 · Rp17.500
+            </div>
+            <div class="laris-msg laris-msg-user">stok mie tinggal berapa?</div>
+            <div class="laris-msg laris-msg-bot">
+              📦 Mie Instan: <strong>18 pcs</strong>.<br/>
+              Saran restock: <strong>6 dus</strong>.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+<section class="laris-stats"><div class="laris-stats-inner"><div class="laris-stat-item"><span class="laris-stat-value">100%</span><span class="laris-stat-label">Gratis coba demo publik</span></div><div class="laris-stat-item"><span class="laris-stat-value">< 30s</span><span class="laris-stat-label">Waktu catat transaksi via WA</span></div><div class="laris-stat-item"><span class="laris-stat-value">24/7</span><span class="laris-stat-label">AI menyala otomatis</span></div><div class="laris-stat-item"><span class="laris-stat-value">Multi-Tenant</span><span class="laris-stat-label">RLS per toko</span></div></div></section>
+
+    <section class="laris-features" id="fitur">
+      <div class="laris-section-inner">
+        <div class="laris-section-head">
+          <span class="laris-pill laris-pill-soft">Kenapa laris.AI?</span>
+          <h2>Semua yang UMKM butuhkan, dalam satu platform.</h2>
+          <p>Catat, lihat, dan ambil keputusan lebih cepat dengan AI Multi-Agent.</p>
+        </div>
+        <div class="laris-features-grid">
+            <div class="laris-feature-card">
+                <div class="laris-feature-icon"><i class="ti ti-brand-whatsapp"></i></div>
+                <h4>Catat via WhatsApp</h4>
+                <p>Kirim pesan seperti 'jual kopi 50rb' lewat WA — AI langsung catat ke Buku Kas.</p>
+            </div>
+
+            <div class="laris-feature-card">
+                <div class="laris-feature-icon"><i class="ti ti-robot"></i></div>
+                <h4>Asisten Multi-Agent</h4>
+                <p>Admin AI kelola ringkasan & stok. Logistik AI kasih rekomendasi PO otomatis.</p>
+            </div>
+
+            <div class="laris-feature-card">
+                <div class="laris-feature-icon"><i class="ti ti-chart-bar"></i></div>
+                <h4>Dashboard Real-Time</h4>
+                <p>Pantau omzet, laba, dan stok UMKM di satu layar Dasher yang modern.</p>
+            </div>
+
+            <div class="laris-feature-card">
+                <div class="laris-feature-icon"><i class="ti ti-shield-check"></i></div>
+                <h4>Multi-Tenant Aman</h4>
+                <p>RLS Supabase: tiap toko hanya lihat data sendiri. Owner tenang.</p>
+            </div>
+
+            <div class="laris-feature-card">
+                <div class="laris-feature-icon"><i class="ti ti-bolt"></i></div>
+                <h4>Auto-Restock</h4>
+                <p>AI kasih peringatan ketika stok produk menyentuh ambang minimum.</p>
+            </div>
+
+            <div class="laris-feature-card">
+                <div class="laris-feature-icon"><i class="ti ti-report-money"></i></div>
+                <h4>Laporan KUR</h4>
+                <p>Ringkasan otomatis untuk pengajuan Kredit Usaha Rakyat ke bank.</p>
+            </div>
+        </div>
+      </div>
+    </section>
+    
+
+    <section class="laris-flow" id="alur">
+      <div class="laris-section-inner">
+        <div class="laris-section-head">
+          <span class="laris-pill laris-pill-soft">Alur kerja</span>
+          <h2>Dari chat WhatsApp ke dashboard bisnis dalam 4 langkah.</h2>
+          <p>Tanpa install, tanpa training — langsung pakai.</p>
+        </div>
+        <div class="laris-flow-grid">
+        <div class="laris-flow-item">
+            <div class="laris-flow-step"><span>01</span><i class="ti ti-message-circle"></i></div>
+            <h5>Owner kirim pesan WA</h5>
+            <p>Bisa bahasa sehari-hari: 'beli kopi 50rb'.</p>
+        </div>
+        
+        <div class="laris-flow-item">
+            <div class="laris-flow-step"><span>02</span><i class="ti ti-robot"></i></div>
+            <h5>AI parsing transaksi</h5>
+            <p>Admin AI parsing kategori, nominal, dan tanggal.</p>
+        </div>
+        
+        <div class="laris-flow-item">
+            <div class="laris-flow-step"><span>03</span><i class="ti ti-database"></i></div>
+            <h5>Tercatat di Supabase</h5>
+            <p>RLS memastikan hanya owner toko itu yang bisa lihat.</p>
+        </div>
+        
+        <div class="laris-flow-item">
+            <div class="laris-flow-step"><span>04</span><i class="ti ti-chart-area"></i></div>
+            <h5>Dashboard Dasher realtime</h5>
+            <p>Statistik, AI Insight, dan Saran Restock terisi otomatis.</p>
+        </div>
+        </div>
+      </div>
+    </section>
+    
+
+    <section class="laris-cta" id="cta">
+      <div class="laris-section-inner">
+        <div class="laris-cta-card">
+          <div>
+            <span class="laris-pill">Mulai sekarang</span>
+            <h2>Siap naik kelas dengan AI?</h2>
+            <p>Coba dashboard contoh publik atau masuk dengan akun toko Anda.</p>
+          </div>
+          <div class="laris-cta-buttons">
+            <a href="?demo=1" target="_parent" class="btn btn-solid btn-lg">
+              <i class="ti ti-flask"></i> Buka Dashboard Demo
+            </a>
+            <a href="?login=1" target="_parent" class="btn btn-ghost btn-lg">
+              <i class="ti ti-login"></i> Masuk Akun
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+
+    <footer class="laris-footer">
+      <div class="laris-section-inner laris-footer-inner">
+        <div class="laris-footer-col">
+          <strong>laris.AI</strong>
+          <p class="text-muted small mb-0">Partner AI untuk UMKM Indonesia.</p>
+        </div>
+        <div class="laris-footer-col">
+          <small class="text-uppercase fw-bold text-muted">Produk</small>
+          <a href="#fitur">Fitur</a>
+          <a href="#alur">Alur</a>
+          <a href="?demo=1" target="_parent">Demo Publik</a>
+        </div>
+        <div class="laris-footer-col">
+          <small class="text-uppercase fw-bold text-muted">Mulai</small>
+          <a href="?login=1" target="_parent">Masuk</a>
+          <a href="?demo=1" target="_parent">Coba Demo</a>
+        </div>
+      </div>
+      <div class="text-center text-muted small py-3">
+        © 2026 laris.AI — Partner Bisnis UMKM Indonesia.
+      </div>
+    </footer>
+    
+</body></html>
