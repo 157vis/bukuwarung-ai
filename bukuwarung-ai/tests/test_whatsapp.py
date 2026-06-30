@@ -21,45 +21,39 @@ async def test_send_message_success():
     mock_resp = MagicMock()
     mock_resp.status_code = 200
 
-    with patch("utils.whatsapp.get_settings") as gs:
-        gs.return_value.fonnte_token = "test-token"
-        with patch("httpx.AsyncClient") as client_cls:
-            client = AsyncMock()
-            client.__aenter__.return_value = client
-            client.__aexit__.return_value = None
-            client.post = AsyncMock(return_value=mock_resp)
-            client_cls.return_value = client
+    with patch("httpx.AsyncClient") as client_cls:
+        client = AsyncMock()
+        client.__aenter__.return_value = client
+        client.__aexit__.return_value = None
+        client.post = AsyncMock(return_value=mock_resp)
+        client_cls.return_value = client
 
-            ok = await whatsapp.send_message("62811", "halo")
-            assert ok is True
+        ok = await whatsapp.send_message("62811", "halo", token="test-token")
+        assert ok is True
 
 
 @pytest.mark.asyncio
 async def test_send_message_retry_on_error():
-    with patch("utils.whatsapp.get_settings") as gs:
-        gs.return_value.fonnte_token = "test-token"
-        with patch("httpx.AsyncClient") as client_cls:
-            client = AsyncMock()
-            client.__aenter__.return_value = client
-            client.__aexit__.return_value = None
-            client.post = AsyncMock(side_effect=httpx.ConnectError("fail"))
-            client_cls.return_value = client
-            with patch("utils.whatsapp.asyncio.sleep", new_callable=AsyncMock):
-                ok = await whatsapp.send_message("62811", "halo")
-            assert ok is False
+    with patch("httpx.AsyncClient") as client_cls:
+        client = AsyncMock()
+        client.__aenter__.return_value = client
+        client.__aexit__.return_value = None
+        client.post = AsyncMock(side_effect=httpx.ConnectError("fail"))
+        client_cls.return_value = client
+        with patch("utils.whatsapp.asyncio.sleep", new_callable=AsyncMock):
+            ok = await whatsapp.send_message("62811", "halo", token="test-token")
+        assert ok is False
 
 
 @pytest.mark.asyncio
 async def test_send_image():
     mock_resp = MagicMock()
     mock_resp.status_code = 200
-    with patch("utils.whatsapp.get_settings") as gs:
-        gs.return_value.fonnte_token = "tok"
-        with patch("utils.whatsapp._fonnte_post", new_callable=AsyncMock, return_value=True) as post:
-            ok = await whatsapp.send_image("62811", "https://img.test/a.jpg", "caption")
-            assert ok is True
-            post.assert_awaited_once()
-            assert post.call_args[0][0]["url"] == "https://img.test/a.jpg"
+    with patch("utils.whatsapp._fonnte_post", new_callable=AsyncMock, return_value=True) as post:
+        ok = await whatsapp.send_image("62811", "https://img.test/a.jpg", "caption", token="tok")
+        assert ok is True
+        post.assert_awaited_once()
+        assert post.call_args[0][0]["url"] == "https://img.test/a.jpg"
 
 
 @pytest.mark.asyncio

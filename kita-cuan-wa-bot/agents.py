@@ -28,13 +28,11 @@ def _validate_env() -> None:
 
 @lru_cache(maxsize=1)
 def get_core() -> LarisCore:
-    """Inisialisasi LarisCore sekali (lazy, setelah .env dimuat)."""
+    """Inisialisasi LarisCore sekali (lazy, setelah .env dimuat). Pakai service role untuk webhook."""
     _validate_env()
-    return LarisCore(
-        os.environ["SUPABASE_URL"],
-        os.environ["SUPABASE_KEY"],
-        os.environ["GROQ_API_KEY"],
-    )
+    url = os.environ["SUPABASE_URL"]
+    key = os.environ.get("SUPABASE_SERVICE_KEY") or os.environ["SUPABASE_KEY"]
+    return LarisCore.from_service_client(url, key, os.environ["GROQ_API_KEY"])
 
 
 class _CoreProxy:

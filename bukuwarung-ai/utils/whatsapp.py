@@ -8,8 +8,6 @@ from typing import Any
 
 import httpx
 
-from config import get_settings
-
 logger = logging.getLogger(__name__)
 
 FONNTE_SEND_URL = "https://api.fonnte.com/send"
@@ -19,9 +17,9 @@ RETRY_DELAY_SEC = 1.5
 
 async def _fonnte_post(payload: dict[str, Any], *, token: str | None = None) -> bool:
     """POST ke Fonnte dengan retry exponential backoff."""
-    api_key = token or get_settings().fonnte_token
+    api_key = (token or "").strip()
     if not api_key:
-        logger.warning("fonnte: token kosong")
+        logger.warning("fonnte: token kosong (ambil dari client_settings per tenant)")
         return False
 
     headers = {"Authorization": api_key}
@@ -65,7 +63,7 @@ async def send_message(
     Args:
         phone: Nomor tujuan (628xx).
         message: Teks balasan.
-        token: Fonnte token; default dari env.
+        token: Fonnte token per tenant (client_settings); wajib diisi.
         inboxid: Opsional inbox Fonnte.
 
     Returns:

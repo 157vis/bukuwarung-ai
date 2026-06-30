@@ -7,6 +7,7 @@ from supabase import create_client
 
 from brand import LOGIN_BRAND_HTML
 from log_config import get_logger
+from ui.laris_theme import inject_login_theme
 
 logger = get_logger(__name__)
 
@@ -127,29 +128,43 @@ def show_login_page():
         st.session_state["show_login"] = False
         return True
 
-    st.markdown("""
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital@0;1&family=Caveat:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        .stApp { background: #f8fafc; }
-        .block-container { max-width: 480px; padding-top: 3rem; }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    st.markdown(f"""
-    <div style="text-align:center; margin-bottom:2rem;">
-        <h1 style="font-family:'Fraunces',serif; font-style:italic;">{LOGIN_BRAND_HTML}</h1>
-        <p style="font-family:'Caveat',cursive; font-size:1.3rem; color:#8B5A3C;">Masuk untuk mengakses dashboard bisnis Anda</p>
-    </div>
-    """, unsafe_allow_html=True)
+    inject_login_theme()
+    st.markdown('<div class="laris-dasher-login">', unsafe_allow_html=True)
+    logo_uri = ""
+    try:
+        from ui.components import _logo_data_uri
+
+        logo_uri = _logo_data_uri()
+    except Exception:
+        pass
+    img = f'<img src="{logo_uri}" width="32" height="32" alt="" style="border-radius:8px;" />' if logo_uri else ""
+
+    st.markdown(
+        f"""
+        <div class="laris-login-brand">
+            <div class="d-inline-flex align-items-center gap-2 justify-content-center fs-2 fw-bold mb-3">
+                {img}<span>{LOGIN_BRAND_HTML}</span>
+            </div>
+            <h1 class="fs-3 mb-1 fw-bold" style="color:#1c252e;">Selamat Datang Kembali</h1>
+            <p class="text-muted mb-0">Masuk untuk mengakses dashboard bisnis Anda</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     if st.button("← Kembali ke Beranda", type="secondary"):
         st.session_state.pop("show_login", None)
         st.rerun()
-    
+
+    st.markdown(
+        '<div class="card card-lg" style="border:1px solid var(--ds-gray-200);border-radius:1rem;">'
+        '<div class="card-body p-4">',
+        unsafe_allow_html=True,
+    )
     with st.form("login_form"):
         email = st.text_input("Email")
         password = st.text_input("Password", type="password")
-        if st.form_submit_button("Masuk", use_container_width=True):
+        if st.form_submit_button("Masuk", use_container_width=True, type="primary"):
             try:
                 res = supabase.auth.sign_in_with_password({"email": email, "password": password})
                 if getattr(res, "user", None):
@@ -162,8 +177,9 @@ def show_login_page():
                     st.error("Email atau password salah.")
             except Exception as e:
                 st.error(f"Gagal masuk: {str(e)[:100]}")
-
-    st.caption("Belum punya akun? Pendaftaran client baru dilakukan oleh Admin Laris.AI.")
+    st.markdown("</div></div>", unsafe_allow_html=True)
+    st.caption("Belum punya akun? Pendaftaran client baru dilakukan oleh Admin laris.AI.")
+    st.markdown("</div>", unsafe_allow_html=True)
     return False
 
 def get_current_user():

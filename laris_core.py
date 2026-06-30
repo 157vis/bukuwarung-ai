@@ -1,4 +1,8 @@
-"""Logika bisnis bersama — dipakai app Streamlit & bot WhatsApp."""
+"""Logika bisnis bersama — dipakai app Streamlit & bot WhatsApp.
+
+Streamlit: inisialisasi dengan **Supabase Anon Key** + `set_access_token(JWT)` agar RLS aktif.
+Backend (main.py webhook): inject `supabase_client` service role lewat parameter konstruktor.
+"""
 
 from __future__ import annotations
 
@@ -8,22 +12,76 @@ import os
 import random
 import re
 from datetime import datetime, timedelta
+from typing import Any
 
 import pandas as pd
 from groq import Groq
-from supabase import create_client
+from supabase import Client, create_client
 
 from log_config import get_logger
 
 logger = get_logger(__name__)
 
 
+class TenantScopeError(ValueError):
+    """Dipanggil saat operasi DB tanpa user_id tenant yang valid."""
+
+
 class LarisCore:
-    def __init__(self, supabase_url: str, supabase_key: str, groq_api_key: str):
+    """Akses data bisnis per-tenant. Semua query wajib memfilter `user_id`."""
+
+    def __init__(
+        self,
+        supabase_url: str,
+        supabase_key: str,
+        groq_api_key: str,
+        *,
+        supabase_client: Client | None = None,
+    ):
+        """`supabase_key` harus Anon Key untuk Streamlit.
+
+        Untuk webhook/backend, pass `supabase_client` service role dari main.py
+        (jangan simpan service key di Streamlit).
+        """
         self.supabase_url = supabase_url
         self.supabase_key = supabase_key
-        self.supabase = create_client(supabase_url, supabase_key)
         self.groq_client = Groq(api_key=groq_api_key)
+        self._service_client = supabase_client is not None
+        if supabase_client is not None:
+            self.supabase = supabase_client
+        else:
+            self.supabase = create_client(supabase_url, supabase_key)
+
+    @staticmethod
+    def normalize_user_id(user_id: Any) -> str:
+        return str(user_id).strip() if user_id else ""
+
+    @classmethod
+    def _require_user_id(cls, user_id: Any) -> str:
+        uid = cls.normalize_user_id(user_id)
+        if not uid:
+            raise TenantScopeError("user_id wajib untuk operasi multi-tenant")
+        return uid
+
+    def _assert_service_client(self, op_name: str) -> None:
+        if not self._service_client:
+            raise TenantScopeError(
+                f"{op_name} lintas-tenant membutuhkan supabase_client service role "
+                "(inject dari main.py, bukan Anon Key Streamlit)"
+            )
+
+    @classmethod
+    def from_service_client(
+        cls,
+        supabase_url: str,
+        service_key: str,
+        groq_api_key: str,
+        *,
+        supabase_client: Client | None = None,
+    ) -> LarisCore:
+        """Factory untuk backend/bot — bypass RLS via service role."""
+        client = supabase_client or create_client(supabase_url, service_key)
+        return cls(supabase_url, service_key, groq_api_key, supabase_client=client)
 
     def set_access_token(self, token: str):
         """Teruskan JWT user login ke PostgREST agar RLS mengenali auth.uid().
@@ -38,15 +96,12 @@ class LarisCore:
         except Exception as exc:
             logger.error("set_access_token: %s", exc)
 
-    @staticmethod
-    def normalize_user_id(user_id) -> str:
-        return str(user_id).strip() if user_id else ""
-
     def count_transactions(self, user_id: str) -> tuple[int, str | None]:
         """Hitung transaksi user (untuk diagnostik dashboard)."""
-        uid = self.normalize_user_id(user_id)
-        if not uid:
-            return 0, "user_id kosong"
+        try:
+            uid = self._require_user_id(user_id)
+        except TenantScopeError as exc:
+            return 0, str(exc)
         try:
             resp = (
                 self.supabase.table("transactions")
@@ -59,9 +114,7 @@ class LarisCore:
             return -1, str(exc)[:200]
 
     def get_dashboard_data(self, user_id: str) -> pd.DataFrame:
-        uid = self.normalize_user_id(user_id)
-        if not uid:
-            return pd.DataFrame()
+        uid = self._require_user_id(user_id)
         response = (
             self.supabase.table("transactions")
             .select("*")
@@ -84,13 +137,33 @@ class LarisCore:
         except Exception as exc:
             return None, str(exc)[:200]
 
-    def list_all_wa_numbers(self):
-        """Admin: ambil semua pemetaan nomor WA -> client."""
+    def list_wa_numbers(self, user_id: str) -> list[dict] | None:
+        uid = self._require_user_id(user_id)
+        try:
+            resp = (
+                self.supabase.table("wa_users")
+                .select("*")
+                .eq("user_id", uid)
+                .order("id", desc=True)
+                .execute()
+            )
+            return resp.data or []
+        except Exception as exc:
+            logger.error("list_wa_numbers user=%s: %s", uid, exc)
+            return None
+
+    def list_all_wa_numbers(self, user_id: str) -> list[dict] | None:
+        """Backward-compatible alias — selalu scoped per user_id."""
+        return self.list_wa_numbers(user_id)
+
+    def admin_list_all_wa_numbers(self) -> list[dict] | None:
+        """Lintas-tenant: hanya dengan service_role client (backend / super-admin tooling)."""
+        self._assert_service_client("admin_list_all_wa_numbers")
         try:
             resp = self.supabase.table("wa_users").select("*").order("id", desc=True).execute()
             return resp.data or []
         except Exception as exc:
-            logger.error("list_all_wa_numbers: %s", exc)
+            logger.error("admin_list_all_wa_numbers: %s", exc)
             return None
 
     @staticmethod
@@ -102,13 +175,46 @@ class LarisCore:
             normalized = "62" + normalized[1:]
         return normalized
 
-    def link_wa_number(self, user_id: str, phone: str, label: str = None):
+    def link_wa_number(self, user_id: str, phone: str, label: str | None = None):
         """Hubungkan nomor WA ke seorang client (user_id). Upsert berdasarkan phone."""
+        uid = self._require_user_id(user_id)
         normalized = self.normalize_phone(phone)
         if not normalized:
             raise ValueError("Nomor WA tidak valid.")
-        data = {"phone": normalized, "user_id": user_id, "label": label}
+        data = {"phone": normalized, "user_id": uid, "label": label}
         return self.supabase.table("wa_users").upsert(data, on_conflict="phone").execute()
+
+    def get_client_settings(self, user_id: str) -> dict | None:
+        """Baca client_settings tenant (RLS: hanya baris milik user login)."""
+        try:
+            uid = self._require_user_id(user_id)
+        except TenantScopeError:
+            return None
+        try:
+            resp = (
+                self.supabase.table("client_settings")
+                .select("*")
+                .eq("user_id", uid)
+                .limit(1)
+                .execute()
+            )
+            rows = resp.data or []
+            return rows[0] if rows else None
+        except Exception as exc:
+            logger.error("get_client_settings user=%s: %s", uid, exc)
+            return None
+
+    def upsert_client_settings(self, user_id: str, row: dict):
+        """Simpan / perbarui client_settings (on_conflict=user_id)."""
+        return self.update_client_settings(user_id, row)
+
+    def update_client_settings(self, user_id: str, settings_dict: dict):
+        """Update pengaturan tenant di tabel client_settings."""
+        uid = self._require_user_id(user_id)
+        payload = dict(settings_dict)
+        payload["user_id"] = uid
+        payload["updated_at"] = datetime.now().isoformat()
+        return self.supabase.table("client_settings").upsert(payload, on_conflict="user_id").execute()
 
     @staticmethod
     def slugify_client_id(label: str, email: str = "") -> str:
@@ -214,8 +320,27 @@ class LarisCore:
             "bukuwarung_error": err,
         }
 
-    def list_bukuwarung_clients(self) -> list[dict] | None:
-        """Admin: daftar client BukuWarung dari tabel clients."""
+    def list_bukuwarung_clients(self, user_id: str) -> list[dict] | None:
+        """Daftar client BukuWarung milik satu tenant (metadata.user_id)."""
+        uid = self._require_user_id(user_id)
+        if not self.table_exists("clients"):
+            return []
+        try:
+            resp = (
+                self.supabase.table("clients")
+                .select("client_id,name,owner_phones,metadata,is_active")
+                .eq("metadata->>user_id", uid)
+                .order("client_id")
+                .execute()
+            )
+            return resp.data or []
+        except Exception as exc:
+            logger.error("list_bukuwarung_clients user=%s: %s", uid, exc)
+            return None
+
+    def admin_list_bukuwarung_clients(self) -> list[dict] | None:
+        """Lintas-tenant: hanya dengan service_role client."""
+        self._assert_service_client("admin_list_bukuwarung_clients")
         if not self.table_exists("clients"):
             return []
         try:
@@ -227,29 +352,23 @@ class LarisCore:
             )
             return resp.data or []
         except Exception as exc:
-            logger.error("list_bukuwarung_clients: %s", exc)
-            return None
-
-    def list_wa_numbers(self, user_id: str):
-        try:
-            resp = self.supabase.table("wa_users").select("*").eq("user_id", user_id).order("id", desc=True).execute()
-            return resp.data or []
-        except Exception as exc:
-            logger.error("list_wa_numbers: %s", exc)
+            logger.error("admin_list_bukuwarung_clients: %s", exc)
             return None
 
     def unlink_wa_number(self, user_id: str, phone: str):
+        uid = self._require_user_id(user_id)
         normalized = self.normalize_phone(phone)
         return (
             self.supabase.table("wa_users")
             .delete()
             .eq("phone", normalized)
-            .eq("user_id", user_id)
+            .eq("user_id", uid)
             .execute()
         )
 
     def resolve_user_id_by_phone(self, phone: str) -> str:
-        """Petakan nomor WA ke user_id Supabase."""
+        """Petakan nomor WA ke user_id Supabase (routing webhook — butuh service role)."""
+        self._assert_service_client("resolve_user_id_by_phone")
         normalized = self.normalize_phone(phone)
 
         for candidate in {phone, normalized, f"+{normalized}"}:
@@ -271,21 +390,39 @@ class LarisCore:
             f"Nomor {phone} belum terdaftar. Hubungkan di dashboard atau set WA_DEFAULT_USER_ID."
         )
 
-    def table_exists(self, table_name: str) -> bool:
+    def probe_table(self, table_name: str) -> str:
+        """Status tabel untuk UI: ok | missing | stale_cache | denied | error."""
         try:
-            resp = self.supabase.table(table_name).select("id").limit(1).execute()
-            return resp is not None
+            self.supabase.table(table_name).select("*").limit(1).execute()
+            return "ok"
         except BaseException as exc:
-            logger.error("table_exists(%s): %s", table_name, exc)
-            return False
+            err = str(exc).lower()
+            name = table_name.lower()
+            if "pgrst205" in err or "schema cache" in err:
+                return "stale_cache"
+            if f"'{name}'" in err or f'"{name}"' in err:
+                if any(x in err for x in ("pgrst205", "could not find", "42p01", "does not exist")):
+                    return "missing"
+            if "column" in err and "does not exist" in err:
+                return "ok"
+            if any(x in err for x in ("permission denied", "42501", "jwt", "401", "403")):
+                return "denied"
+            logger.error("probe_table(%s): %s", table_name, exc)
+            # Jangan blokir UI jika error tidak jelas — tabel mungkin sudah ada.
+            return "ok"
+
+    def table_exists(self, table_name: str) -> bool:
+        """Cek apakah tabel ada — toleran RLS / cache schema."""
+        return self.probe_table(table_name) in ("ok", "denied", "error", "stale_cache")
 
     def db_insert_transaction(
         self, user_id: str, type_txn, category, amount, note, is_prive=False
     ):
+        uid = self._require_user_id(user_id)
         prev = (
             self.supabase.table("transactions")
             .select("running_balance")
-            .eq("user_id", user_id)
+            .eq("user_id", uid)
             .order("id", desc=True)
             .limit(1)
             .execute()
@@ -297,7 +434,7 @@ class LarisCore:
         count_resp = (
             self.supabase.table("transactions")
             .select("id", count="exact")
-            .eq("user_id", user_id)
+            .eq("user_id", uid)
             .like("date", f"{today}%")
             .execute()
         )
@@ -312,20 +449,42 @@ class LarisCore:
             "receipt_no": receipt_no,
             "running_balance": new_balance,
             "is_prive": is_prive,
-            "user_id": user_id,
+            "user_id": uid,
         }
         return self.supabase.table("transactions").insert(data).execute()
 
-    def recalculate_running_balance(self, user_id):
-        """Hitung ulang running_balance semua transaksi user (urut kronologis/id asc).
+    def save_transaction(
+        self, user_id: str, type_txn, category, amount, note, is_prive=False
+    ):
+        """Alias `db_insert_transaction` — selalu scoped per user_id."""
+        return self.db_insert_transaction(user_id, type_txn, category, amount, note, is_prive=is_prive)
 
-        Wajib dipanggil setelah edit/hapus agar saldo berjalan tetap konsisten.
-        """
+    def get_balance(self, user_id: str) -> float:
+        """Saldo berjalan terakhir dari buku kas tenant."""
+        uid = self._require_user_id(user_id)
+        try:
+            resp = (
+                self.supabase.table("transactions")
+                .select("running_balance")
+                .eq("user_id", uid)
+                .order("id", desc=True)
+                .limit(1)
+                .execute()
+            )
+            rows = resp.data or []
+            return float(rows[0].get("running_balance") or 0) if rows else 0.0
+        except Exception as exc:
+            logger.error("get_balance user=%s: %s", uid, exc)
+            return 0.0
+
+    def recalculate_running_balance(self, user_id: str):
+        """Hitung ulang running_balance semua transaksi user (urut kronologis/id asc)."""
+        uid = self._require_user_id(user_id)
         try:
             resp = (
                 self.supabase.table("transactions")
                 .select("id, type, amount")
-                .eq("user_id", user_id)
+                .eq("user_id", uid)
                 .order("id", desc=False)
                 .execute()
             )
@@ -338,72 +497,99 @@ class LarisCore:
                     self.supabase.table("transactions")
                     .update({"running_balance": balance})
                     .eq("id", r["id"])
-                    .eq("user_id", user_id)
+                    .eq("user_id", uid)
                     .execute()
                 )
             return balance
         except Exception as exc:
-            logger.error("recalculate_running_balance: %s", exc)
+            logger.error("recalculate_running_balance user=%s: %s", uid, exc)
             return None
 
     def db_update_transaction(self, user_id, txn_id, type_txn, category, amount, note):
+        uid = self._require_user_id(user_id)
         (
             self.supabase.table("transactions")
             .update({"type": type_txn, "category": category, "amount": amount, "note": note})
             .eq("id", txn_id)
-            .eq("user_id", user_id)
+            .eq("user_id", uid)
             .execute()
         )
-        # Saldo bisa berubah karena tipe/nominal diedit -> hitung ulang.
-        self.recalculate_running_balance(user_id)
+        self.recalculate_running_balance(uid)
 
     def db_delete_transaction(self, user_id, txn_id):
+        uid = self._require_user_id(user_id)
         (
             self.supabase.table("transactions")
             .delete()
             .eq("id", txn_id)
-            .eq("user_id", user_id)
+            .eq("user_id", uid)
             .execute()
         )
-        # Hapus satu baris menggeser saldo semua transaksi sesudahnya -> hitung ulang.
-        self.recalculate_running_balance(user_id)
+        self.recalculate_running_balance(uid)
 
     # --------------------
     # Warehouses / Inventory
     # --------------------
-    def create_warehouse(self, user_id: str, name: str, location: str = None, notes: str = None):
-        data = {"user_id": user_id, "name": name, "location": location, "notes": notes, "created_at": datetime.now().isoformat()}
+    def create_warehouse(self, user_id: str, name: str, location: str | None = None, notes: str | None = None):
+        uid = self._require_user_id(user_id)
+        data = {
+            "user_id": uid,
+            "name": name,
+            "location": location,
+            "notes": notes,
+            "created_at": datetime.now().isoformat(),
+        }
         return self.supabase.table("warehouses").insert(data).execute()
 
     def list_warehouses(self, user_id: str):
+        uid = self._require_user_id(user_id)
         try:
-            resp = self.supabase.table("warehouses").select("*").eq("user_id", user_id).order("id", desc=False).execute()
+            resp = (
+                self.supabase.table("warehouses")
+                .select("*")
+                .eq("user_id", uid)
+                .order("id", desc=False)
+                .execute()
+            )
             return resp.data or []
         except BaseException as exc:
-            logger.error("list_warehouses: %s", exc)
+            logger.error("list_warehouses user=%s: %s", uid, exc)
             return None
 
     def update_warehouse(self, user_id: str, warehouse_id: int, **fields):
+        uid = self._require_user_id(user_id)
         try:
             return (
-                self.supabase.table("warehouses").update(fields).eq("id", warehouse_id).eq("user_id", user_id).execute()
+                self.supabase.table("warehouses")
+                .update(fields)
+                .eq("id", warehouse_id)
+                .eq("user_id", uid)
+                .execute()
             )
         except BaseException as exc:
-            logger.error("update_warehouse: %s", exc)
+            logger.error("update_warehouse user=%s: %s", uid, exc)
             return None
 
     def delete_warehouse(self, user_id: str, warehouse_id: int):
+        uid = self._require_user_id(user_id)
         try:
             return (
-                self.supabase.table("warehouses").delete().eq("id", warehouse_id).eq("user_id", user_id).execute()
+                self.supabase.table("warehouses")
+                .delete()
+                .eq("id", warehouse_id)
+                .eq("user_id", uid)
+                .execute()
             )
         except BaseException as exc:
-            logger.error("delete_warehouse: %s", exc)
+            logger.error("delete_warehouse user=%s: %s", uid, exc)
             return None
 
-    def add_inventory_entry(self, user_id: str, warehouse_id: int, barang: str, qty_in: int = 0, qty_out: int = 0, note: str = None):
+    def add_inventory_entry(
+        self, user_id: str, warehouse_id: int, barang: str, qty_in: int = 0, qty_out: int = 0, note: str | None = None
+    ):
+        uid = self._require_user_id(user_id)
         data = {
-            "user_id": user_id,
+            "user_id": uid,
             "warehouse_id": warehouse_id,
             "barang": barang,
             "qty_in": int(qty_in or 0),
@@ -413,22 +599,22 @@ class LarisCore:
         }
         try:
             res = self.supabase.table("inventory_entries").insert(data).execute()
-            # Sinkronkan stok agregat ke tabel products agar dashboard & logistik satu sumber data.
-            self.sync_product_from_inventory(user_id, barang, int(qty_in or 0), int(qty_out or 0))
+            self.sync_product_from_inventory(uid, barang, int(qty_in or 0), int(qty_out or 0))
             return res
         except Exception as exc:
-            logger.error("add_inventory_entry: %s", exc)
+            logger.error("add_inventory_entry user=%s: %s", uid, exc)
             return None
 
-    def list_inventory(self, user_id: str, warehouse_id: int = None):
+    def list_inventory(self, user_id: str, warehouse_id: int | None = None):
+        uid = self._require_user_id(user_id)
         try:
-            q = self.supabase.table("inventory_entries").select("*").eq("user_id", user_id)
+            q = self.supabase.table("inventory_entries").select("*").eq("user_id", uid)
             if warehouse_id is not None:
                 q = q.eq("warehouse_id", warehouse_id)
             resp = q.order("id", desc=True).execute()
             return resp.data or []
         except Exception as exc:
-            logger.error("list_inventory: %s", exc)
+            logger.error("list_inventory user=%s: %s", uid, exc)
             return None
 
     def sync_product_from_inventory(self, user_id: str, barang: str, qty_in: int, qty_out: int) -> int | None:
@@ -437,7 +623,7 @@ class LarisCore:
         if not name:
             return None
         delta = int(qty_in or 0) - int(qty_out or 0)
-        uid = self.normalize_user_id(user_id)
+        uid = self._require_user_id(user_id)
         try:
             current = (
                 self.supabase.table("products")
@@ -455,11 +641,11 @@ class LarisCore:
                     self.supabase.table("products")
                     .update({"stock": new_stock})
                     .eq("id", row["id"])
+                    .eq("user_id", uid)
                     .execute()
                 )
                 return new_stock
 
-            # Jika produk belum ada, buat baru dari aktivitas gudang.
             init_stock = max(0, delta)
             (
                 self.supabase.table("products")
@@ -468,31 +654,36 @@ class LarisCore:
             )
             return init_stock
         except Exception as exc:
-            logger.error("sync_product_from_inventory: %s", exc)
+            logger.error("sync_product_from_inventory user=%s: %s", uid, exc)
             return None
 
     def list_products(self, user_id: str):
-        """Daftar produk + stok terkini."""
+        """Daftar produk + stok terkini milik tenant."""
+        uid = self._require_user_id(user_id)
         try:
             resp = (
                 self.supabase.table("products")
                 .select("id, name, stock, created_at")
-                .eq("user_id", user_id)
+                .eq("user_id", uid)
                 .order("name", desc=False)
                 .execute()
             )
             return resp.data or []
         except Exception as exc:
-            logger.error("list_products: %s", exc)
+            logger.error("list_products user=%s: %s", uid, exc)
             return None
+
+    def get_products(self, user_id: str):
+        """Alias `list_products`."""
+        return self.list_products(user_id)
 
     # --------------------
     # Approvals (Ruang Komando / Proactive UI)
     # --------------------
-    def create_approval(self, user_id: str, agent_id: str, action_type: str, summary: str, payload: dict = None):
-        """Buat ApprovalRequest status PENDING. Dipakai agent saat butuh persetujuan owner."""
+    def create_approval(self, user_id: str, agent_id: str, action_type: str, summary: str, payload: dict | None = None):
+        uid = self._require_user_id(user_id)
         data = {
-            "user_id": user_id,
+            "user_id": uid,
             "agent_id": agent_id,
             "action_type": action_type,
             "summary": summary,
@@ -502,25 +693,27 @@ class LarisCore:
         try:
             return self.supabase.table("approvals").insert(data).execute()
         except Exception as exc:
-            logger.error("create_approval: %s", exc)
+            logger.error("create_approval user=%s: %s", uid, exc)
             return None
 
     def list_pending_approvals(self, user_id: str):
+        uid = self._require_user_id(user_id)
         try:
             resp = (
                 self.supabase.table("approvals")
                 .select("*")
-                .eq("user_id", user_id)
+                .eq("user_id", uid)
                 .eq("status", "PENDING")
                 .order("id", desc=True)
                 .execute()
             )
             return resp.data or []
         except Exception as exc:
-            logger.error("list_pending_approvals: %s", exc)
+            logger.error("list_pending_approvals user=%s: %s", uid, exc)
             return None
 
     def update_approval_status(self, user_id: str, approval_id, status: str):
+        uid = self._require_user_id(user_id)
         if status not in ("APPROVED", "REJECTED"):
             raise ValueError("status harus APPROVED atau REJECTED")
         try:
@@ -528,11 +721,11 @@ class LarisCore:
                 self.supabase.table("approvals")
                 .update({"status": status, "updated_at": datetime.now().isoformat()})
                 .eq("id", approval_id)
-                .eq("user_id", user_id)
+                .eq("user_id", uid)
                 .execute()
             )
         except Exception as exc:
-            logger.error("update_approval_status: %s", exc)
+            logger.error("update_approval_status user=%s: %s", uid, exc)
             return None
 
     # --------------------
@@ -543,7 +736,7 @@ class LarisCore:
         hint = (name_hint or "").strip()
         if not hint:
             return None
-        uid = self.normalize_user_id(user_id)
+        uid = self._require_user_id(user_id)
         try:
             resp = (
                 self.supabase.table("products")
@@ -556,16 +749,16 @@ class LarisCore:
             rows = resp.data or []
             return rows[0] if rows else None
         except Exception as exc:
-            logger.error("find_product_row: %s", exc)
+            logger.error("find_product_row user=%s: %s", uid, exc)
             return None
 
     def get_product_stock(self, user_id: str, product: str):
-        """Kembalikan (stok, jumlah_baris) dari tabel `products` untuk produk tertentu."""
+        uid = self._require_user_id(user_id)
         try:
             resp = (
                 self.supabase.table("products")
                 .select("stock")
-                .eq("user_id", user_id)
+                .eq("user_id", uid)
                 .ilike("name", f"%{product}%")
                 .execute()
             )
@@ -573,12 +766,11 @@ class LarisCore:
             stock = sum((r.get("stock") or 0) for r in rows)
             return stock, len(rows)
         except Exception as exc:
-            logger.error("get_product_stock: %s", exc)
+            logger.error("get_product_stock user=%s: %s", uid, exc)
             return 0, 0
 
     def adjust_product_stock(self, user_id: str, product: str, delta: int):
-        """Tambah/kurangi stok produk (delta negatif = terjual). Return stok baru atau None."""
-        uid = self.normalize_user_id(user_id)
+        uid = self._require_user_id(user_id)
         try:
             resp = (
                 self.supabase.table("products")
@@ -593,10 +785,16 @@ class LarisCore:
                 return None
             row = rows[0]
             new_stock = max(0, (row.get("stock") or 0) + delta)
-            self.supabase.table("products").update({"stock": new_stock}).eq("id", row["id"]).execute()
+            (
+                self.supabase.table("products")
+                .update({"stock": new_stock})
+                .eq("id", row["id"])
+                .eq("user_id", uid)
+                .execute()
+            )
             return new_stock
         except Exception as exc:
-            logger.error("adjust_product_stock: %s", exc)
+            logger.error("adjust_product_stock user=%s: %s", uid, exc)
             return None
 
     def resolve_sale_quantity(
@@ -638,7 +836,7 @@ class LarisCore:
             if row:
                 return row
 
-        uid = self.normalize_user_id(user_id)
+        uid = self._require_user_id(user_id)
         haystack = f"{category} {raw_text}".lower()
         try:
             resp = (
@@ -761,24 +959,32 @@ class LarisCore:
     # --------------------
     # Log percakapan WhatsApp (opsional, untuk Chat History)
     # --------------------
-    def log_wa_message(self, user_id: str, role: str, content: str, phone: str = None, agent_id: str = None):
-        uid = self.normalize_user_id(user_id)
+    def log_wa_message(
+        self, user_id: str, role: str, content: str, phone: str | None = None, agent_id: str | None = None
+    ):
+        uid = self._require_user_id(user_id)
         data = {"user_id": uid, "role": role, "content": content, "phone": phone, "agent_id": agent_id}
         try:
             result = self.supabase.table("wa_messages").insert(data).execute()
             if not getattr(result, "data", None):
-                logger.warning("log_wa_message: insert tanpa data balik %s", data)
+                logger.warning("log_wa_message user=%s: insert tanpa data balik", uid)
             return result
         except Exception as exc:
-            logger.error("log_wa_message: %s | payload: %s", exc, {**data, "content": (content or "")[:80]})
+            logger.error(
+                "log_wa_message user=%s: %s | payload: %s",
+                uid,
+                exc,
+                {**data, "content": (content or "")[:80]},
+            )
             return None
 
     def list_wa_messages(self, user_id: str, limit: int = 30):
+        uid = self._require_user_id(user_id)
         try:
             resp = (
                 self.supabase.table("wa_messages")
                 .select("*")
-                .eq("user_id", user_id)
+                .eq("user_id", uid)
                 .order("id", desc=True)
                 .limit(limit)
                 .execute()
@@ -786,14 +992,15 @@ class LarisCore:
             rows = resp.data or []
             return list(reversed(rows))
         except Exception as exc:
-            logger.error("list_wa_messages: %s", exc)
+            logger.error("list_wa_messages user=%s: %s", uid, exc)
             return []
 
-    def delete_last_transaction(self, user_id):
+    def delete_last_transaction(self, user_id: str):
+        uid = self._require_user_id(user_id)
         last = (
             self.supabase.table("transactions")
             .select("id, note, amount")
-            .eq("user_id", user_id)
+            .eq("user_id", uid)
             .order("id", desc=True)
             .limit(1)
             .execute()
@@ -801,7 +1008,7 @@ class LarisCore:
         if not last.data:
             return None
         txn = last.data[0]
-        self.db_delete_transaction(user_id, txn["id"])
+        self.db_delete_transaction(uid, txn["id"])
         return txn
 
     @staticmethod
@@ -1051,24 +1258,45 @@ class LarisCore:
             return "Gagal mengambil saran AI."
             
 class TenantManager:
-    """Handle multi-tenant. Belum dipakai, cuma siap-siap."""
-    def _init_(self, sb):
+    """Handle multi-tenant session (tabel opsional)."""
+
+    def __init__(self, sb: Client):
         self.sb = sb
-    def get_active_tenant(self, user_id):
+
+    def get_active_tenant(self, user_id: str):
+        uid = LarisCore._require_user_id(user_id)
         try:
-            r = self.sb.table("active_tenant_session").select("tenant_id").eq("user_id", user_id).limit(1).execute()
+            r = (
+                self.sb.table("active_tenant_session")
+                .select("tenant_id")
+                .eq("user_id", uid)
+                .limit(1)
+                .execute()
+            )
             return str(r.data[0]["tenant_id"]) if r.data else None
         except Exception:
             return None
-    def set_active_tenant(self, user_id, tenant_id):
+
+    def set_active_tenant(self, user_id: str, tenant_id: str):
+        uid = LarisCore._require_user_id(user_id)
         try:
             exp = (datetime.now() + timedelta(days=7)).isoformat()
-            self.sb.table("active_tenant_session").upsert({"user_id": user_id, "tenant_id": tenant_id, "source": "manual", "expires_at": exp}, on_conflict="user_id").execute()
+            self.sb.table("active_tenant_session").upsert(
+                {"user_id": uid, "tenant_id": tenant_id, "source": "manual", "expires_at": exp},
+                on_conflict="user_id",
+            ).execute()
         except Exception:
             pass
-    def get_user_tenants(self, user_id):
+
+    def get_user_tenants(self, user_id: str):
+        uid = LarisCore._require_user_id(user_id)
         try:
-            r = self.sb.table("user_tenants").select("tenant_id, is_default, label").eq("user_id", user_id).execute()
+            r = (
+                self.sb.table("user_tenants")
+                .select("tenant_id, is_default, label")
+                .eq("user_id", uid)
+                .execute()
+            )
             return r.data or []
         except Exception:
             return []

@@ -7,6 +7,18 @@ from landing import render_landing
 from login import show_login_page, get_current_user, logout, ensure_valid_session
 from laris_core import LarisCore
 from log_config import get_logger
+from pengaturan_bot import render_pengaturan_bot
+from ui.components import (
+    empty_state,
+    hero_welcome,
+    info_pill,
+    section_card,
+    stat_card_row,
+)
+from ui.dasher_nav import render_sidebar_nav, render_topbar
+from ui.laris_theme import inject_dashboard_theme
+from ui.constants import MENU_SESSION_KEY
+from ui.menus import build_menu_keys, display_label
 
 logger = get_logger(__name__)
 
@@ -52,6 +64,21 @@ def render_wa_sync_hint(user_id: str, user_email: str | None, df_empty: bool) ->
         f"3. Setelah kirim WA, buka **Buku Kas** atau refresh halaman.\n\n"
         f"User ID sesi ini: `{user_id}`"
     )
+
+
+def get_admin_core() -> LarisCore | None:
+    """Core service role untuk panel Super Admin (opsional di secrets.toml)."""
+    try:
+        service_key = st.secrets.get("SUPABASE_SERVICE_KEY", "")
+        if not service_key:
+            return None
+        return LarisCore.from_service_client(
+            st.secrets["SUPABASE_URL"],
+            service_key,
+            st.secrets["GROQ_API_KEY"],
+        )
+    except (KeyError, FileNotFoundError):
+        return None
 
 
 def get_core() -> LarisCore:
@@ -200,7 +227,8 @@ def get_query_flag(name: str) -> bool:
 
 
 def render_home() -> None:
-    # Tombol akses native Streamlit (selalu terbaca, tidak overlay, tidak di dalam iframe).
+    from landing import render_landing as _landing
+
     col_brand, col_demo, col_cta = st.columns([4, 1, 1])
     with col_brand:
         st.markdown(f"### {APP_NAME}")
@@ -215,11 +243,11 @@ def render_home() -> None:
             st.session_state["show_login"] = True
             st.rerun()
     st.caption(f"Publik bisa mencoba dashboard contoh lewat {DEMO_QUERY}")
-    render_landing()
+    _landing()
 
 
 def render_dashboard(core: LarisCore, user) -> None:
-    inject_dashboard_style()
+    inject_dashboard_theme()
     user_id = None
     user_email = None
     if isinstance(user, dict):
@@ -241,47 +269,37 @@ def render_dashboard(core: LarisCore, user) -> None:
 
     user_id = core.normalize_user_id(user_id)
 
-    # Header actions: hamburger + logout selalu terlihat
-    if 'show_menu' not in st.session_state:
+    if "show_menu" not in st.session_state:
         st.session_state.show_menu = True
-
-    col1, col2, col3 = st.columns([1, 16, 3])
-    with col1:
-        if st.button('\u2630', key='hamburger_button', help='Tampilkan atau sembunyikan menu'):
-            st.session_state.show_menu = not st.session_state.show_menu
-    with col2:
-        pass
-    with col3:
-        if st.button("Logout", key="top_logout_button", use_container_width=True):
-            logout()
-            st.rerun()
 
     warehouse_enabled = core.table_exists("warehouses")
 
-    # Sidebar content only rendered when menu is shown.
-    # "Ruang Komando" diletakkan paling depan: owner langsung disodorkan keputusan (Proactive UI).
-    menu_items = ["Ruang Komando", "Ringkasan", "Catat Transaksi", "Buku Kas", "Laporan KUR"]
-    if warehouse_enabled:
-        menu_items.append("Gudang")
-    menu_items.append("Pengaturan")
+    if not st.session_state.show_menu:
+        st.markdown(
+            "<style>section[data-testid='stSidebar']{display:none!important;}</style>",
+            unsafe_allow_html=True,
+        )
 
     if st.session_state.show_menu:
-        st.sidebar.title(APP_NAME)
-        st.sidebar.markdown(f"**{DASHBOARD_TITLE}**")
-        st.sidebar.divider()
-        st.sidebar.markdown(f"**Pengguna:** {user_email or 'Unknown'}  ")
-        if st.sidebar.button("Logout"):
-            logout()
-        st.sidebar.divider()
-
-        menu = st.sidebar.radio(
-            "Menu",
-            menu_items,
-            index=0,
+        menu = render_sidebar_nav(
+            warehouse_enabled=warehouse_enabled,
+            user_email=user_email,
         )
     else:
-        # Fallback when sidebar is hidden: show compact selector at top
-        menu = st.selectbox("Menu", menu_items)
+        menu_keys = build_menu_keys(warehouse_enabled=warehouse_enabled)
+        from ui.dasher_nav import init_menu
+
+        init_menu(menu_keys[0] if menu_keys else "Ringkasan")
+        labels = [display_label(k) for k in menu_keys]
+        picked = st.selectbox("Menu", labels)
+        menu = menu_keys[labels.index(picked)]
+        st.session_state[MENU_SESSION_KEY] = menu
+
+    render_topbar(
+        page_title=display_label(menu),
+        user_email=user_email,
+        show_menu=st.session_state.show_menu,
+    )
 
     try:
         df = core.get_dashboard_data(user_id)
@@ -295,79 +313,128 @@ def render_dashboard(core: LarisCore, user) -> None:
     score = core.calculate_laris_score(df)
 
     if menu == "Ruang Komando":
-        st.title("🚀 Ruang Komando")
-        st.caption("Keputusan yang disodorkan tim AI Anda. Setujui atau tolak langsung di sini.")
+        section_card(
+            "Ruang Komando",
+            "Keputusan yang disodorkan tim AI. Setujui atau tolak langsung di sini.",
+            icon="ti-layout-dashboard",
+        )
 
         if not core.table_exists("approvals"):
-            st.warning(
-                "Tabel 'approvals' belum ada di Supabase. Jalankan `setup_laris_ai.sql` "
-                "di SQL Editor Supabase untuk mengaktifkan Ruang Komando."
+            empty_state(
+                "ti-database",
+                "Modul Ruang Komando belum aktif",
+                "Jalankan setup_laris_ai.sql di Supabase untuk mengaktifkan approvals.",
             )
         else:
             approvals = core.list_pending_approvals(user_id)
             if approvals is None:
                 st.error("Gagal memuat data approval. Pastikan tabel 'approvals' tersedia di Supabase.")
             elif not approvals:
-                st.success("✅ Tidak ada keputusan menunggu. Semua aman, Bos!")
+                info_pill("Tidak ada keputusan menunggu. Semua aman, Bos!", "success")
             else:
-                st.markdown(f"**{len(approvals)} keputusan menunggu persetujuan Anda:**")
+                st.markdown(
+                    f'<p class="text-muted mb-3">{len(approvals)} keputusan menunggu persetujuan Anda:</p>',
+                    unsafe_allow_html=True,
+                )
                 for a in approvals:
+                    summary = a.get("summary", "")
+                    agent_id = a.get("agent_id", "AI")
+                    agent_name = agent_label(agent_id)
+                    icon = "ti-robot" if agent_id == "admin" else "ti-truck-delivery"
+                    payload = a.get("payload") or {}
                     with st.container(border=True):
-                        st.markdown(f"#### 💡 {agent_label(a.get('agent_id'))}")
-                        st.write(a.get("summary", ""))
-                        payload = a.get("payload") or {}
+                        col_h, col_a = st.columns([7, 3])
+                        with col_h:
+                            st.markdown(
+                                f'<div class="d-flex align-items-center gap-2 mb-2">'
+                                f'<span class="laris-page-badge"><i class="ti {icon}"></i> {agent_name}</span>'
+                                f'</div>',
+                                unsafe_allow_html=True,
+                            )
+                            st.write(summary)
+                        with col_a:
+                            c1, c2 = st.columns(2)
+                            if c1.button(
+                                "✅ Setujui",
+                                key=f"approve_{a['id']}",
+                                type="primary",
+                                use_container_width=True,
+                            ):
+                                core.update_approval_status(user_id, a["id"], "APPROVED")
+                                st.success("Disetujui & diproses!")
+                                st.rerun()
+                            if c2.button(
+                                "❌ Tolak",
+                                key=f"reject_{a['id']}",
+                                use_container_width=True,
+                            ):
+                                core.update_approval_status(user_id, a["id"], "REJECTED")
+                                st.info("Keputusan ditolak.")
+                                st.rerun()
                         if payload:
                             with st.expander("Lihat detail aksi"):
                                 st.json(payload)
-                        c1, c2, _ = st.columns([1, 1, 4])
-                        if c1.button("✅ Setujui", key=f"approve_{a['id']}", type="primary"):
-                            core.update_approval_status(user_id, a["id"], "APPROVED")
-                            st.success("Disetujui & diproses!")
-                            st.rerun()
-                        if c2.button("❌ Tolak", key=f"reject_{a['id']}"):
-                            core.update_approval_status(user_id, a["id"], "REJECTED")
-                            st.info("Keputusan ditolak.")
-                            st.rerun()
 
         st.markdown("---")
-        st.subheader("Aktivitas WhatsApp Terbaru")
+        section_card(
+            "Aktivitas WhatsApp Terbaru",
+            "Log percakapan antara pelanggan, owner, dan AI.",
+            icon="ti-brand-whatsapp",
+        )
         if not core.table_exists("wa_messages"):
-            st.caption("Aktifkan log percakapan dengan menjalankan `setup_laris_ai.sql` (tabel 'wa_messages').")
+            empty_state(
+                "ti-message-dots",
+                "Belum ada log percakapan",
+                "Aktifkan tabel wa_messages dengan setup_laris_ai.sql.",
+            )
         else:
             msgs = core.list_wa_messages(user_id, limit=20)
             if not msgs:
-                st.caption("Belum ada percakapan WhatsApp.")
+                empty_state(
+                    "ti-message-circle",
+                    "Belum ada percakapan WhatsApp",
+                    "Hubungkan nomor di Pengaturan Bot untuk mulai menerima pesan.",
+                )
             else:
                 for m in msgs:
-                    if m.get("role") == "user":
-                        with st.chat_message("user"):
-                            st.write(m.get("content", ""))
-                    else:
-                        with st.chat_message("assistant"):
+                    role = m.get("role", "user")
+                    content = m.get("content", "")
+                    with st.chat_message(role):
+                        if role == "assistant":
                             st.markdown(f"**{agent_label(m.get('agent_id'))}**")
-                            st.write(m.get("content", ""))
+                        st.write(content)
 
     elif menu == "Ringkasan":
-        st.title("Ringkasan Bisnis")
+        hero_welcome(user_name=user_email or "Bos")
         render_wa_sync_hint(user_id, user_email, df.empty)
-        col1, col2, col3, col4 = st.columns(4)
         total_income = int(df[df["type"] == "Pemasukan"]["amount"].sum()) if not df.empty else 0
         total_expense = int(df[df["type"] == "Pengeluaran"]["amount"].sum()) if not df.empty else 0
         balance = total_income - total_expense
-
-        col1.metric("Total Pemasukan", f"Rp {total_income:,}")
-        col2.metric("Total Pengeluaran", f"Rp {total_expense:,}")
-        col3.metric("Saldo Bersih", f"Rp {balance:,}")
-        col4.metric("Laris Score", f"{score['score']}/100")
+        stat_card_row(
+            [
+                ("Total Pemasukan", f"Rp {total_income:,}", "success"),
+                ("Total Pengeluaran", f"Rp {total_expense:,}", "danger"),
+                ("Saldo Bersih", f"Rp {balance:,}", "purple"),
+                ("Laris Score", f"{score['score']}/100", "info"),
+            ]
+        )
 
         st.markdown("---")
         if df.empty:
-            st.info("Belum ada transaksi. Silakan catat transaksi pertama Anda di menu 'Catat Transaksi'.")
+            empty_state(
+                "ti-notebook",
+                "Belum ada transaksi",
+                "Catat transaksi pertama Anda lewat menu 'Catat Transaksi' atau lewat WhatsApp.",
+            )
         else:
             if not warehouse_enabled:
-                st.warning("Fitur gudang belum tersedia. Pastikan tabel 'warehouses' di Supabase sudah dibuat untuk mengaktifkan manajemen gudang.")
+                info_pill("Fitur gudang belum tersedia — jalankan setup_laris_ai.sql untuk mengaktifkan.", "warning")
 
-            st.subheader("Statistik Ringkas")
+            section_card(
+                "Statistik Ringkas",
+                "Tren saldo kumulatif dari waktu ke waktu.",
+                icon="ti-chart-line",
+            )
             df_recent = df.copy()
             df_recent["date"] = pd.to_datetime(df_recent["date"])
             df_recent = df_recent.sort_values(by="date")
@@ -381,28 +448,50 @@ def render_dashboard(core: LarisCore, user) -> None:
                 .sort_values(ascending=False)
             )
             if not top_costs.empty:
-                st.subheader("Top Pengeluaran")
+                section_card(
+                    "Top Pengeluaran",
+                    "5 kategori dengan pengeluaran terbesar.",
+                    icon="ti-arrows-down",
+                )
                 st.bar_chart(top_costs.head(5))
 
-            st.subheader("Saran AI")
+            section_card(
+                "Saran AI",
+                "Rekomendasi berbasis data transaksi Anda.",
+                icon="ti-sparkles",
+            )
             if len(df) >= 5:
-                st.info(core.get_ai_advisor_insights(df))
+                st.markdown(
+                    f'<div class="alert alert-info mb-0" role="alert">{core.get_ai_advisor_insights(df)}</div>',
+                    unsafe_allow_html=True,
+                )
             else:
-                st.warning("Catat minimal 5 transaksi agar AI dapat memberi rekomendasi lebih baik.")
+                info_pill("Catat minimal 5 transaksi agar AI dapat memberi rekomendasi.", "warning")
 
             with st.expander("Tampilkan aktivitas terbaru", expanded=False):
                 recent = df.sort_values(by="date", ascending=False).head(6).reset_index(drop=True)
                 st.table(recent[["date", "type", "category", "amount", "note"]])
 
     elif menu == "Catat Transaksi":
-        st.title("Catat Transaksi")
+        section_card(
+            "Catat Transaksi",
+            "Input manual pemasukan / pengeluaran. Otomatis tersinkron dengan Buku Kas.",
+            icon="ti-pencil-plus",
+        )
         with st.form("transaction_form"):
-            type_txn = st.radio("Jenis Transaksi", ["Pemasukan", "Pengeluaran"], horizontal=True)
-            category = st.text_input("Kategori", value="Penjualan")
-            amount = st.number_input("Jumlah (Rp)", min_value=0, step=1000)
+            c1, c2 = st.columns(2)
+            with c1:
+                type_txn = st.radio(
+                    "Jenis Transaksi",
+                    ["Pemasukan", "Pengeluaran"],
+                    horizontal=True,
+                )
+                category = st.text_input("Kategori", value="Penjualan")
+            with c2:
+                amount = st.number_input("Jumlah (Rp)", min_value=0, step=1000)
+                is_prive = st.checkbox("Prive / ambil pribadi")
             note = st.text_input("Catatan", value="")
-            is_prive = st.checkbox("Prive / ambil pribadi")
-            submitted = st.form_submit_button("Simpan Transaksi")
+            submitted = st.form_submit_button("Simpan Transaksi", type="primary", use_container_width=True)
 
             if submitted:
                 if amount <= 0:
@@ -412,27 +501,50 @@ def render_dashboard(core: LarisCore, user) -> None:
                     st.success("Transaksi berhasil dicatat.")
                     st.rerun()
 
-        st.markdown("---")
-        st.write("Gunakan form di atas untuk mencatat pemasukan atau pengeluaran baru.")
+        info_pill(
+            "💡 Atau kirim lewat WhatsApp ke nomor AI Catat Anda, contoh: 'jual kopi 50rb'.",
+            "info",
+        )
 
     elif menu == "Buku Kas":
-        st.title("Buku Kas")
+        section_card(
+            "Buku Kas",
+            "Daftar transaksi lengkap, edit, hapus, atau unduh CSV.",
+            icon="ti-cash",
+        )
         render_connection_status(core, user_id, user_email)
         if df.empty:
-            render_wa_sync_hint(user_id, user_email, True)
-            st.info("Buku kas masih kosong. Tambahkan transaksi terlebih dahulu atau kirim lewat WhatsApp.")
+            empty_state(
+                "ti-receipt",
+                "Buku kas masih kosong",
+                "Tambahkan transaksi lewat menu 'Catat Transaksi' atau lewat WhatsApp.",
+            )
         else:
-            st.markdown("**Ringkasan buku kas terbaru**")
+            section_card(
+                "Ringkasan buku kas terbaru",
+                "Transaksi paling baru muncul di atas.",
+                icon="ti-list",
+            )
             summary = df.sort_values(by="date", ascending=False).reset_index(drop=True)
             st.dataframe(summary, height=320)
             if st.checkbox("Tampilkan semua entri buku kas", value=False):
                 st.dataframe(df.sort_values(by="date", ascending=False).reset_index(drop=True))
 
             csv = df.to_csv(index=False).encode("utf-8")
-            st.download_button("Unduh CSV", csv, file_name="buku_kas.csv", mime="text/csv")
+            st.download_button(
+                "Unduh CSV",
+                csv,
+                file_name="buku_kas.csv",
+                mime="text/csv",
+                type="primary",
+            )
 
             st.markdown("---")
-            st.subheader("Edit atau Hapus Transaksi")
+            section_card(
+                "Edit atau Hapus Transaksi",
+                "Pilih transaksi, ubah nilai, atau hapus permanen.",
+                icon="ti-edit",
+            )
             transaction_options = [
                 f"{str(row['date'])} | {row['type']} | {row['category']} | Rp {int(row['amount']):,} | id:{row['id']}"
                 for _, row in summary.iterrows()
@@ -467,7 +579,7 @@ def render_dashboard(core: LarisCore, user) -> None:
                         value=int(selected_txn["amount"]),
                     )
                     note = st.text_input("Catatan", value=selected_txn.get("note", ""))
-                    updated = st.form_submit_button("Simpan Perubahan")
+                    updated = st.form_submit_button("Simpan Perubahan", type="primary")
                     if updated:
                         if amount <= 0:
                             st.error("Masukkan jumlah transaksi yang valid.")
@@ -483,203 +595,248 @@ def render_dashboard(core: LarisCore, user) -> None:
                             st.success("Transaksi berhasil diperbarui.")
                             st.rerun()
 
-                if st.button("Hapus transaksi ini", key="delete_txn_button"):
+                if st.button("🗑️ Hapus transaksi ini", key="delete_txn_button", type="secondary"):
                     core.db_delete_transaction(user_id, selected_txn["id"])
                     st.success("Transaksi berhasil dihapus.")
                     st.rerun()
 
     elif menu == "Laporan KUR":
-        st.title("Laporan KUR")
+        section_card(
+            "Laporan KUR",
+            "Ringkasan otomatis untuk pengajuan Kredit Usaha Rakyat ke bank.",
+            icon="ti-report-analytics",
+        )
         if df.empty:
-            st.info("Masih belum ada data untuk laporan.")
+            empty_state(
+                "ti-report-money",
+                "Belum ada data untuk laporan",
+                "Catat transaksi terlebih dahulu agar AI bisa membuat ringkasan.",
+            )
         else:
             total_income = int(df[df["type"] == "Pemasukan"]["amount"].sum())
             total_expense = int(df[df["type"] == "Pengeluaran"]["amount"].sum())
             net_profit = total_income - total_expense
-            st.metric("Pendapatan", f"Rp {total_income:,}")
-            st.metric("Biaya", f"Rp {total_expense:,}")
-            st.metric("Laba Bersih", f"Rp {net_profit:,}")
+            stat_card_row(
+                [
+                    ("Pendapatan", f"Rp {total_income:,}", "success"),
+                    ("Biaya", f"Rp {total_expense:,}", "danger"),
+                    ("Laba Bersih", f"Rp {net_profit:,}", "purple"),
+                ]
+            )
             st.markdown(
-                f"**Insight**: {score['insight']}\n\n"
-                f"**Kesehatan**: {score['level'].capitalize()}"
+                f"""
+                <div class="card card-lg mt-3" style="border:1px solid var(--ds-gray-200);border-radius:1rem;">
+                  <div class="card-body">
+                    <h5 class="mb-1"><i class="ti ti-bulb text-warning me-2"></i>Insight AI</h5>
+                    <p class="mb-1"><strong>Insight:</strong> {score['insight']}</p>
+                    <p class="mb-0"><strong>Kesehatan:</strong> {score['level'].capitalize()}</p>
+                  </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
             )
 
-    elif menu == "Pengaturan":
-        st.title("⚙️ Pengaturan")
+    elif menu == "⚙️ Pengaturan Bot":
+        render_pengaturan_bot(core, user_id)
+
         is_admin = (user_email or "").strip().lower() == SUPER_ADMIN_EMAIL
-
-        if not is_admin:
-            st.info(
-                "Penambahan & pengeditan client baru hanya dilakukan oleh Admin Laris.AI "
-                f"({SUPER_ADMIN_EMAIL}). Hubungi admin untuk mendaftarkan nomor WhatsApp Anda."
+        if is_admin:
+            st.markdown("---")
+            section_card(
+                "Panel Super Admin",
+                "Tambah & hubungkan client baru. Hanya untuk email admin.",
+                icon="ti-shield-lock",
             )
-            st.caption(f"User ID Anda (untuk referensi ke admin): `{user_id}`")
-        elif not core.table_exists("wa_users"):
-            st.warning(
-                "Tabel 'wa_users' belum ada di Supabase. Jalankan `setup_laris_ai.sql` "
-                "di SQL Editor Supabase terlebih dahulu."
-            )
-        else:
-            st.success(f"Mode Admin Super aktif: {user_email}")
-            bw_url, catat_url = _bot_base_urls()
+            if not core.table_exists("wa_users"):
+                info_pill(
+                    "Tabel 'wa_users' belum ada di Supabase. Jalankan setup_laris_ai.sql di SQL Editor.",
+                    "warning",
+                )
+            if core.table_exists("wa_users"):
+                info_pill(f"Mode Admin Super aktif: {user_email}", "success")
+                bw_url, catat_url = _bot_base_urls()
 
-            st.info(
-                "**Pola 3 — Dua nomor terpisah**\n\n"
-                "| Peran | Field form | Device Fonnte | Webhook |\n"
-                "|-------|------------|---------------|--------|\n"
-                "| **CS Pelanggan** | ① Nomor WA CS | Device #1 | BukuWarung `/webhook-whatsapp/{client_id}` |\n"
-                "| **AI Catat** | ② Nomor HP Owner | Device #2 (bot catat) | `kita-cuan-wa-bot` `/webhook` |\n\n"
-                "② = HP owner yang **mengirim** perintah `jual/beli` (terdaftar di `wa_users`). "
-                "Pasang device Fonnte #2 ke URL bot **AI Catat** (bisa beda deploy dari BukuWarung)."
-            )
+                section_card(
+                    "Tambah Client Baru (2 Nomor WA)",
+                    "Buat akun + hubungkan 2 nomor sekaligus (CS & Catat).",
+                    icon="ti-user-plus",
+                )
+                with st.form("create_client_form"):
+                    c_email = st.text_input("Email Client")
+                    c_pass = st.text_input("Password Sementara", type="password")
+                    c_label = st.text_input("Nama Usaha / Label")
+                    c_client_id = st.text_input(
+                        "Client ID BukuWarung (opsional)",
+                        placeholder="toko_rafih — otomatis dari nama jika kosong",
+                    )
+                    c_phone_cs = st.text_input(
+                        "① Nomor WA CS (Pelanggan)",
+                        placeholder="0857xxxxxxxx — device Fonnte untuk CS toko",
+                        help="Pelanggan chat nomor ini → balasan CS BukuWarung.",
+                    )
+                    c_phone_catat = st.text_input(
+                        "② Nomor HP Owner (AI Catat)",
+                        placeholder="0812xxxxxxxx — HP owner kirim jual/beli",
+                        help="Owner kirim 'jual kopi 50rb' dari HP ini → tercatat di Buku Kas.",
+                    )
+                    if st.form_submit_button("Buat Client + Hubungkan 2 Nomor", type="primary"):
+                        if not c_email.strip() or len(c_pass) < 6:
+                            st.error("Email wajib & password minimal 6 karakter.")
+                        elif not c_phone_cs.strip() or not c_phone_catat.strip():
+                            st.error("Nomor WA CS dan nomor AI Catat wajib diisi.")
+                        else:
+                            new_id, err = core.create_client_account(c_email.strip(), c_pass)
+                            if err:
+                                st.error(f"Gagal membuat client: {err}")
+                            else:
+                                try:
+                                    setup = core.setup_dual_wa_client(
+                                        new_id,
+                                        wa_cs=c_phone_cs.strip(),
+                                        wa_catat=c_phone_catat.strip(),
+                                        label=c_label.strip() or c_email.split("@")[0],
+                                        client_id=c_client_id.strip() or None,
+                                        email=c_email.strip(),
+                                        bukuwarung_base_url=bw_url,
+                                        catat_bot_base_url=catat_url,
+                                    )
+                                    st.success(
+                                        f"Client dibuat! `user_id`: `{new_id}` · "
+                                        f"`client_id`: `{setup['client_id']}`"
+                                    )
+                                    if setup["bukuwarung_ok"]:
+                                        st.markdown(
+                                            f"**Webhook Fonnte CS:** `{setup['webhook_cs']}`  \n"
+                                            f"**Webhook Fonnte AI Catat:** `{setup['webhook_catat']}`"
+                                        )
+                                    else:
+                                        st.warning(
+                                            f"Akun & nomor Catat OK, tapi tabel clients gagal: "
+                                            f"{setup.get('bukuwarung_error')}. "
+                                            f"Jalankan `bukuwarung-ai/sql/fix_rls_bukuwarung.sql` di Supabase."
+                                        )
+                                    st.rerun()
+                                except Exception as e:
+                                    st.warning(f"Akun dibuat, setup WA gagal: {str(e)[:150]}")
 
-            # 1) Buat client baru (akun + dua nomor WA sekaligus)
-            st.subheader("➕ Tambah Client Baru (2 Nomor WA)")
-            with st.form("create_client_form"):
-                c_email = st.text_input("Email Client")
-                c_pass = st.text_input("Password Sementara", type="password")
-                c_label = st.text_input("Nama Usaha / Label")
-                c_client_id = st.text_input(
-                    "Client ID BukuWarung (opsional)",
-                    placeholder="toko_rafih — otomatis dari nama jika kosong",
+                st.markdown("---")
+                section_card(
+                    "Update Dua Nomor WA Client",
+                    "Perbarui nomor CS & Catat untuk client yang sudah ada.",
+                    icon="ti-link",
                 )
-                c_phone_cs = st.text_input(
-                    "① Nomor WA CS (Pelanggan)",
-                    placeholder="0857xxxxxxxx — device Fonnte untuk CS toko",
-                    help="Pelanggan chat nomor ini → balasan CS BukuWarung.",
-                )
-                c_phone_catat = st.text_input(
-                    "② Nomor HP Owner (AI Catat)",
-                    placeholder="0812xxxxxxxx — HP owner kirim jual/beli",
-                    help="Owner kirim 'jual kopi 50rb' dari HP ini → tercatat di Buku Kas.",
-                )
-                if st.form_submit_button("Buat Client + Hubungkan 2 Nomor"):
-                    if not c_email.strip() or len(c_pass) < 6:
-                        st.error("Email wajib & password minimal 6 karakter.")
-                    elif not c_phone_cs.strip() or not c_phone_catat.strip():
-                        st.error("Nomor WA CS dan nomor AI Catat wajib diisi.")
-                    else:
-                        new_id, err = core.create_client_account(c_email.strip(), c_pass)
-                        if err:
-                            st.error(f"Gagal membuat client: {err}")
+                with st.form("link_dual_wa_form"):
+                    target_uid = st.text_input("User ID Client")
+                    wa_cs = st.text_input("① Nomor WA CS (Pelanggan)", placeholder="0857xxxxxxxx")
+                    wa_catat = st.text_input("② Nomor HP Owner (AI Catat)", placeholder="0812xxxxxxxx")
+                    wa_label = st.text_input("Nama Usaha / Label")
+                    link_client_id = st.text_input("Client ID BukuWarung (opsional)")
+                    if st.form_submit_button("Simpan Dua Nomor", type="primary"):
+                        if not target_uid.strip() or not wa_cs.strip() or not wa_catat.strip():
+                            st.error("User ID, nomor CS, dan nomor Catat wajib diisi.")
                         else:
                             try:
                                 setup = core.setup_dual_wa_client(
-                                    new_id,
-                                    wa_cs=c_phone_cs.strip(),
-                                    wa_catat=c_phone_catat.strip(),
-                                    label=c_label.strip() or c_email.split("@")[0],
-                                    client_id=c_client_id.strip() or None,
-                                    email=c_email.strip(),
+                                    target_uid.strip(),
+                                    wa_cs=wa_cs.strip(),
+                                    wa_catat=wa_catat.strip(),
+                                    label=wa_label.strip() or target_uid.strip()[:8],
+                                    client_id=link_client_id.strip() or None,
                                     bukuwarung_base_url=bw_url,
                                     catat_bot_base_url=catat_url,
                                 )
-                                st.success(f"Client dibuat! `user_id`: `{new_id}` · `client_id`: `{setup['client_id']}`")
-                                if setup["bukuwarung_ok"]:
-                                    st.markdown(
-                                        f"**Webhook Fonnte CS:** `{setup['webhook_cs']}`  \n"
-                                        f"**Webhook Fonnte AI Catat:** `{setup['webhook_catat']}`"
-                                    )
-                                else:
-                                    st.warning(
-                                        f"Akun & nomor Catat OK, tapi tabel clients gagal: "
-                                        f"{setup.get('bukuwarung_error')}. "
-                                        f"Jalankan `bukuwarung-ai/sql/fix_rls_bukuwarung.sql` di Supabase."
-                                    )
+                                st.success(
+                                    f"Terhubung · CS `{setup['wa_cs']}` · Catat `{setup['wa_catat']}` · "
+                                    f"client_id `{setup['client_id']}`"
+                                )
+                                st.code(
+                                    f"Webhook CS:\n{setup['webhook_cs']}\n\n"
+                                    f"Webhook AI Catat:\n{setup['webhook_catat']}",
+                                    language="text",
+                                )
+                                if not setup["bukuwarung_ok"]:
+                                    st.warning(setup.get("bukuwarung_error"))
                                 st.rerun()
                             except Exception as e:
-                                st.warning(f"Akun dibuat, setup WA gagal: {str(e)[:150]}")
+                                st.error(f"Gagal: {str(e)[:150]}")
 
-            # 2) Hubungkan / update dua nomor untuk client yang sudah ada
-            st.markdown("---")
-            st.subheader("🔗 Update Dua Nomor WA Client")
-            with st.form("link_dual_wa_form"):
-                target_uid = st.text_input("User ID Client")
-                wa_cs = st.text_input("① Nomor WA CS (Pelanggan)", placeholder="0857xxxxxxxx")
-                wa_catat = st.text_input("② Nomor HP Owner (AI Catat)", placeholder="0812xxxxxxxx")
-                wa_label = st.text_input("Nama Usaha / Label")
-                link_client_id = st.text_input("Client ID BukuWarung (opsional)")
-                if st.form_submit_button("Simpan Dua Nomor"):
-                    if not target_uid.strip() or not wa_cs.strip() or not wa_catat.strip():
-                        st.error("User ID, nomor CS, dan nomor Catat wajib diisi.")
-                    else:
-                        try:
-                            setup = core.setup_dual_wa_client(
-                                target_uid.strip(),
-                                wa_cs=wa_cs.strip(),
-                                wa_catat=wa_catat.strip(),
-                                label=wa_label.strip() or target_uid.strip()[:8],
-                                client_id=link_client_id.strip() or None,
-                                bukuwarung_base_url=bw_url,
-                                catat_bot_base_url=catat_url,
-                            )
-                            st.success(
-                                f"Terhubung · CS `{setup['wa_cs']}` · Catat `{setup['wa_catat']}` · "
-                                f"client_id `{setup['client_id']}`"
-                            )
-                            st.code(
-                                f"Webhook CS:\n{setup['webhook_cs']}\n\nWebhook AI Catat:\n{setup['webhook_catat']}",
-                                language="text",
-                            )
-                            if not setup["bukuwarung_ok"]:
-                                st.warning(setup.get("bukuwarung_error"))
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Gagal: {str(e)[:150]}")
-
-            # 3) Hubungkan nomor tunggal (legacy)
-            st.markdown("---")
-            st.subheader("🔗 Hubungkan Nomor WA (satu nomor / legacy)")
-            with st.form("link_client_wa_form"):
-                target_uid = st.text_input("User ID Client")
-                wa_phone = st.text_input("Nomor WhatsApp", placeholder="0812xxxxxxxx")
-                wa_label = st.text_input("Label (opsional)")
-                if st.form_submit_button("Hubungkan"):
-                    if not target_uid.strip() or not wa_phone.strip():
-                        st.error("User ID & nomor WA wajib diisi.")
-                    else:
-                        try:
-                            core.link_wa_number(target_uid.strip(), wa_phone, wa_label or None)
-                            st.success(f"Nomor {core.normalize_phone(wa_phone)} terhubung ke {target_uid.strip()}")
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Gagal menghubungkan: {str(e)[:150]}")
-
-            # 4) Daftar semua client (mapping WA + BukuWarung)
-            st.markdown("---")
-            st.subheader("📋 Semua Client Terdaftar")
-            bw_clients = core.list_bukuwarung_clients()
-            if bw_clients:
-                st.markdown("**BukuWarung CS (tabel clients)**")
-                for c in bw_clients:
-                    meta = c.get("metadata") or {}
-                    cs_disp = meta.get("whatsapp_cs_display") or meta.get("wa_cs") or "—"
-                    catat_disp = meta.get("whatsapp_catat_display") or meta.get("wa_catat") or "—"
-                    active = "✅" if c.get("is_active") else "⏸️"
-                    st.markdown(
-                        f"{active} **{c.get('name')}** (`{c.get('client_id')}`)  \n"
-                        f"① CS: `{cs_disp}` · ② Catat: `{catat_disp}`  \n"
-                        f"Webhook CS: `{meta.get('webhook_cs', '—')}`"
-                    )
                 st.markdown("---")
+                section_card(
+                    "Hubungkan Nomor WA (satu nomor / legacy)",
+                    "Untuk klien lama dengan satu nomor WA.",
+                    icon="ti-phone",
+                )
+                with st.form("link_client_wa_form"):
+                    target_uid = st.text_input("User ID Client", key="legacy_target_uid")
+                    wa_phone = st.text_input("Nomor WhatsApp", placeholder="0812xxxxxxxx")
+                    wa_label = st.text_input("Label (opsional)")
+                    if st.form_submit_button("Hubungkan", type="primary"):
+                        if not target_uid.strip() or not wa_phone.strip():
+                            st.error("User ID & nomor WA wajib diisi.")
+                        else:
+                            try:
+                                core.link_wa_number(target_uid.strip(), wa_phone, wa_label or None)
+                                st.success(
+                                    f"Nomor {core.normalize_phone(wa_phone)} "
+                                    f"terhubung ke {target_uid.strip()}"
+                                )
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Gagal menghubungkan: {str(e)[:150]}")
 
-            numbers = core.list_all_wa_numbers()
-            if numbers is None:
-                st.error("Gagal memuat data. Pastikan tabel 'wa_users' tersedia.")
-            elif not numbers:
-                st.info("Belum ada nomor AI Catat di wa_users.")
-            else:
-                st.markdown("**AI Catat (tabel wa_users)**")
-                for n in numbers:
-                    c1, c2 = st.columns([5, 1])
-                    label = f" — {n.get('label')}" if n.get('label') else ""
-                    c1.write(f"📱 **{n.get('phone')}**{label}  \n`{n.get('user_id')}`")
-                    if c2.button("Hapus", key=f"unlink_{n['id']}"):
-                        core.unlink_wa_number(n["user_id"], n["phone"])
-                        st.rerun()
+                st.markdown("---")
+                section_card(
+                    "Semua Client Terdaftar",
+                    "Daftar lengkap client BukuWarung & nomor WA AI Catat.",
+                    icon="ti-list-details",
+                )
+                admin_core = get_admin_core()
+                if admin_core:
+                    bw_clients = admin_core.admin_list_bukuwarung_clients()
+                else:
+                    info_pill(
+                        "Tambahkan SUPABASE_SERVICE_KEY di secrets.toml untuk melihat semua client.",
+                        "warning",
+                    )
+                    bw_clients = core.list_bukuwarung_clients(user_id)
+                if bw_clients:
+                    st.markdown("**BukuWarung CS (tabel clients)**")
+                    for c in bw_clients:
+                        meta = c.get("metadata") or {}
+                        cs_disp = meta.get("whatsapp_cs_display") or meta.get("wa_cs") or "—"
+                        catat_disp = meta.get("whatsapp_catat_display") or meta.get("wa_catat") or "—"
+                        active = "✅" if c.get("is_active") else "⏸️"
+                        st.markdown(
+                            f"{active} **{c.get('name')}** (`{c.get('client_id')}`)  \n"
+                            f"① CS: `{cs_disp}` · ② Catat: `{catat_disp}`  \n"
+                            f"Webhook CS: `{meta.get('webhook_cs', '—')}`"
+                        )
+                    st.markdown("---")
+
+                if admin_core:
+                    numbers = admin_core.admin_list_all_wa_numbers()
+                else:
+                    numbers = core.list_wa_numbers(user_id)
+                if numbers is None:
+                    st.error("Gagal memuat data. Pastikan tabel 'wa_users' tersedia.")
+                elif not numbers:
+                    info_pill("Belum ada nomor AI Catat di wa_users.", "info")
+                else:
+                    st.markdown("**AI Catat (tabel wa_users)**")
+                    for n in numbers:
+                        c1, c2 = st.columns([5, 1])
+                        label = f" — {n.get('label')}" if n.get("label") else ""
+                        c1.write(f"📱 **{n.get('phone')}**{label}  \n`{n.get('user_id')}`")
+                        if c2.button("Hapus", key=f"unlink_{n['id']}"):
+                            core.unlink_wa_number(n["user_id"], n["phone"])
+                            st.rerun()
 
     elif menu == "Gudang":
-        st.title("Manajemen Gudang & Inventaris")
+        section_card(
+            "Manajemen Gudang & Inventaris",
+            "Pantau stok per gudang dan produk terkoneksi otomatis.",
+            icon="ti-building-warehouse",
+        )
         core = get_core()
         user = user
         user_id = None
@@ -688,33 +845,39 @@ def render_dashboard(core: LarisCore, user) -> None:
         else:
             user_id = getattr(user, "id", None)
 
-        # Warehouse creation
-        with st.expander("Tambah Gudang", expanded=False):
+        with st.expander("➕ Tambah Gudang", expanded=False):
             with st.form("create_warehouse"):
                 wh_name = st.text_input("Nama Gudang")
                 wh_location = st.text_input("Lokasi (opsional)")
                 wh_notes = st.text_area("Keterangan (opsional)")
-                if st.form_submit_button("Buat Gudang"):
+                if st.form_submit_button("Buat Gudang", type="primary"):
                     if not wh_name:
                         st.error("Nama gudang wajib.")
                     else:
                         res = core.create_warehouse(user_id, wh_name, wh_location or None, wh_notes or None)
                         st.success("Gudang dibuat.")
 
-        # List warehouses
         try:
             warehouses = core.list_warehouses(user_id)
         except (OSError, ValueError, KeyError, AttributeError) as exc:
             logger.error("list_warehouses: %s", exc)
             warehouses = None
 
-        st.subheader("Daftar Gudang")
+        section_card(
+            "Daftar Gudang",
+            "Pilih gudang untuk melihat kartu stok.",
+            icon="ti-archive",
+        )
         if warehouses is None:
             st.error("Terjadi kesalahan saat memuat data gudang. Pastikan tabel 'warehouses' tersedia di Supabase.")
             st.stop()
 
         if not warehouses:
-            st.info("Belum ada gudang. Buat gudang baru di atas.")
+            empty_state(
+                "ti-building",
+                "Belum ada gudang",
+                "Tambah gudang baru lewat tombol di atas untuk mulai mencatat inventaris.",
+            )
         else:
             options = {str(w.get('id')): w for w in warehouses}
             cols = st.columns([3, 1])
@@ -722,18 +885,20 @@ def render_dashboard(core: LarisCore, user) -> None:
                 sel = st.selectbox("Pilih Gudang", [f"{w.get('name')} (id:{w.get('id')})" for w in warehouses])
                 selected_id = None
                 if sel:
-                    # extract id from selection
                     try:
                         selected_id = int(sel.split("id:")[-1].strip(')'))
                     except Exception:
                         selected_id = warehouses[0].get('id')
             with cols[1]:
-                if st.button("Segarkan Gudang"):
+                if st.button("Segarkan Gudang", type="secondary"):
                     st.rerun()
 
-            # Inventory entry form
             st.markdown("---")
-            st.subheader("Catat Barang (In/Out)")
+            section_card(
+                "Catat Barang (In/Out)",
+                "Entri otomatis tersinkron ke tabel produk.",
+                icon="ti-package-import",
+            )
             with st.form("inventory_form"):
                 if warehouses:
                     wh_choices = {w.get('id'): w.get('name') for w in warehouses}
@@ -746,7 +911,7 @@ def render_dashboard(core: LarisCore, user) -> None:
                 qty_in = st.number_input("Masuk (qty)", min_value=0, step=1, value=0)
                 qty_out = st.number_input("Keluar (qty)", min_value=0, step=1, value=0)
                 keterangan = st.text_input("Keterangan")
-                if st.form_submit_button("Simpan Inventaris"):
+                if st.form_submit_button("Simpan Inventaris", type="primary"):
                     if not wh_selected:
                         st.error("Pilih gudang terlebih dahulu.")
                     elif not barang:
@@ -755,12 +920,15 @@ def render_dashboard(core: LarisCore, user) -> None:
                         res = core.add_inventory_entry(user_id, wh_selected, barang, qty_in, qty_out, keterangan or None)
                         st.success("Entri inventaris tersimpan.")
 
-            # Show recent inventory
             st.markdown("---")
-            st.subheader("Aktivitas Inventaris Terakhir")
+            section_card(
+                "Aktivitas Inventaris Terakhir",
+                "30 entri inventaris paling baru.",
+                icon="ti-history",
+            )
             inv = core.list_inventory(user_id, warehouse_id=selected_id if 'selected_id' in locals() else None)
             if not inv:
-                st.info("Belum ada aktivitas inventaris.")
+                empty_state("ti-tray", "Belum ada aktivitas inventaris", "")
             else:
                 import pandas as _pd
 
@@ -770,13 +938,16 @@ def render_dashboard(core: LarisCore, user) -> None:
                 st.dataframe(inv_df.head(30))
 
             st.markdown("---")
-            st.subheader("Produk Terkoneksi dari Gudang")
-            st.caption("Setiap entri gudang otomatis sinkron ke tabel produk (`products`).")
+            section_card(
+                "Produk Terkoneksi dari Gudang",
+                "Setiap entri gudang otomatis sinkron ke tabel products.",
+                icon="ti-box",
+            )
             products = core.list_products(user_id)
             if products is None:
-                st.warning("Gagal memuat tabel produk.")
+                info_pill("Gagal memuat tabel produk.", "warning")
             elif not products:
-                st.info("Belum ada produk tersinkron. Tambah entri gudang terlebih dahulu.")
+                info_pill("Belum ada produk tersinkron. Tambah entri gudang terlebih dahulu.", "info")
             else:
                 prod_df = pd.DataFrame(products)
                 st.dataframe(prod_df, use_container_width=True)

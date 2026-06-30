@@ -237,11 +237,64 @@ def _normalize_digits(value: Any) -> str:
     return "".join(c for c in str(value or "") if c.isdigit())
 
 
-def _resolve_fonnte_token(client_config: ClientConfig | None) -> str | None:
-    """Token per-client, fallback ke FONNTE_TOKEN global di Railway."""
-    per_client = (client_config.fonnte_token if client_config else "") or ""
-    global_token = get_settings().fonnte_token or ""
-    token = (per_client or global_token).strip()
+async def get_client_settings(user_id: str) -> dict[str, Any] | None:
+    """Muat client_settings tenant via service role (webhook backend)."""
+    uid = str(user_id).strip()
+    if not uid:
+        logger.warning("get_client_settings: user_id kosong")
+        return None
+    try:
+        from utils.supabase import get_supabase_admin
+
+        db = get_supabase_admin()
+        result = await asyncio.to_thread(
+            lambda: (
+                db.table("client_settings")
+                .select("*")
+                .eq("user_id", uid)
+                .limit(1)
+                .execute()
+            )
+        )
+        rows = result.data or []
+        return rows[0] if rows else None
+    except Exception as exc:
+        logger.error("[%s] get_client_settings gagal: %s", uid, exc)
+        return None
+
+
+def _fonnte_token_from_settings(settings: dict[str, Any] | None, *, channel: str) -> str | None:
+    """Token Fonnte per tenant — channel: 'cs' atau 'catat'."""
+    if not settings:
+        return None
+    field = "fonnte_token_cs" if channel == "cs" else "fonnte_token_catat"
+    token = (settings.get(field) or "").strip()
+    return token or None
+
+
+def _authorized_owner_set(settings: dict[str, Any] | None) -> frozenset[str]:
+    raw = (settings or {}).get("authorized_owners") or []
+    phones: list[str] = []
+    if isinstance(raw, list):
+        items = raw
+    elif isinstance(raw, str):
+        items = [p.strip() for p in raw.replace("\n", ",").split(",") if p.strip()]
+    else:
+        items = []
+    for item in items:
+        digits = _normalize_digits(item)
+        if digits:
+            if digits.startswith("0"):
+                digits = "62" + digits[1:]
+            phones.append(digits)
+    return frozenset(phones)
+
+
+def _fonnte_token_from_client_config(client_config: ClientConfig | None) -> str | None:
+    """Legacy: token dari tabel clients (bukan env)."""
+    if not client_config:
+        return None
+    token = (client_config.fonnte_token or "").strip()
     return token or None
 
 
@@ -451,8 +504,9 @@ async def root() -> dict[str, Any]:
     return {
         "status": "running",
         "health": "/health",
-        "webhook": "/webhook-whatsapp/{client_id}",
-        "webhook_legacy": "/webhook-whatsapp",
+        "webhook_csat": "/webhook/csat/{user_id}",
+        "webhook_catat": "/webhook/catat/{user_id}",
+        "webhook_legacy": "/webhook-whatsapp/{client_id}",
         "clients": "/clients",
         "stats": "/stats",
         "version": APP_VERSION,
@@ -504,7 +558,7 @@ async def _process_webhook(
     client_config: ClientConfig | None,
 ) -> WebhookResponse | JSONResponse:
     orch = get_orchestrator()
-    fonnte_token = _resolve_fonnte_token(client_config)
+    fonnte_token = _fonnte_token_from_client_config(client_config)
     dashboard_user_id = await _resolve_dashboard_user_id(phone)
     await _log_wa_message(user_id=dashboard_user_id, phone=phone, role="user", content=text)
     await _record_dashboard_transaction_if_any(user_id=dashboard_user_id, text=text)
@@ -573,7 +627,7 @@ async def webhook_whatsapp_client(client_id: str, request: Request) -> WebhookRe
         raise
     except Exception as exc:
         logger.exception("webhook error client=%s: %s", client_id, exc)
-        await _send_error_once(phone, token=_resolve_fonnte_token(client_config), inboxid=inboxid)
+        await _send_error_once(phone, token=_fonnte_token_from_client_config(client_config), inboxid=inboxid)
         return JSONResponse(status_code=500, content={"status": "error", "detail": str(exc)[:120]})
 
 
@@ -614,7 +668,146 @@ async def webhook_whatsapp(request: Request) -> WebhookResponse | JSONResponse:
         raise
     except Exception as exc:
         logger.exception("webhook error: %s", exc)
-        await _send_error_once(phone, token=_resolve_fonnte_token(client_config), inboxid=inboxid)
+        await _send_error_once(phone, token=_fonnte_token_from_client_config(client_config), inboxid=inboxid)
+        return JSONResponse(status_code=500, content={"status": "error", "detail": str(exc)[:120]})
+
+
+UNAUTHORIZED_CATAT_MSG = (
+    "Maaf, nomor Anda tidak terdaftar sebagai pemilik toko ini. "
+    "Daftarkan nomor di menu Pengaturan Bot."
+)
+
+
+async def _process_tenant_webhook(
+    *,
+    tenant_user_id: str,
+    phone: str,
+    text: str,
+    inboxid: str | None,
+    channel: str,
+) -> WebhookResponse | JSONResponse:
+    """Webhook Multi-Tenant — token & owners dari client_settings."""
+    settings = await get_client_settings(tenant_user_id)
+    if not settings or not settings.get("is_active", True):
+        logger.warning("[%s] client_settings tidak ditemukan/nonaktif", tenant_user_id)
+        raise HTTPException(status_code=404, detail=f"Tenant '{tenant_user_id}' belum dikonfigurasi")
+
+    fonnte_token = _fonnte_token_from_settings(settings, channel=channel)
+    if not fonnte_token:
+        logger.error("[%s] fonnte token kosong channel=%s", tenant_user_id, channel)
+        return WebhookResponse(status="error", reason=f"fonnte_token_{channel}_missing")
+
+    sender = _normalize_digits(phone)
+    if sender.startswith("0"):
+        sender = "62" + sender[1:]
+
+    if channel == "catat":
+        owners = _authorized_owner_set(settings)
+        if owners and sender not in owners:
+            logger.warning("[%s] catat ditolak sender=%s", tenant_user_id, sender)
+            await send_message(phone, UNAUTHORIZED_CATAT_MSG, token=fonnte_token, inboxid=inboxid)
+            return WebhookResponse(status="forbidden", reason="not_authorized_owner")
+
+    orch = get_orchestrator()
+    await _log_wa_message(user_id=tenant_user_id, phone=phone, role="user", content=text)
+
+    if channel == "catat":
+        result = await orch.route_catat_message(tenant_user_id, sender, text)
+    else:
+        result = await orch.route_cs_message(tenant_user_id, sender, text)
+
+    sent = await send_message(phone, result.text, token=fonnte_token, inboxid=inboxid)
+    await _log_wa_message(
+        user_id=tenant_user_id,
+        phone=phone,
+        role="assistant",
+        content=result.text,
+        agent_id=result.agent_id,
+    )
+    reason = None
+    if not sent:
+        reason = "fonnte_send_failed"
+    return WebhookResponse(
+        status="ok" if sent else "ok_unsent",
+        agent=result.agent_id,
+        intent=result.intent,
+        reason=reason,
+    )
+
+
+@app.post("/webhook/csat/{user_id}", response_model=WebhookResponse)
+async def webhook_csat(user_id: str, request: Request) -> WebhookResponse | JSONResponse:
+    """Webhook CS pelanggan — Multi-Tenant."""
+    _check_shutdown()
+    body = await _parse_body(request)
+    phone, text, inboxid, _ = _extract_webhook_fields(body)
+
+    if not phone or not text:
+        logger.info("[%s] webhook csat ignored keys=%s", user_id, list(body.keys()))
+        return WebhookResponse(status="ignored", reason="no phone or text")
+
+    if _is_outgoing_echo(body, phone, text):
+        return WebhookResponse(status="ignored", reason="outgoing echo")
+
+    if _is_duplicate_inbound(body, phone, text):
+        return WebhookResponse(status="ignored", reason="duplicate")
+
+    _check_rate_limit(request, f"{user_id}:{phone}")
+    logger.info("[%s] webhook csat sender=%s msg=%r", user_id, phone, text[:80])
+
+    try:
+        return await _process_tenant_webhook(
+            tenant_user_id=user_id,
+            phone=phone,
+            text=text,
+            inboxid=inboxid,
+            channel="cs",
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("[%s] webhook csat error: %s", user_id, exc)
+        settings = await get_client_settings(user_id)
+        token = _fonnte_token_from_settings(settings, channel="cs")
+        await _send_error_once(phone, token=token, inboxid=inboxid)
+        return JSONResponse(status_code=500, content={"status": "error", "detail": str(exc)[:120]})
+
+
+@app.post("/webhook/catat/{user_id}", response_model=WebhookResponse)
+async def webhook_catat(user_id: str, request: Request) -> WebhookResponse | JSONResponse:
+    """Webhook AI Catat owner — Multi-Tenant."""
+    _check_shutdown()
+    body = await _parse_body(request)
+    phone, text, inboxid, _ = _extract_webhook_fields(body)
+
+    if not phone or not text:
+        logger.info("[%s] webhook catat ignored keys=%s", user_id, list(body.keys()))
+        return WebhookResponse(status="ignored", reason="no phone or text")
+
+    if _is_outgoing_echo(body, phone, text):
+        return WebhookResponse(status="ignored", reason="outgoing echo")
+
+    if _is_duplicate_inbound(body, phone, text):
+        return WebhookResponse(status="ignored", reason="duplicate")
+
+    _check_rate_limit(request, f"{user_id}:{phone}")
+    logger.info("[%s] webhook catat sender=%s msg=%r", user_id, phone, text[:80])
+
+    try:
+        return await _process_tenant_webhook(
+            tenant_user_id=user_id,
+            phone=phone,
+            text=text,
+            inboxid=inboxid,
+            channel="catat",
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("[%s] webhook catat error: %s", user_id, exc)
+        settings = await get_client_settings(user_id)
+        token = _fonnte_token_from_settings(settings, channel="catat")
+        await _send_error_once(phone, token=token, inboxid=inboxid)
         return JSONResponse(status_code=500, content={"status": "error", "detail": str(exc)[:120]})
 
 

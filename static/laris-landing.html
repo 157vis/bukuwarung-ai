@@ -8,6 +8,7 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
 
     <style>
         /* ========== RESET & BASE ========== */
@@ -234,23 +235,29 @@
         }
         .section-header { text-align: center; margin-bottom: 48px; }
 
-        /* ========== PAIN POINTS ========== */
-        .pain { background: #fef2f2; }
-        .pain-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
-        .pain-card {
-            background: #fff; border-radius: 16px; padding: 28px;
-            border: 2px solid #fecaca; display: flex; align-items: flex-start;
-            gap: 16px; transition: all 0.3s;
+        /* ========== FEATURE CARDS ========== */
+        .laris-features { background: #f9fafb; }
+        .laris-features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+        .laris-feature-card {
+            background: #fff;
+            border: 1px solid rgba(28,37,46,.08);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 6px 20px rgba(28,37,46,.06);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-        .pain-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(0,0,0,0.08); border-color: #fca5a5; }
-        .pain-icon {
-            width: 48px; height: 48px; border-radius: 50%;
-            background: #fee2e2; color: #ef4444;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.2rem; flex-shrink: 0;
+        .laris-feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(28,37,46,.10);
         }
-        .pain-card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 6px; }
-        .pain-card p { font-size: 0.92rem; color: #6b7280; line-height: 1.6; }
+        .laris-feature-icon {
+            width: 48px; height: 48px; border-radius: 12px;
+            background: #c8fad6; color: #007867;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 1.4rem; margin-bottom: 16px;
+        }
+        .laris-feature-card h4 { font-size: 1.05rem; font-weight: 700; margin-bottom: 8px; }
+        .laris-feature-card p { font-size: 0.92rem; color: #6b7280; line-height: 1.6; }
 
         /* ========== AGENTS ========== */
         .agents-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
@@ -475,7 +482,7 @@
             .section { padding: 60px 0; }
             .section-title { font-size: 1.7rem; }
 
-            .pain-grid, .agents-grid, .testi-grid, .pricing-grid { grid-template-columns: 1fr; }
+            .laris-features-grid, .agents-grid, .testi-grid, .pricing-grid { grid-template-columns: 1fr; }
             .steps-grid { grid-template-columns: 1fr; gap: 40px; }
             .cta-final h2 { font-size: 1.8rem; }
             .footer-grid { grid-template-columns: 1fr; gap: 32px; }
@@ -599,42 +606,49 @@
         </div>
     </section>
 
-    <!-- ==================== PAIN POINTS ==================== -->
-    <section class="section pain" id="fitur">
+    <!-- ==================== FEATURE CARDS ==================== -->
+    <section class="section laris-features" id="fitur">
         <div class="container">
             <div class="section-header">
-                <div class="section-badge">😩 Masalah Umum</div>
-                <h2 class="section-title">Apakah Kamu Mengalami Ini?</h2>
-                <p class="section-subtitle">Masalah umum yang dihadapi ribuan UMKM Indonesia setiap hari</p>
+                <div class="section-badge">✨ Fitur Utama</div>
+                <h2 class="section-title">Semua yang UMKM butuhkan, dalam satu platform.</h2>
+                <p class="section-subtitle">Catat, lihat, dan ambil keputusan lebih cepat dengan AI Multi-Agent.</p>
             </div>
-            <div class="pain-grid">
-                <div class="pain-card">
-                    <div class="pain-icon"><i class="fas fa-book"></i></div>
-                    <div>
-                        <h3>Catat Manual Ribet</h3>
-                        <p>Transaksi harian tercatat di chat, notes, atau kertas — sulit dirangkum jadi laporan.</p>
-                    </div>
+            <div class="laris-features-grid">
+                <div class="laris-feature-card">
+                    <div class="laris-feature-icon"><i class="ti ti-brand-whatsapp"></i></div>
+                    <h4>Catat via WhatsApp</h4>
+                    <p>Kirim pesan seperti 'jual kopi 50rb' lewat WA — AI langsung catat ke Buku Kas.</p>
                 </div>
-                <div class="pain-card">
-                    <div class="pain-icon"><i class="fas fa-box-open"></i></div>
-                    <div>
-                        <h3>Stok Habis Tanpa Sinyal</h3>
-                        <p>Barang laris tiba-tiba habis. Owner baru sadar saat pelanggan kecewa.</p>
-                    </div>
+
+                <div class="laris-feature-card">
+                    <div class="laris-feature-icon"><i class="ti ti-robot"></i></div>
+                    <h4>Asisten Multi-Agent</h4>
+                    <p>Admin AI kelola ringkasan & stok. Logistik AI kasih rekomendasi PO otomatis.</p>
                 </div>
-                <div class="pain-card">
-                    <div class="pain-icon"><i class="fas fa-file-invoice"></i></div>
-                    <div>
-                        <h3>Laporan KUR Susah</h3>
-                        <p>Butuh ringkasan pemasukan, pengeluaran, dan kesehatan usaha — data masih berantakan.</p>
-                    </div>
+
+                <div class="laris-feature-card">
+                    <div class="laris-feature-icon"><i class="ti ti-chart-bar"></i></div>
+                    <h4>Dashboard Real-Time</h4>
+                    <p>Pantau omzet, laba, dan stok UMKM di satu layar Dasher yang modern.</p>
                 </div>
-                <div class="pain-card">
-                    <div class="pain-icon"><i class="fas fa-comments"></i></div>
-                    <div>
-                        <h3>Keputusan Tertunda</h3>
-                        <p>Restock, approval, dan follow-up bisnis menunggu owner buka banyak aplikasi berbeda.</p>
-                    </div>
+
+                <div class="laris-feature-card">
+                    <div class="laris-feature-icon"><i class="ti ti-shield-check"></i></div>
+                    <h4>Multi-Tenant Aman</h4>
+                    <p>RLS Supabase: tiap toko hanya lihat data sendiri. Owner tenang.</p>
+                </div>
+
+                <div class="laris-feature-card">
+                    <div class="laris-feature-icon"><i class="ti ti-bolt"></i></div>
+                    <h4>Auto-Restock</h4>
+                    <p>AI kasih peringatan ketika stok produk menyentuh ambang minimum.</p>
+                </div>
+
+                <div class="laris-feature-card">
+                    <div class="laris-feature-icon"><i class="ti ti-report-money"></i></div>
+                    <h4>Laporan KUR</h4>
+                    <p>Ringkasan otomatis untuk pengajuan Kredit Usaha Rakyat ke bank.</p>
                 </div>
             </div>
         </div>

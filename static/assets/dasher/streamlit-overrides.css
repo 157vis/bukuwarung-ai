@@ -1,0 +1,221 @@
+/* Streamlit × Dasher 1.0.0 — tema visual */
+
+html, body, [class*="css"] {
+  font-family: "Public Sans", "Inter", system-ui, sans-serif !important;
+}
+
+.stApp {
+  background-color: var(--ds-body-bg, #f9fafb) !important;
+}
+
+header[data-testid="stHeader"] { display: none !important; }
+footer { visibility: hidden; }
+
+/* ============================================================
+   SIDEBAR — Dasher #miniSidebar expanded
+   ============================================================ */
+section[data-testid="stSidebar"] {
+  width: 264px !important;
+  min-width: 264px !important;
+  background-color: var(--ds-navbar-bg, #ffffff) !important;
+  border-right: 1px dashed var(--ds-gray-300, #dfe3e8) !important;
+}
+
+section[data-testid="stSidebar"] > div {
+  background-color: var(--ds-navbar-bg, #ffffff) !important;
+  padding-top: 0.25rem !important;
+}
+
+section[data-testid="stSidebar"] .stMarkdown,
+section[data-testid="stSidebar"] label,
+section[data-testid="stSidebar"] p,
+section[data-testid="stSidebar"] small {
+  color: var(--ds-gray-700, #454f5b) !important;
+}
+
+section[data-testid="stSidebar"] hr {
+  border-color: var(--ds-gray-300, #dfe3e8) !important;
+  margin: 0.6rem 0 !important;
+}
+
+/* Brand logo Dasher */
+section[data-testid="stSidebar"] .brand-logo {
+  padding: 0.5rem 0.85rem 0.85rem 0.85rem;
+  position: sticky;
+  top: 0;
+  background-color: var(--ds-navbar-bg, #fff);
+  z-index: 2;
+  border-bottom: 1px dashed var(--ds-gray-300, #dfe3e8);
+}
+
+/* Nav heading */
+section[data-testid="stSidebar"] .nav-heading small {
+  letter-spacing: 1px;
+  font-size: 0.7rem;
+}
+
+/* Placeholder visual ikon (karena st.button tidak mendukung icon) */
+section[data-testid="stSidebar"] .laris-nav-item {
+  display: none; /* hanya semantik jika diperlukan */
+}
+
+/* Tombol menu — Dasher-style */
+section[data-testid="stSidebar"] .stButton > button {
+  width: 100% !important;
+  text-align: left !important;
+  justify-content: flex-start !important;
+  border-radius: 0.5rem !important;
+  font-weight: 500 !important;
+  padding: 0.55rem 0.85rem !important;
+  border: none !important;
+  box-shadow: none !important;
+  margin: 0.15rem 0.5rem !important;
+  width: calc(100% - 1rem) !important;
+  font-size: 0.92rem !important;
+}
+
+section[data-testid="stSidebar"] .stButton > button[kind="secondary"] {
+  background: transparent !important;
+  color: var(--ds-gray-600, #637381) !important;
+}
+
+section[data-testid="stSidebar"] .stButton > button[kind="secondary"]:hover {
+  background-color: var(--ds-gray-100, #f9fafb) !important;
+  color: var(--ds-gray-800, #1c252e) !important;
+}
+
+section[data-testid="stSidebar"] .stButton > button[kind="primary"] {
+  background-color: var(--ds-primary-bg-subtle, #c8fad6) !important;
+  color: var(--ds-primary-text-emphasis, #007867) !important;
+}
+
+/* ============================================================
+   AREA KONTEN UTAMA
+   ============================================================ */
+.main .block-container {
+  padding-top: 0.5rem !important;
+  padding-left: 1.5rem !important;
+  padding-right: 1.5rem !important;
+  max-width: 100% !important;
+}
+
+.laris-dasher-topbar {
+  margin: 0 0 1.5rem 0;
+  padding: 1rem 1.25rem;
+  background: var(--ds-card-bg, #ffffff);
+  border: 1px solid var(--ds-gray-200, #f4f6f8);
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px rgba(28,37,46,0.04);
+}
+
+.laris-dasher-topbar h2 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--ds-gray-900, #141a21);
+}
+
+.laris-page-badge {
+  background: var(--ds-primary-bg-subtle, #c8fad6);
+  color: var(--ds-primary-text-emphasis, #007867);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.laris-user-chip {
+  background: var(--ds-gray-50, #fcfdfd);
+  border: 1px solid var(--ds-gray-200, #f4f6f8);
+  border-radius: 0.75rem;
+  padding: 0.4rem 0.85rem;
+}
+
+/* ============================================================
+   KARTU, METRIK, FORM (Dasher card-lg)
+   ============================================================ */
+div[data-testid="stMetric"],
+div[data-testid="stExpander"],
+div[data-testid="stForm"],
+div[data-testid="stChatMessage"],
+div[data-testid="stVerticalBlockBorderWrapper"],
+.laris-card {
+  border-radius: 1rem !important;
+  border: 1px solid var(--ds-gray-200, #f4f6f8) !important;
+  background-color: var(--ds-card-bg, #fff) !important;
+  box-shadow: 0 1px 3px rgba(28,37,46,0.05) !important;
+}
+
+.stTextInput input,
+.stNumberInput input,
+.stTextArea textarea,
+div[data-baseweb="select"] > div {
+  border-radius: 0.5rem !important;
+  border-color: var(--ds-gray-200, #f4f6f8) !important;
+}
+
+/* Tombol primer Dasher */
+.stButton > button[kind="primary"] {
+  background-color: var(--ds-primary, #00a76f) !important;
+  border-color: var(--ds-primary, #00a76f) !important;
+  border-radius: 0.5rem !important;
+  font-weight: 600 !important;
+  box-shadow: 0 1px 2px rgba(0,167,111,0.3) !important;
+}
+
+.stButton > button[kind="primary"]:hover {
+  background-color: var(--ds-primary-600, #008f5f) !important;
+  border-color: var(--ds-primary-600, #008f5f) !important;
+}
+
+div[data-testid="stDataFrame"] {
+  border-radius: 1rem;
+  overflow: hidden;
+  border: 1px solid var(--ds-gray-200, #f4f6f8);
+  background: var(--ds-card-bg, #fff);
+}
+
+/* ============================================================
+   LOGIN
+   ============================================================ */
+.laris-dasher-login .block-container {
+  max-width: 480px !important;
+  padding-top: 3rem !important;
+}
+
+.laris-dasher-login .laris-login-brand {
+  text-align: center;
+  margin-bottom: 1.25rem;
+}
+
+.laris-dasher-login .laris-login-brand h1 {
+  font-size: 1.85rem;
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+}
+
+.laris-dasher-login div[data-testid="stForm"] {
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+/* Hero gradient (bg-gradient-mixed Dasher) */
+.bg-gradient-mixed {
+  background: linear-gradient(94.82deg, #ffe9d5 1.11%, #c8fad6 99.11%) !important;
+}
+
+/* Cards icon shapes */
+.laris-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}

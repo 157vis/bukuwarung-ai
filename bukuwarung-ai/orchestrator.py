@@ -1,7 +1,8 @@
-"""Orchestrator — koordinator multi-agent untuk WhatsApp CS."""
+"""Orchestrator — koordinator multi-agent untuk WhatsApp CS (Multi-Tenant)."""
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
@@ -13,10 +14,17 @@ from core.client_registry import ClientConfig
 from core.otak_ai import OtakAI
 from core.personality import PersonalityEngine
 from core.semantic_router import RouteResult, SemanticRouter
+from core.tenant_bridge import get_tenant_core
+from core.tenant_data import (
+    TenantContext,
+    build_tenant_context,
+    format_products_for_prompt,
+    normalize_phone,
+)
+from utils.supabase import get_supabase_admin
 
 logger = logging.getLogger(__name__)
 
-# Intent confidence di bawah ini → minta klarifikasi
 CLARIFY_THRESHOLD = 0.45
 MAX_CLARIFY_ATTEMPTS = 2
 
@@ -53,6 +61,11 @@ FALLBACK_ERROR = (
     "Maaf, ada kendala teknis sebentar. Tim CS kami siap bantu — silakan coba lagi ya 🙏"
 )
 
+UNAUTHORIZED_CATAT = (
+    "Maaf, nomor Anda tidak terdaftar sebagai pemilik toko ini. "
+    "Hubungi admin untuk mendaftarkan nomor di Pengaturan Bot."
+)
+
 
 @dataclass
 class OrchestratorStats:
@@ -83,7 +96,7 @@ class OrchestratorStats:
 
 
 class Orchestrator:
-    """Main coordinator — routing, agent execution, personality, memory."""
+    """Main coordinator — routing CS & Catat per tenant (`user_id` dashboard)."""
 
     def __init__(
         self,
@@ -106,6 +119,204 @@ class Orchestrator:
     def stats(self) -> OrchestratorStats:
         return self._stats
 
+    @property
+    def _llm(self):
+        return self._cs_agent._llm
+
+    # ------------------------------------------------------------------
+    # Multi-tenant entry points (webhook /webhook/csat & /webhook/catat)
+    # ------------------------------------------------------------------
+
+    async def route_cs_message(
+        self,
+        user_id: str,
+        sender_phone: str,
+        message: str,
+    ) -> OrchestratorResult:
+        """Route pesan CS pelanggan — `user_id` = UUID tenant (dashboard)."""
+        tenant = await self._load_tenant_context(user_id)
+        phone = normalize_phone(sender_phone)
+        client_config = self._client_config_from_tenant(tenant)
+        text = await self.handle_message(
+            phone,
+            message,
+            user_id,
+            client_config=client_config,
+            tenant=tenant,
+        )
+        return OrchestratorResult(
+            text=text,
+            agent_id=self._last_agent_id,
+            intent=self._last_intent,
+            data={"channel": "csat", "tenant_user_id": user_id},
+        )
+
+    async def route_catat_message(
+        self,
+        user_id: str,
+        sender_phone: str,
+        message: str,
+    ) -> OrchestratorResult:
+        """Route perintah catat owner — `user_id` = UUID tenant (dashboard)."""
+        tenant = await self._load_tenant_context(user_id)
+        phone = normalize_phone(sender_phone)
+
+        if tenant.authorized_owners and phone not in tenant.authorized_owners:
+            logger.warning(
+                "catat ditolak tenant=%s sender=%s bukan authorized owner",
+                user_id,
+                phone,
+            )
+            return OrchestratorResult(
+                text=UNAUTHORIZED_CATAT,
+                agent_id="admin",
+                intent="unauthorized",
+                data={"channel": "catat", "tenant_user_id": user_id},
+            )
+
+        saved, reply = await self.admin_ai_catat_transaksi(user_id, message)
+        self._last_agent_id = "admin"
+        self._last_intent = "catat" if saved else "catat_empty"
+        return OrchestratorResult(
+            text=reply,
+            agent_id=self._last_agent_id,
+            intent=self._last_intent,
+            data={"channel": "catat", "tenant_user_id": user_id, "transactions": saved},
+        )
+
+    async def admin_ai_catat_transaksi(
+        self,
+        user_id: str,
+        text: str,
+    ) -> tuple[list[dict[str, Any]], str]:
+        """Ekstrak transaksi via AI lalu simpan ke tenant yang benar (`save_transaction`)."""
+        tenant = await self._load_tenant_context(user_id)
+        raw = (text or "").strip()
+        if not raw:
+            return [], "Kirim perintah catat ya, contoh: _jual kopi 50rb_ atau _beli gula 20rb_"
+
+        transactions = await self._extract_transactions(raw, tenant)
+        if not transactions:
+            return [], (
+                f"Belum kebaca sebagai transaksi untuk *{tenant.display_name}*. "
+                "Coba format: jual [produk] [nominal] atau beli [item] [nominal]."
+            )
+
+        core = get_tenant_core()
+        saved: list[dict[str, Any]] = []
+        for txn in transactions:
+            txn_type = str(txn.get("type") or "Pemasukan")
+            amount = int(txn.get("amount") or 0)
+            if amount <= 0:
+                continue
+            category = str(txn.get("category") or "Umum")
+            note = str(txn.get("note") or raw)[:200]
+            is_prive = bool(txn.get("is_prive", False))
+            try:
+                await asyncio.to_thread(
+                    core.save_transaction,
+                    user_id,
+                    txn_type,
+                    category,
+                    amount,
+                    note,
+                    is_prive,
+                )
+                saved.append(txn)
+                logger.info(
+                    "save_transaction tenant=%s type=%s amount=%s",
+                    user_id,
+                    txn_type,
+                    amount,
+                )
+            except Exception as exc:
+                logger.exception("save_transaction gagal tenant=%s: %s", user_id, exc)
+                self._stats.errors += 1
+
+        if not saved:
+            return [], FALLBACK_ERROR
+
+        lines = [
+            f"✅ Tercatat: {t.get('type')} {t.get('category', '')} "
+            f"Rp {int(t.get('amount', 0)):,}"
+            for t in saved
+        ]
+        balance = await asyncio.to_thread(core.get_balance, user_id)
+        footer = f"\n\nSaldo terkini *{tenant.display_name}*: Rp {int(balance):,}"
+        return saved, "\n".join(lines) + footer
+
+    # ------------------------------------------------------------------
+    # Tenant helpers
+    # ------------------------------------------------------------------
+
+    async def _load_tenant_context(self, user_id: str) -> TenantContext:
+        try:
+            db = get_supabase_admin()
+            return await build_tenant_context(db, user_id)
+        except Exception as exc:
+            logger.warning("load tenant context gagal user=%s: %s", user_id, exc)
+            return TenantContext(user_id=str(user_id).strip())
+
+    @staticmethod
+    def _client_config_from_tenant(tenant: TenantContext) -> ClientConfig:
+        owners = list(tenant.authorized_owners)
+        return ClientConfig(
+            client_id=tenant.user_id,
+            name=tenant.display_name,
+            owner_phones=owners,
+            products=tenant.products,
+            payment_methods=[],
+            profile_key="ramah_warm",
+        )
+
+    def _cs_system_prompt(self, tenant: TenantContext) -> str:
+        catalog = format_products_for_prompt(tenant.products)
+        return (
+            f"Kamu adalah CS WhatsApp untuk bisnis bernama *{tenant.display_name}*.\n"
+            "Tugas: sapaan, info umum, bantu pelanggan tanya harga & produk.\n"
+            "Jawab singkat, hangat, Bahasa Indonesia, maksimal 3 kalimat.\n"
+            "HANYA sebut produk/harga dari katalog di bawah — jangan mengarang promo atau produk.\n\n"
+            f"Katalog produk:\n{catalog}"
+        )
+
+    async def _extract_transactions(self, text: str, tenant: TenantContext) -> list[dict[str, Any]]:
+        """Ekstrak transaksi — Groq via laris_core, fallback OpenRouter."""
+        core = get_tenant_core()
+        try:
+            rows = await asyncio.to_thread(core.ai_extractor_agent, text)
+            if rows:
+                return rows
+        except Exception as exc:
+            logger.warning("ai_extractor_agent gagal tenant=%s: %s", tenant.user_id, exc)
+
+        prompt = (
+            f'Anda akuntan untuk bisnis "{tenant.display_name}". Teks owner: "{text}"\n\n'
+            "Ekstrak HANYA jika user mencatat transaksi jual/beli dengan nominal.\n"
+            'Balas JSON: {"transactions":[{"type":"Pemasukan|Pengeluaran","amount":angka,'
+            '"category":"...","note":"..."}]}'
+        )
+        system = (
+            f"Kamu asisten pencatat keuangan untuk {tenant.display_name}. "
+            f"Produk di katalog:\n{format_products_for_prompt(tenant.products)}"
+        )
+        try:
+            raw = await self._llm.chat(
+                [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.1,
+                max_tokens=400,
+            )
+            return core._parse_transactions(raw)
+        except Exception as exc:
+            logger.error("extract transactions OpenRouter tenant=%s: %s", tenant.user_id, exc)
+            return []
+
+    # ------------------------------------------------------------------
+    # Core pipeline (legacy + tenant-aware)
+    # ------------------------------------------------------------------
+
     async def handle_message(
         self,
         user_id: str,
@@ -113,28 +324,23 @@ class Orchestrator:
         client_id: str,
         *,
         client_config: ClientConfig | None = None,
+        tenant: TenantContext | None = None,
     ) -> str:
-        """Pipeline lengkap 8 langkah — return teks balasan final.
-
-        Args:
-            user_id: ID pelanggan (nomor WA).
-            message: Pesan masuk.
-            client_id: ID toko / tenant.
-
-        Returns:
-            Respons final siap kirim ke WhatsApp.
-        """
+        """Pipeline lengkap — `user_id` di sini = nomor WA pengirim (pelanggan/owner)."""
         t0 = time.perf_counter()
         text = (message or "").strip()
         agent_id = "cs"
-        mem_key = client_config.memory_scope(user_id) if client_config else user_id
-        owners = (
-            list(client_config.owner_phone_set)
+        tenant_user_id = tenant.user_id if tenant else client_id
+        mem_key = f"{tenant_user_id}:{normalize_phone(user_id)}"
+
+        if tenant and not client_config:
+            client_config = self._client_config_from_tenant(tenant)
+
+        owners = list(client_config.owner_phone_set) if client_config else []
+        is_owner = (
+            normalize_phone(user_id) in client_config.owner_phone_set
             if client_config
-            else list(get_settings().owner_phone_set)
-        )
-        is_owner = user_id in (
-            client_config.owner_phone_set if client_config else get_settings().owner_phone_set
+            else False
         )
 
         if client_config:
@@ -144,12 +350,8 @@ class Orchestrator:
             )
 
         try:
-            # 1. Terima message (sudah di argumen)
-
-            # 2. Detect language
             user_lang = await self._personality.detect_language(text)
 
-            # Sentimen marah → eskalasi human (edge case)
             if self._is_angry(text):
                 self._stats.escalations += 1
                 self._clarify_counts.pop(mem_key, None)
@@ -164,11 +366,15 @@ class Orchestrator:
                 self._record_stats("support", t0)
                 return final
 
-            # 3. Semantic routing
             otak_ctx = await self._otak.bangun_context(mem_key, text)
+            if tenant:
+                otak_ctx = (
+                    f"Bisnis: {tenant.display_name}\n"
+                    f"{format_products_for_prompt(tenant.products)}\n\n{otak_ctx}"
+                )
+
             route = await self._router.route(text, context=otak_ctx)
 
-            # Intent unclear → klarifikasi max 2x
             if route.confidence < CLARIFY_THRESHOLD:
                 count = self._clarify_counts.get(mem_key, 0) + 1
                 self._clarify_counts[mem_key] = count
@@ -188,7 +394,6 @@ class Orchestrator:
             else:
                 self._clarify_counts.pop(mem_key, None)
 
-            # 4. Personality config + agent selection
             personality = await self._personality.get_personality(client_id)
             agent = self._resolve_agent(route)
             agent_id = agent.agent_id
@@ -199,8 +404,13 @@ class Orchestrator:
                 "confidence": route.confidence,
                 "is_owner": is_owner,
                 "owners": owners,
+                "tenant_user_id": tenant_user_id,
             }
-            if client_config:
+            if tenant:
+                meta["business_name"] = tenant.display_name
+                meta["products"] = tenant.products
+                meta["cs_system_prompt"] = self._cs_system_prompt(tenant)
+            elif client_config:
                 if client_config.products:
                     meta["products"] = client_config.products
                 if client_config.payment_methods:
@@ -216,21 +426,17 @@ class Orchestrator:
                 metadata=meta,
             )
 
-            # 5. Agent process
-            raw = await self._safe_process(agent, ctx)
+            raw = await self._safe_process(agent, ctx, tenant=tenant)
 
-            # 6. Adapt tone
             final = await self._personality.adapt_tone(raw, personality, user_lang=user_lang)
-
-            # 7. Simpan ke memory
             await self._save_interaction(mem_key, text, final, agent_id, route.intent)
 
-            # 8. Return
             self._last_agent_id = agent_id
             self._last_intent = route.intent
             self._record_stats(agent_id, t0)
             logger.info(
-                "handle_message user=%s agent=%s intent=%s conf=%.2f ms=%.0f",
+                "handle_message tenant=%s sender=%s agent=%s intent=%s conf=%.2f ms=%.0f",
+                tenant_user_id,
                 user_id,
                 agent_id,
                 route.intent,
@@ -241,7 +447,12 @@ class Orchestrator:
 
         except Exception as exc:
             self._stats.errors += 1
-            logger.exception("handle_message error user=%s: %s", user_id, exc)
+            logger.exception(
+                "handle_message error tenant=%s sender=%s: %s",
+                tenant_user_id,
+                user_id,
+                exc,
+            )
             try:
                 personality = await self._personality.get_personality(client_id)
             except Exception:
@@ -267,16 +478,25 @@ class Orchestrator:
         user_id: str,
         message: str,
         client_config: ClientConfig | None = None,
+        tenant_user_id: str | None = None,
     ) -> OrchestratorResult:
-        """Adapter kompatibel dengan API lama."""
+        """Adapter kompatibel dengan API webhook lama."""
+        tenant = None
+        tid = tenant_user_id or client_id
+        if tid:
+            tenant = await self._load_tenant_context(tid)
         text = await self.handle_message(
-            user_id, message, client_id, client_config=client_config
+            user_id,
+            message,
+            client_id,
+            client_config=client_config,
+            tenant=tenant,
         )
         return OrchestratorResult(
             text=text,
             agent_id=self._last_agent_id,
             intent=self._last_intent,
-            data={"route_confidence": 0.0},
+            data={"route_confidence": 0.0, "tenant_user_id": tid},
         )
 
     def _resolve_agent(self, route: RouteResult) -> BaseAgent:
@@ -286,9 +506,20 @@ class Orchestrator:
         resolved = BaseAgent.resolve_conflict(list(self._agents.values()), route.intent)
         return resolved or self._cs_agent
 
-    async def _safe_process(self, agent: BaseAgent, ctx: AgentContext) -> str:
-        """Jalankan agent.process dengan fallback ke CS jika error."""
+    async def _safe_process(
+        self,
+        agent: BaseAgent,
+        ctx: AgentContext,
+        *,
+        tenant: TenantContext | None = None,
+    ) -> str:
         try:
+            if agent.agent_id == "cs" and tenant:
+                system = ctx.metadata.get("cs_system_prompt") or self._cs_system_prompt(tenant)
+                reply = await agent._call_llm(ctx.message, system)
+                if agent._validate_response(reply):
+                    return reply
+
             raw = await agent.process(ctx.message, ctx, ctx.personality)
             if agent._validate_response(raw):
                 return raw
@@ -298,6 +529,11 @@ class Orchestrator:
             self._stats.errors += 1
 
         try:
+            if tenant:
+                system = self._cs_system_prompt(tenant)
+                reply = await self._cs_agent._call_llm(ctx.message, system)
+                if self._cs_agent._validate_response(reply):
+                    return reply
             raw = await self._cs_agent.process(ctx.message, ctx, ctx.personality)
             if self._cs_agent._validate_response(raw):
                 return raw
@@ -318,7 +554,9 @@ class Orchestrator:
             await self._otak.simpan_memory(
                 user_id,
                 {
-                    "content": f"User: {user_msg[:200]} | Agent({agent_id}/{intent}): {response[:300]}",
+                    "content": (
+                        f"User: {user_msg[:200]} | Agent({agent_id}/{intent}): {response[:300]}"
+                    ),
                     "metadata": {"agent": agent_id, "intent": intent},
                 },
             )
@@ -338,7 +576,7 @@ class Orchestrator:
 
 @dataclass
 class OrchestratorResult:
-    """Hasil handle untuk kompatibilitas webhook lama."""
+    """Hasil handle untuk kompatibilitas webhook."""
 
     text: str
     agent_id: str
@@ -346,5 +584,4 @@ class OrchestratorResult:
     data: dict[str, Any] = field(default_factory=dict)
 
 
-# Alias backward-compatible
 AgentOrchestrator = Orchestrator

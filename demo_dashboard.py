@@ -161,7 +161,46 @@ def _clear_demo_mode() -> None:
 
 
 def render_demo_dashboard() -> None:
-    _inject_demo_style()
+    from ui.dasher_assets import inject_dasher_styles
+    from ui.components import (
+        empty_state,
+        hero_welcome,
+        info_pill,
+        section_card,
+        sidebar_brand,
+        stat_card_row,
+    )
+
+    inject_dasher_styles(login=False)
+    sidebar_brand()
+
+    st.sidebar.markdown(
+        '<div class="px-3 mt-2 mb-3"><span class="laris-page-badge" '
+        'style="background:var(--ds-primary-bg-subtle);color:var(--ds-primary-text-emphasis);">Demo Publik</span></div>',
+        unsafe_allow_html=True,
+    )
+    st.sidebar.caption("Calon pengguna & presentasi")
+    st.sidebar.divider()
+
+    if st.sidebar.button("Masuk dengan Akun Real", type="primary", use_container_width=True):
+        _clear_demo_mode()
+        st.session_state["show_login"] = True
+        st.rerun()
+    st.sidebar.markdown(
+        f'<a href="{WA_BASE_URL}?text=Halo%20laris.AI%2C%20saya%20tertarik%20minta%20demo" '
+        'style="display:block;text-align:center;background:#22c55e;color:#fff;padding:0.65rem 1rem;'
+        'border-radius:.5rem;text-decoration:none;font-weight:700;margin:0.35rem 0;">💬 Chat WhatsApp</a>',
+        unsafe_allow_html=True,
+    )
+    if st.sidebar.button("Kembali ke Landing", use_container_width=True):
+        _clear_demo_mode()
+        st.rerun()
+    st.sidebar.divider()
+    st.sidebar.markdown(
+        '<div class="px-3 mb-2"><small class="text-muted">Pengguna</small><br>'
+        '<span class="fw-semibold">demo@laris.ai</span></div>',
+        unsafe_allow_html=True,
+    )
 
     df = _demo_transactions()
     score = LarisCore.calculate_laris_score(df)
@@ -170,81 +209,102 @@ def render_demo_dashboard() -> None:
     warehouses = _demo_warehouses()
     inventory_df = _demo_inventory()
 
-    if "show_menu" not in st.session_state:
-        st.session_state.show_menu = True
-
-    col1, col2 = st.columns([1, 19])
-    with col1:
-        if st.button("☰", key="demo_hamburger_button", help="Tampilkan atau sembunyikan menu"):
-            st.session_state.show_menu = not st.session_state.show_menu
-    with col2:
-        st.markdown('<div class="demo-pill">Mode Demo Publik — data contoh, aman untuk publik</div>', unsafe_allow_html=True)
-
     menu_items = ["Ruang Komando", "Ringkasan", "Catat Transaksi", "Buku Kas", "Laporan KUR", "Gudang", "Pengaturan"]
-    if st.session_state.show_menu:
-        st.sidebar.title(APP_NAME)
-        st.sidebar.markdown(f"**{DASHBOARD_TITLE}**")
-        st.sidebar.caption("Demo publik untuk calon pengguna dan presentasi.")
-        st.sidebar.divider()
-        st.sidebar.markdown("**Pengguna Demo:** demo@laris.ai")
-        if st.sidebar.button("Masuk dengan Akun Real", type="primary", use_container_width=True):
-            _clear_demo_mode()
-            st.session_state["show_login"] = True
-            st.rerun()
-        st.sidebar.markdown(
-            f'<a href="{WA_BASE_URL}?text=Halo%20laris.AI%2C%20saya%20tertarik%20minta%20demo" '
-            'style="display:block;text-align:center;background:#22c55e;color:#fff;padding:0.75rem 1rem;'
-            'border-radius:12px;text-decoration:none;font-weight:700;margin-top:0.5rem;">Chat WhatsApp</a>',
-            unsafe_allow_html=True,
-        )
-        if st.sidebar.button("Kembali ke Landing", use_container_width=True):
-            _clear_demo_mode()
-            st.rerun()
-        st.sidebar.divider()
-        menu = st.sidebar.radio("Menu Demo", menu_items, index=0)
-    else:
-        menu = st.selectbox("Menu Demo", menu_items)
+    menu = st.sidebar.radio("Menu Demo", menu_items, index=0, label_visibility="collapsed")
+
+    # Topbar
+    st.markdown(
+        f"""
+        <div class="laris-dasher-topbar d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <span class="laris-page-badge">Demo</span>
+                <div>
+                    <h2 class="mb-0">{APP_NAME}</h2>
+                    <small class="text-muted">Dashboard contoh untuk publik</small>
+                </div>
+            </div>
+            <div class="laris-user-chip d-none d-md-flex align-items-center gap-2">
+                <i class="ti ti-user-circle fs-3 text-primary"></i>
+                <div class="lh-sm">
+                    <small class="d-block text-muted">Pengguna</small>
+                    <strong>demo@laris.ai</strong>
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     if menu == "Ruang Komando":
-        st.title("🚀 Ruang Komando Demo")
-        st.caption("Contoh keputusan yang biasanya disodorkan AI ke owner.")
-        st.markdown(f"**{len(approvals)} keputusan contoh menunggu persetujuan:**")
+        section_card(
+            "🚀 Ruang Komando Demo",
+            "Contoh keputusan yang biasanya disodorkan AI ke owner.",
+            icon="ti-layout-dashboard",
+        )
+        st.markdown(
+            f'<p class="text-muted mb-3">{len(approvals)} keputusan contoh menunggu persetujuan:</p>',
+            unsafe_allow_html=True,
+        )
         for approval in approvals:
+            agent_name = approval["agent_id"].capitalize()
             with st.container(border=True):
-                st.markdown(f"#### 💡 {approval['agent_id'].capitalize()} AI")
-                st.write(approval["summary"])
+                col_h, col_a = st.columns([7, 3])
+                with col_h:
+                    st.markdown(
+                        f'<span class="laris-page-badge"><i class="ti ti-robot"></i> {agent_name} AI</span>',
+                        unsafe_allow_html=True,
+                    )
+                    st.write(approval["summary"])
+                with col_a:
+                    c1, c2 = st.columns(2)
+                    if c1.button(
+                        "✅ Setujui",
+                        key=f"demo_approve_{approval['id']}",
+                        type="primary",
+                        use_container_width=True,
+                    ):
+                        st.info("Mode demo publik tidak menyimpan aksi. Login untuk workflow asli.")
+                    if c2.button(
+                        "❌ Tolak",
+                        key=f"demo_reject_{approval['id']}",
+                        use_container_width=True,
+                    ):
+                        st.info("Mode demo publik tidak menyimpan aksi. Login untuk workflow asli.")
                 with st.expander("Lihat detail aksi"):
                     st.json(approval["payload"])
-                c1, c2, _ = st.columns([1, 1, 4])
-                if c1.button("✅ Setujui", key=f"demo_approve_{approval['id']}", type="primary"):
-                    st.info("Mode demo publik tidak menyimpan aksi. Login untuk mencoba workflow asli.")
-                if c2.button("❌ Tolak", key=f"demo_reject_{approval['id']}"):
-                    st.info("Mode demo publik tidak menyimpan aksi. Login untuk mencoba workflow asli.")
 
         st.markdown("---")
-        st.subheader("Aktivitas WhatsApp Contoh")
+        section_card(
+            "Aktivitas WhatsApp Contoh",
+            "Cuplikan percakapan antara pelanggan, owner, dan AI.",
+            icon="ti-brand-whatsapp",
+        )
         for message in messages:
-            if message["role"] == "user":
-                with st.chat_message("user"):
-                    st.write(message["content"])
-            else:
-                with st.chat_message("assistant"):
+            with st.chat_message(message["role"]):
+                if message["role"] == "assistant":
                     st.markdown(f"**{message['agent_id'].capitalize()} AI**")
-                    st.write(message["content"])
+                st.write(message["content"])
 
     elif menu == "Ringkasan":
-        st.title("Ringkasan Bisnis Demo")
-        col1, col2, col3, col4 = st.columns(4)
+        hero_welcome(user_name="demo@laris.ai", subtitle="Dashboard contoh UMKM Indonesia")
         total_income = int(df[df["type"] == "Pemasukan"]["amount"].sum())
         total_expense = int(df[df["type"] == "Pengeluaran"]["amount"].sum())
         balance = total_income - total_expense
-        col1.metric("Total Pemasukan", f"Rp {total_income:,}")
-        col2.metric("Total Pengeluaran", f"Rp {total_expense:,}")
-        col3.metric("Saldo Bersih", f"Rp {balance:,}")
-        col4.metric("Laris Score", f"{score['score']}/100")
+        stat_card_row(
+            [
+                ("Total Pemasukan", f"Rp {total_income:,}", "success"),
+                ("Total Pengeluaran", f"Rp {total_expense:,}", "danger"),
+                ("Saldo Bersih", f"Rp {balance:,}", "purple"),
+                ("Laris Score", f"{score['score']}/100", "info"),
+            ]
+        )
 
         st.markdown("---")
-        st.subheader("Statistik Ringkas")
+        section_card(
+            "Statistik Ringkas",
+            "Tren saldo kumulatif dari waktu ke waktu.",
+            icon="ti-chart-line",
+        )
         df_recent = df.copy()
         df_recent["date"] = pd.to_datetime(df_recent["date"])
         df_recent = df_recent.sort_values(by="date")
@@ -258,25 +318,42 @@ def render_demo_dashboard() -> None:
             .sort_values(ascending=False)
         )
         if not top_costs.empty:
-            st.subheader("Top Pengeluaran")
+            section_card(
+                "Top Pengeluaran",
+                "5 kategori terbesar.",
+                icon="ti-arrows-down",
+            )
             st.bar_chart(top_costs.head(5))
 
-        st.subheader("Saran Demo")
-        st.info(_demo_advisor(df))
+        section_card(
+            "Saran Demo",
+            "Insight dari AI berdasarkan data contoh.",
+            icon="ti-sparkles",
+        )
+        st.markdown(
+            f'<div class="alert alert-info mb-0" role="alert">{_demo_advisor(df)}</div>',
+            unsafe_allow_html=True,
+        )
         with st.expander("Tampilkan aktivitas terbaru", expanded=False):
             recent = df.sort_values(by="date", ascending=False).head(6).reset_index(drop=True)
             st.table(recent[["date", "type", "category", "amount", "note"]])
 
     elif menu == "Catat Transaksi":
-        st.title("Catat Transaksi Demo")
-        st.caption("Form ini dibuat untuk menunjukkan alur input. Data tidak akan disimpan.")
+        section_card(
+            "Catat Transaksi Demo",
+            "Form ini dibuat untuk menunjukkan alur input. Data tidak akan disimpan.",
+            icon="ti-pencil-plus",
+        )
         with st.form("demo_transaction_form"):
-            type_txn = st.radio("Jenis Transaksi", ["Pemasukan", "Pengeluaran"], horizontal=True)
-            category = st.text_input("Kategori", value="Penjualan")
-            amount = st.number_input("Jumlah (Rp)", min_value=0, step=1000, value=150000)
+            c1, c2 = st.columns(2)
+            with c1:
+                type_txn = st.radio("Jenis Transaksi", ["Pemasukan", "Pengeluaran"], horizontal=True)
+                category = st.text_input("Kategori", value="Penjualan")
+            with c2:
+                amount = st.number_input("Jumlah (Rp)", min_value=0, step=1000, value=150000)
+                is_prive = st.checkbox("Prive / ambil pribadi")
             note = st.text_input("Catatan", value="Contoh transaksi demo")
-            is_prive = st.checkbox("Prive / ambil pribadi")
-            submitted = st.form_submit_button("Coba Simpan")
+            submitted = st.form_submit_button("Coba Simpan", type="primary", use_container_width=True)
             if submitted:
                 if amount <= 0:
                     st.error("Masukkan jumlah transaksi yang valid.")
@@ -286,32 +363,58 @@ def render_demo_dashboard() -> None:
                         f"Rp {int(amount):,} di kategori {category}."
                     )
                     st.info("Mode demo publik tidak menyimpan perubahan. Login untuk memakai data asli.")
-        st.markdown("---")
-        st.write("Contoh ini menunjukkan betapa ringan alur input transaksi untuk owner atau admin.")
+        info_pill(
+            "💡 Atau kirim lewat WhatsApp ke nomor AI Catat — contoh: 'jual kopi 50rb'.",
+            "info",
+        )
 
     elif menu == "Buku Kas":
-        st.title("Buku Kas Demo")
-        st.markdown("**Ringkasan buku kas terbaru**")
+        section_card(
+            "Buku Kas Demo",
+            "Daftar transaksi contoh. Data ini publik dan tidak terkait toko nyata.",
+            icon="ti-cash",
+        )
         summary = df.sort_values(by="date", ascending=False).reset_index(drop=True)
         st.dataframe(summary, height=320)
         if st.checkbox("Tampilkan semua entri buku kas demo", value=False):
             st.dataframe(summary)
         csv = df.to_csv(index=False).encode("utf-8")
-        st.download_button("Unduh CSV Demo", csv, file_name="buku_kas_demo.csv", mime="text/csv")
+        st.download_button(
+            "Unduh CSV Demo",
+            csv,
+            file_name="buku_kas_demo.csv",
+            mime="text/csv",
+            type="primary",
+        )
         st.caption("Data di atas adalah contoh agar publik bisa melihat bentuk laporan tanpa membuka data pelanggan nyata.")
 
     elif menu == "Laporan KUR":
-        st.title("Laporan KUR Demo")
+        section_card(
+            "Laporan KUR Demo",
+            "Ringkasan otomatis untuk pengajuan Kredit Usaha Rakyat.",
+            icon="ti-report-analytics",
+        )
         total_income = int(df[df["type"] == "Pemasukan"]["amount"].sum())
         total_expense = int(df[df["type"] == "Pengeluaran"]["amount"].sum())
         net_profit = total_income - total_expense
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Pendapatan", f"Rp {total_income:,}")
-        c2.metric("Biaya", f"Rp {total_expense:,}")
-        c3.metric("Laba Bersih", f"Rp {net_profit:,}")
+        stat_card_row(
+            [
+                ("Pendapatan", f"Rp {total_income:,}", "success"),
+                ("Biaya", f"Rp {total_expense:,}", "danger"),
+                ("Laba Bersih", f"Rp {net_profit:,}", "purple"),
+            ]
+        )
         st.markdown(
-            f"**Insight Demo:** {score['insight']}  \n"
-            f"**Kesehatan Usaha:** {score['level'].capitalize()}"
+            f"""
+            <div class="card card-lg mt-3" style="border:1px solid var(--ds-gray-200);border-radius:1rem;">
+              <div class="card-body">
+                <h5 class="mb-1"><i class="ti ti-bulb text-warning me-2"></i>Insight Demo</h5>
+                <p class="mb-1"><strong>Insight:</strong> {score['insight']}</p>
+                <p class="mb-0"><strong>Kesehatan:</strong> {score['level'].capitalize()}</p>
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
         st.info(
             "Mode demo ini memperlihatkan bagaimana data transaksi bisa dibaca ulang sebagai "
@@ -319,14 +422,22 @@ def render_demo_dashboard() -> None:
         )
 
     elif menu == "Gudang":
-        st.title("Gudang & Inventaris Demo")
+        section_card(
+            "Gudang & Inventaris Demo",
+            "Pantau stok per gudang dan produk terkoneksi.",
+            icon="ti-building-warehouse",
+        )
         labels = {warehouse["id"]: warehouse["name"] for warehouse in warehouses}
         selected = st.selectbox("Pilih Gudang", options=list(labels.keys()), format_func=lambda x: labels[x])
         selected_name = labels[selected]
-        st.subheader(f"Ringkasan {selected_name}")
+        section_card(
+            f"Ringkasan {selected_name}",
+            "Aktivitas inventaris gudang demo.",
+            icon="ti-archive",
+        )
         filtered = inventory_df[inventory_df["warehouse"] == selected_name]
         if filtered.empty:
-            st.info("Belum ada aktivitas inventaris pada gudang demo ini.")
+            empty_state("ti-tray", "Belum ada aktivitas inventaris", "")
         else:
             st.dataframe(filtered.reset_index(drop=True), height=280)
         with st.expander("Lihat saran restock demo", expanded=True):
@@ -337,8 +448,15 @@ def render_demo_dashboard() -> None:
             )
 
     elif menu == "Pengaturan":
-        st.title("⚙️ Pengaturan Demo")
-        st.info("Mode demo publik tidak membuka pengaturan akun asli atau data pelanggan.")
+        section_card(
+            "⚙️ Pengaturan Demo",
+            "Mode demo publik tidak membuka pengaturan akun asli.",
+            icon="ti-settings",
+        )
+        info_pill(
+            "Mode demo publik tidak membuka pengaturan akun asli atau data pelanggan.",
+            "info",
+        )
         st.markdown(
             """
             **Yang biasanya bisa dilihat setelah login:**

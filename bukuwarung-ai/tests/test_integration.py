@@ -27,8 +27,6 @@ class _OfflineDB:
 @pytest.fixture
 def stack(monkeypatch):
     """Stack lengkap: OtakAI mock + PersonalityEngine + Router + 6 agents."""
-    monkeypatch.setenv("OWNER_PHONES", "6289999999999")
-
     from config import get_settings
 
     get_settings.cache_clear()
@@ -158,14 +156,10 @@ async def test_edge_messages(stack, message: str, expect_nonempty: bool) -> None
 
 
 @pytest.mark.asyncio
-async def test_admin_owner_access(stack, monkeypatch):
-    monkeypatch.setenv("OWNER_PHONES", "6288888888888")
-    from config import get_settings
-
-    get_settings.cache_clear()
+async def test_admin_owner_access(stack):
+    from core.client_registry import ClientConfig
 
     orch, _, _, _ = stack
-    # Rebuild with new owner env
     from agents import build_agents
     from core.semantic_router import SemanticRouter
 
@@ -179,7 +173,17 @@ async def test_admin_owner_access(stack, monkeypatch):
     agents = build_agents(otak, personality, llm)
     orch2 = Orchestrator(otak, SemanticRouter(llm), personality, agents)
 
-    resp = await orch2.handle_message("6288888888888", "laporan harian", "toko_test")
+    owner_cfg = ClientConfig(
+        client_id="toko_test",
+        name="Toko Test",
+        owner_phones=["6288888888888"],
+    )
+    resp = await orch2.handle_message(
+        "6288888888888",
+        "laporan harian",
+        "toko_test",
+        client_config=owner_cfg,
+    )
     assert "laporan" in resp.lower()
     assert "pesanan" in resp.lower() or "omzet" in resp.lower()
 
