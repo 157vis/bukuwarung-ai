@@ -16,6 +16,10 @@ _HERO_STATS = [
     ("Multi-Tenant", "RLS per toko"),
 ]
 
+# Domain publik: landing statis & dashboard Streamlit dipisah sesuai arsitektur terbaru.
+LANDING_DOMAIN = "https://www.larisai.my.id"
+APP_DOMAIN = "https://app.larisai.my.id"
+
 _INLINE_LANDING_CSS = """
 .laris-landing { font-family: "Public Sans", system-ui, sans-serif; color:#1c252e; background:#f9fafb; }
 .laris-landing a { text-decoration:none; }
@@ -109,8 +113,8 @@ def _navbar_html() -> str:
           <a href="#cta">Mulai</a>
         </nav>
         <div class="laris-navbar-cta d-flex gap-2">
-          <a href="?demo=1" target="_parent" class="btn btn-ghost">Demo</a>
-          <a href="?login=1" target="_parent" class="btn btn-solid">Masuk</a>
+          <a href="{APP_DOMAIN}/?demo=1" target="_blank" rel="noopener" class="btn btn-ghost">Demo</a>
+          <a href="{APP_DOMAIN}/?login=1" target="_blank" rel="noopener" class="btn btn-solid">Masuk</a>
         </div>
       </div>
     </div>
@@ -129,10 +133,10 @@ def _hero_html() -> str:
           Logistik AI pantau stok, dan Dashboard Dasher Anda terisi secara real-time.
         </p>
         <div class="laris-hero-cta">
-          <a href="?demo=1" target="_parent" class="btn btn-solid btn-lg">
+          <a href="{APP_DOMAIN}/?demo=1" target="_blank" rel="noopener" class="btn btn-solid btn-lg">
             <i class="ti ti-flask"></i> Buka Dashboard Demo
           </a>
-          <a href="?login=1" target="_parent" class="btn btn-ghost btn-lg">
+          <a href="{APP_DOMAIN}/?login=1" target="_blank" rel="noopener" class="btn btn-ghost btn-lg">
             <i class="ti ti-login"></i> Masuk Akun
           </a>
         </div>
@@ -269,10 +273,10 @@ def _cta_html() -> str:
             <p>Coba dashboard contoh publik atau masuk dengan akun toko Anda.</p>
           </div>
           <div class="laris-cta-buttons">
-            <a href="?demo=1" target="_parent" class="btn btn-solid btn-lg">
+            <a href="{APP_DOMAIN}/?demo=1" target="_blank" rel="noopener" class="btn btn-solid btn-lg">
               <i class="ti ti-flask"></i> Buka Dashboard Demo
             </a>
-            <a href="?login=1" target="_parent" class="btn btn-ghost btn-lg">
+            <a href="{APP_DOMAIN}/?login=1" target="_blank" rel="noopener" class="btn btn-ghost btn-lg">
               <i class="ti ti-login"></i> Masuk Akun
             </a>
           </div>
@@ -294,12 +298,12 @@ def _footer_html() -> str:
           <small class="text-uppercase fw-bold text-muted">Produk</small>
           <a href="#fitur">Fitur</a>
           <a href="#alur">Alur</a>
-          <a href="?demo=1" target="_parent">Demo Publik</a>
+          <a href="{APP_DOMAIN}/?demo=1" target="_blank" rel="noopener">Demo Publik</a>
         </div>
         <div class="laris-footer-col">
           <small class="text-uppercase fw-bold text-muted">Mulai</small>
-          <a href="?login=1" target="_parent">Masuk</a>
-          <a href="?demo=1" target="_parent">Coba Demo</a>
+          <a href="{APP_DOMAIN}/?login=1" target="_blank" rel="noopener">Masuk</a>
+          <a href="{APP_DOMAIN}/?demo=1" target="_blank" rel="noopener">Coba Demo</a>
         </div>
       </div>
       <div class="text-center text-muted small py-3">
