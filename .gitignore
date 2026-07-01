@@ -42,3 +42,6 @@ app_hamburger_block.txt
 app_head.txt
 tmp_*.py
 tmp-*.json
+
+# Landing page statis lama (SEO worker Cloudflare) — sudah digantikan index.html di root
+site/
