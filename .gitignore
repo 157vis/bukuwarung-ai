@@ -45,3 +45,10 @@ tmp-*.json
 
 # Landing page statis lama (SEO worker Cloudflare) — sudah digantikan index.html di root
 site/
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
