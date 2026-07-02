@@ -23,7 +23,7 @@ _HERO_STATS = [
 # tetap berfungsi, sementara diarahkan ke domain Railway yang terbukti hidup.
 # Nanti cukup ganti kembali APP_DOMAIN ke custom domain app saat sudah sehat.
 LANDING_DOMAIN = "https://www.larisai.my.id"
-APP_DOMAIN = "https://bukuwarung-ai-larisai.up.railway.app"
+APP_DOMAIN = "https://larisai.my.id"
 
 _INLINE_LANDING_CSS = """
 .laris-landing { font-family: "Public Sans", system-ui, sans-serif; color:#1c252e; background:#f9fafb; }
