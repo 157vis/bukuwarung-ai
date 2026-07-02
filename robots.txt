@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Main sitemap for public landing pages
+Sitemap: https://www.larisai.my.id/sitemap.xml
