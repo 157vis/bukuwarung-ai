@@ -16,9 +16,14 @@ _HERO_STATS = [
     ("Multi-Tenant", "RLS per toko"),
 ]
 
-# Domain publik: landing statis & dashboard Streamlit dipisah sesuai arsitektur terbaru.
+# Domain publik: landing statis & dashboard Streamlit.
+#
+# NOTE:
+# `app.larisai.my.id` sempat tidak stabil (503). Untuk menjaga CTA "Masuk"
+# tetap berfungsi, sementara diarahkan ke domain Railway yang terbukti hidup.
+# Nanti cukup ganti kembali APP_DOMAIN ke custom domain app saat sudah sehat.
 LANDING_DOMAIN = "https://www.larisai.my.id"
-APP_DOMAIN = "https://app.larisai.my.id"
+APP_DOMAIN = "https://bukuwarung-ai-larisai.up.railway.app"
 
 _INLINE_LANDING_CSS = """
 .laris-landing { font-family: "Public Sans", system-ui, sans-serif; color:#1c252e; background:#f9fafb; }
