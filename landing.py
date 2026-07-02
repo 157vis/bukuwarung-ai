@@ -304,6 +304,7 @@ def _footer_html() -> str:
           <a href="#fitur">Fitur</a>
           <a href="#alur">Alur</a>
           <a href="{APP_DOMAIN}/?demo=1" target="_blank" rel="noopener">Demo Publik</a>
+          <a href="/artikel/cara-mencatat-keuangan-warung/" target="_blank" rel="noopener">Artikel UMKM</a>
         </div>
         <div class="laris-footer-col">
           <small class="text-uppercase fw-bold text-muted">Mulai</small>
