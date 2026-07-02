@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 
 from brand import APP_NAME, PAGE_ICON, PAGE_TITLE, DASHBOARD_TITLE, DEMO_QUERY
+from config_runtime import get_secret, require_secret
 from demo_dashboard import render_demo_dashboard
 from landing import render_landing
 from login import show_login_page, get_current_user, logout, ensure_valid_session
@@ -35,11 +36,8 @@ DEFAULT_CATAT_BOT_URL = "https://kita-cuan-wa-bot-larisai.up.railway.app"
 
 def _bot_base_urls() -> tuple[str, str]:
     """URL webhook BukuWarung CS & bot AI Catat dari secrets atau default."""
-    try:
-        bw = st.secrets.get("BUKUWARUNG_BASE_URL", DEFAULT_BUKUWARUNG_URL)
-        catat = st.secrets.get("CATAT_BOT_BASE_URL", DEFAULT_CATAT_BOT_URL)
-    except (KeyError, FileNotFoundError):
-        bw, catat = DEFAULT_BUKUWARUNG_URL, DEFAULT_CATAT_BOT_URL
+    bw = get_secret("BUKUWARUNG_BASE_URL", DEFAULT_BUKUWARUNG_URL)
+    catat = get_secret("CATAT_BOT_BASE_URL", DEFAULT_CATAT_BOT_URL)
     return str(bw).rstrip("/"), str(catat).rstrip("/")
 
 
@@ -69,23 +67,23 @@ def render_wa_sync_hint(user_id: str, user_email: str | None, df_empty: bool) ->
 def get_admin_core() -> LarisCore | None:
     """Core service role untuk panel Super Admin (opsional di secrets.toml)."""
     try:
-        service_key = st.secrets.get("SUPABASE_SERVICE_KEY", "")
+        service_key = get_secret("SUPABASE_SERVICE_KEY", "") or ""
         if not service_key:
             return None
         return LarisCore.from_service_client(
-            st.secrets["SUPABASE_URL"],
+            require_secret("SUPABASE_URL"),
             service_key,
-            st.secrets["GROQ_API_KEY"],
+            require_secret("GROQ_API_KEY"),
         )
-    except (KeyError, FileNotFoundError):
+    except (KeyError, FileNotFoundError, RuntimeError):
         return None
 
 
 def get_core() -> LarisCore:
     core = LarisCore(
-        st.secrets["SUPABASE_URL"],
-        st.secrets["SUPABASE_KEY"],
-        st.secrets["GROQ_API_KEY"],
+        require_secret("SUPABASE_URL"),
+        require_secret("SUPABASE_KEY"),
+        require_secret("GROQ_API_KEY"),
     )
     # Teruskan token login agar RLS Supabase mengenali user (auth.uid()).
     token = st.session_state.get("access_token")

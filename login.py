@@ -6,6 +6,7 @@ import streamlit as st
 from supabase import create_client
 
 from brand import LOGIN_BRAND_HTML
+from config_runtime import require_secret
 from log_config import get_logger
 from ui.laris_theme import inject_login_theme
 
@@ -13,7 +14,7 @@ logger = get_logger(__name__)
 
 
 def _client():
-    return create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
+    return create_client(require_secret("SUPABASE_URL"), require_secret("SUPABASE_KEY"))
 
 
 def _decode_exp(token: str) -> int:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from config_runtime import get_secret
 from laris_core import LarisCore
 
 DEFAULT_RAILWAY_URL = "https://bukuwarung-ai-larisai.up.railway.app"
@@ -11,12 +12,9 @@ DEFAULT_RAILWAY_URL = "https://bukuwarung-ai-larisai.up.railway.app"
 
 def railway_base_url() -> str:
     """URL deploy FastAPI (satu base untuk webhook CS & Catat)."""
-    try:
-        raw = st.secrets.get("RAILWAY_URL") or st.secrets.get(
-            "BUKUWARUNG_BASE_URL", DEFAULT_RAILWAY_URL
-        )
-    except (KeyError, FileNotFoundError):
-        raw = DEFAULT_RAILWAY_URL
+    raw = get_secret("RAILWAY_URL") or get_secret(
+        "BUKUWARUNG_BASE_URL", DEFAULT_RAILWAY_URL
+    )
     return str(raw).rstrip("/")
 
 
