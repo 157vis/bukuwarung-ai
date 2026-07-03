@@ -39,10 +39,11 @@ Supabase tetap di cloud (database). Railway men-host **2 service** dari repo Git
 ### Settings → Deploy
 
 
-| Setting            | Nilai                               |
-| ------------------ | ----------------------------------- |
-| **Root Directory** | `/` (kosong / root repo)            |
-| **Start Command**  | `bash scripts/railway-streamlit.sh` |
+| Setting            | Nilai                                              |
+| ------------------ | -------------------------------------------------- |
+| **Root Directory** | `/` (kosong / root repo)                           |
+| **Custom Start Command** | **ON** (toggle aktif)                        |
+| **Start Command**  | `streamlit run app.py --server.address 0.0.0.0 --server.port $PORT --server.headless true` |
 
 
 ### Settings → Variables (Environment)
