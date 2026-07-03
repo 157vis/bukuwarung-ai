@@ -329,6 +329,8 @@
             text-align: center; font-size: 0.85rem; color: #6b7280;
             margin-top: 0.85rem;
         }
+        .laris-3d-alur { background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%); }
+        .laris-3d-frame-dark { background: #0f172a; }
 
         /* ========== AGENTS ========== */
         .agents-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
@@ -749,6 +751,27 @@
                 </div>
             </div>
             <p class="laris-3d-caption">Snippet ringan &lt; 200KB Â· Three.js via CDN Â· tidak mengganggu loading landing.</p>
+        </div>
+    </section>
+
+    <!-- ==================== 3D ALUR DATA ==================== -->
+    <!-- Diagram 3D: WhatsApp â†’ AI â†’ Supabase â†’ Dashboard, dengan partikel
+         data yang mengalir di setiap tahap. Klik node untuk lihat detail.
+         File sumber: static/laris-3d/alur_3d.html -->
+    <section class="section laris-3d-alur" id="alur-3d">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-badge">ðŸ› ï¸ Alur Data 3D</div>
+                <h2 class="section-title">Lihat data mengalir dari chat WhatsApp ke dashboard bisnis Anda.</h2>
+                <p class="section-subtitle">Drag untuk memutar Â· Scroll untuk zoom Â· Klik node untuk melihat penjelasan tiap tahap.</p>
+            </div>
+            <div class="laris-3d-frame laris-3d-frame-dark">
+                <iframe src="/laris-3d/alur_3d.html" title="Alur Data UMKM 3D" loading="lazy" allow="autoplay; fullscreen"></iframe>
+                <div class="laris-3d-fallback">
+                    <p>Browser Anda tidak mendukung 3D interaktif. <a href="/laris-3d/alur_3d.html" target="_blank" rel="noopener">Buka di tab baru</a>.</p>
+                </div>
+            </div>
+            <p class="laris-3d-caption">4 node Â· 3 jalur data Â· ~120 partikel hidup. Bukti teknis alur AI multi-agent laris.AI.</p>
         </div>
     </section>
 
