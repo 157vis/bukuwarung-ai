@@ -937,8 +937,38 @@ def render_dashboard(core: LarisCore, user) -> None:
                 st.dataframe(prod_df, use_container_width=True)
 
 
+def _redirect_legacy_paths() -> None:
+    """Path yang sebenarnya dilayani Cloudflare Pages (www.larisai.my.id)
+    tapi user/email/share-link bisa datang ke root domain (larisai.my.id).
+    Streamlit tidak handle arbitrary path, jadi pakai JS redirect di awal.
+    """
+    LANDING = "https://www.larisai.my.id"
+    # Path yang wajib di-redirect ke landing (Pages). Tambah sesuai kebutuhan.
+    REDIRECT_PREFIXES = ("/artikel/", "/3d/", "/laris-3d/")
+    import streamlit.components.v1 as components
+
+    components.html(
+        f"""
+        <script>
+          (function() {{
+            var p = window.location.pathname || "/";
+            var prefixes = {list(REDIRECT_PREFIXES)};
+            for (var i = 0; i < prefixes.length; i++) {{
+              if (p.indexOf(prefixes[i]) === 0) {{
+                window.location.replace("{LANDING}" + p);
+                return;
+              }}
+            }}
+          }})();
+        </script>
+        """,
+        height=0,
+    )
+
+
 def main() -> None:
     page_config()
+    _redirect_legacy_paths()
     render_header()
 
     if get_query_flag("demo"):

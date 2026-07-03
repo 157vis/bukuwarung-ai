@@ -130,7 +130,7 @@ def _navbar_html() -> str:
         <nav class="laris-navbar-links d-none d-md-flex">
           <a href="#fitur">Fitur</a>
           <a href="#alur">Alur</a>
-          <a href="/artikel/cara-mencatat-keuangan-warung/" target="_blank" rel="noopener">Artikel</a>
+          <a href="{LANDING_DOMAIN}/artikel/cara-mencatat-keuangan-warung/" target="_blank" rel="noopener">Artikel</a>
           <a href="#cta">Mulai</a>
         </nav>
         <div class="laris-navbar-cta d-flex gap-2">
@@ -157,7 +157,7 @@ def _hero_html() -> str:
           <a href="{APP_DOMAIN}/?demo=1" target="_blank" rel="noopener" class="btn btn-solid btn-lg">
             <i class="ti ti-flask"></i> Buka Dashboard Demo
           </a>
-          <a href="/artikel/cara-mencatat-keuangan-warung/" target="_blank" rel="noopener" class="btn btn-ghost btn-lg">
+          <a href="{LANDING_DOMAIN}/artikel/cara-mencatat-keuangan-warung/" target="_blank" rel="noopener" class="btn btn-ghost btn-lg">
             <i class="ti ti-news"></i> Baca Artikel UMKM
           </a>
           <a href="{APP_DOMAIN}/?login=1" target="_blank" rel="noopener" class="btn btn-ghost btn-lg">
@@ -399,7 +399,7 @@ def _footer_html() -> str:
           <a href="#fitur">Fitur</a>
           <a href="#alur">Alur</a>
           <a href="{APP_DOMAIN}/?demo=1" target="_blank" rel="noopener">Demo Publik</a>
-          <a href="/artikel/cara-mencatat-keuangan-warung/" target="_blank" rel="noopener">Artikel UMKM</a>
+          <a href="{LANDING_DOMAIN}/artikel/cara-mencatat-keuangan-warung/" target="_blank" rel="noopener">Artikel UMKM</a>
         </div>
         <div class="laris-footer-col">
           <small class="text-uppercase fw-bold text-muted">Mulai</small>
