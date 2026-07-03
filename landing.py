@@ -24,6 +24,8 @@ _HERO_STATS = [
 # Nanti cukup ganti kembali APP_DOMAIN ke custom domain app saat sudah sehat.
 LANDING_DOMAIN = "https://www.larisai.my.id"
 APP_DOMAIN = "https://larisai.my.id"
+WA_NUMBER = "6282112826851"
+WA_BASE = f"https://wa.me/{WA_NUMBER}"
 
 _INLINE_LANDING_CSS = """
 .laris-landing { font-family: "Public Sans", system-ui, sans-serif; color:#1c252e; background:#f9fafb; }
@@ -128,14 +130,15 @@ def _navbar_html() -> str:
           <small class="text-muted ms-2">{APP_TAGLINE}</small>
         </a>
         <nav class="laris-navbar-links d-none d-md-flex">
-          <a href="#fitur">Fitur</a>
+          <a href="{LANDING_DOMAIN}/fitur/">Fitur</a>
           <a href="#alur">Alur</a>
+          <a href="{LANDING_DOMAIN}/harga/">Harga</a>
           <a href="{LANDING_DOMAIN}/artikel/cara-mencatat-keuangan-warung/" target="_blank" rel="noopener">Artikel</a>
           <a href="#cta">Mulai</a>
         </nav>
         <div class="laris-navbar-cta d-flex gap-2">
-          <a href="{APP_DOMAIN}/?demo=1" target="_blank" rel="noopener" class="btn btn-ghost">Demo</a>
-          <a href="{APP_DOMAIN}/?login=1" target="_blank" rel="noopener" class="btn btn-solid">Masuk</a>
+          <a href="{WA_BASE}?text=Halo%20laris.AI%2C%20saya%20mau%20lihat%20demo" target="_blank" rel="noopener" class="btn btn-ghost">Demo</a>
+          <a href="{WA_BASE}?text=Halo%20laris.AI%2C%20saya%20mau%20mulai%20trial" target="_blank" rel="noopener" class="btn btn-solid">Masuk</a>
         </div>
       </div>
     </div>
@@ -154,13 +157,13 @@ def _hero_html() -> str:
           Logistik AI pantau stok, dan Dashboard Dasher Anda terisi secara real-time.
         </p>
         <div class="laris-hero-cta">
-          <a href="{APP_DOMAIN}/?demo=1" target="_blank" rel="noopener" class="btn btn-solid btn-lg">
+          <a href="{WA_BASE}?text=Halo%20laris.AI%2C%20saya%20mau%20lihat%20demo" target="_blank" rel="noopener" class="btn btn-solid btn-lg">
             <i class="ti ti-flask"></i> Buka Dashboard Demo
           </a>
           <a href="{LANDING_DOMAIN}/artikel/cara-mencatat-keuangan-warung/" target="_blank" rel="noopener" class="btn btn-ghost btn-lg">
             <i class="ti ti-news"></i> Baca Artikel UMKM
           </a>
-          <a href="{APP_DOMAIN}/?login=1" target="_blank" rel="noopener" class="btn btn-ghost btn-lg">
+          <a href="{WA_BASE}?text=Halo%20laris.AI%2C%20saya%20mau%20mulai%20trial" target="_blank" rel="noopener" class="btn btn-ghost btn-lg">
             <i class="ti ti-login"></i> Masuk Akun
           </a>
         </div>
@@ -373,10 +376,10 @@ def _cta_html() -> str:
             <p>Coba dashboard contoh publik atau masuk dengan akun toko Anda.</p>
           </div>
           <div class="laris-cta-buttons">
-            <a href="{APP_DOMAIN}/?demo=1" target="_blank" rel="noopener" class="btn btn-solid btn-lg">
+            <a href="{WA_BASE}?text=Halo%20laris.AI%2C%20saya%20mau%20lihat%20demo" target="_blank" rel="noopener" class="btn btn-solid btn-lg">
               <i class="ti ti-flask"></i> Buka Dashboard Demo
             </a>
-            <a href="{APP_DOMAIN}/?login=1" target="_blank" rel="noopener" class="btn btn-ghost btn-lg">
+            <a href="{WA_BASE}?text=Halo%20laris.AI%2C%20saya%20mau%20mulai%20trial" target="_blank" rel="noopener" class="btn btn-ghost btn-lg">
               <i class="ti ti-login"></i> Masuk Akun
             </a>
           </div>
@@ -396,15 +399,16 @@ def _footer_html() -> str:
         </div>
         <div class="laris-footer-col">
           <small class="text-uppercase fw-bold text-muted">Produk</small>
-          <a href="#fitur">Fitur</a>
+          <a href="{LANDING_DOMAIN}/fitur/">Fitur</a>
           <a href="#alur">Alur</a>
-          <a href="{APP_DOMAIN}/?demo=1" target="_blank" rel="noopener">Demo Publik</a>
+          <a href="{LANDING_DOMAIN}/harga/">Harga</a>
+          <a href="{WA_BASE}?text=Halo%20laris.AI%2C%20saya%20mau%20lihat%20demo" target="_blank" rel="noopener">Demo Publik</a>
           <a href="{LANDING_DOMAIN}/artikel/cara-mencatat-keuangan-warung/" target="_blank" rel="noopener">Artikel UMKM</a>
         </div>
         <div class="laris-footer-col">
           <small class="text-uppercase fw-bold text-muted">Mulai</small>
-          <a href="{APP_DOMAIN}/?login=1" target="_blank" rel="noopener">Masuk</a>
-          <a href="{APP_DOMAIN}/?demo=1" target="_blank" rel="noopener">Coba Demo</a>
+          <a href="{WA_BASE}?text=Halo%20laris.AI%2C%20saya%20mau%20mulai%20trial" target="_blank" rel="noopener">Masuk</a>
+          <a href="{WA_BASE}?text=Halo%20laris.AI%2C%20saya%20mau%20coba%20demo" target="_blank" rel="noopener">Coba Demo</a>
         </div>
       </div>
       <div class="text-center text-muted small py-3">
