@@ -945,8 +945,31 @@ def _redirect_legacy_paths() -> None:
     LANDING = "https://www.larisai.my.id"
     # Path yang wajib di-redirect ke landing (Pages). Tambah sesuai kebutuhan.
     REDIRECT_PREFIXES = ("/artikel/", "/3d/", "/laris-3d/")
-    import streamlit.components.v1 as components
 
+    # Pakai st.html() (Streamlit >= 1.32) — lebih cocok untuk HTML kecil
+    # seperti JS redirect. st.components.v1.html deprecated per 2026-06-01.
+    try:
+        st.html(
+            f"""
+            <script>
+              (function() {{
+                var p = window.location.pathname || "/";
+                var prefixes = {list(REDIRECT_PREFIXES)};
+                for (var i = 0; i < prefixes.length; i++) {{
+                  if (p.indexOf(prefixes[i]) === 0) {{
+                    window.location.replace("{LANDING}" + p);
+                    return;
+                  }}
+                }}
+              }})();
+            </script>
+            """
+        )
+        return
+    except AttributeError:
+        pass
+    # Fallback untuk Streamlit lama
+    import streamlit.components.v1 as components
     components.html(
         f"""
         <script>

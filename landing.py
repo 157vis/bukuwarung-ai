@@ -459,6 +459,13 @@ def render_landing() -> None:
   <div class="laris-landing">{html_content}</div>
 </body>
 </html>"""
+    # st.html() (Streamlit >= 1.32) — render full HTML doc tanpa wrapper
+    # <p>. st.components.v1.html deprecated per 2026-06-01.
+    try:
+        st.html(full_doc)
+        return
+    except AttributeError:
+        pass
     components.html(full_doc, height=5200, scrolling=True)
 
 
