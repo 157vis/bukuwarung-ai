@@ -1,6 +1,5 @@
 # Rahasia — JANGAN di-upload ke GitHub
 .streamlit/secrets.toml
-kita-cuan-wa-bot/.env
 *.env
 *.env.*
 !*.env.example

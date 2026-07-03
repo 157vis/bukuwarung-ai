@@ -63,19 +63,26 @@ Itu URL dashboard publik — buka dari laptop rumah, HP, mana saja.
 
 ---
 
-## Langkah 3 — Service 2: Bot WhatsApp (FastAPI)
+## Langkah 3 — Service 2: Bot WhatsApp (FastAPI) — **REPO TERPISAH**
 
-Di project Railway yang sama: **+ New Service** → **GitHub Repo** → pilih repo **sama**.
+> ⚠️ **Penting:** Bot WhatsApp (`kita-cuan-wa-bot`) sudah **dipisah**
+> ke repo GitHub tersendiri:
+> 👉 **https://github.com/157vis/kita-cuan-wa-bot**
+>
+> Deploy bot di Railway dengan **repo baru** (bukan monorepo ini).
+> Lihat README & PANDUAN di repo tersebut untuk setup.
 
-### Settings → Deploy
-
+### Settings → Deploy (di repo `157vis/kita-cuan-wa-bot`)
 
 | Setting            | Nilai                         |
 | ------------------ | ----------------------------- |
-| **Root Directory** | `/` (root repo) |
-| **Start Command**  | `bash scripts/railway-bot.sh` |
+| **Root Directory** | `/` (default, kosong) |
+| **Custom Start Command** | ON (toggle aktif) |
+| **Start Command**  | `python -m uvicorn main:app --host 0.0.0.0 --port $PORT` |
 
-> **Satu file bot:** `kita-cuan-wa-bot/main.py` — script di atas otomatis `cd` ke folder itu lalu jalankan `uvicorn main:app`. Jangan pakai `main.py` di root repo (sudah dihapus).
+> Repo `kita-cuan-wa-bot` sudah **self-contained** (`paths.py`,
+> `requirements.txt`, `Procfile`, `railway.toml` semua di repo itu).
+> Tidak butuh akses ke monorepo `bukuwarung-ai` ini.
 
 
 ### Settings → Variables
@@ -126,7 +133,7 @@ git push
 Railway **otomatis rebuild** kedua service setelah push ke `main`.
 
 Tidak perlu menjalankan Streamlit/bot di laptop — cukup edit + push.  
-Untuk tes lokal (opsional): salin `.streamlit/secrets.toml` + `kita-cuan-wa-bot/.env`.
+Untuk tes lokal (opsional): salin `.streamlit/secrets.toml`. Bot WhatsApp ada di repo terpisah, lihat `157vis/kita-cuan-wa-bot`.
 
 ---
 
@@ -160,16 +167,16 @@ Landing di dalam Streamlit (`static/laris-landing.html`) sudah ikut Service 1.
 
 | Masalah                         | Solusi                                                                                                                                                                |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Build gagal                     | Cek **Deploy Logs** di Railway; pastikan `requirements.txt` root + `kita-cuan-wa-bot/requirements.txt` terinstall (Railway pakai root — gabung dependency jika perlu) |
+| Build gagal                     | Cek **Deploy Logs** di Railway; pastikan `requirements.txt` root terinstall                                                                                           |
 | Dashboard blank / secrets error | Pastikan 3 env var Service 1 terisi                                                                                                                                   |
-| Bot 502 / `Could not import module "main"` | Start Command = `bash scripts/railway-bot.sh` (bukan `uvicorn main:app` dari root). File bot: `kita-cuan-wa-bot/main.py`. |
+| Bot 502 / `Could not import module "main"` | **Bot ada di repo terpisah** `157vis/kita-cuan-wa-bot`. Lihat PANDUAN di repo tersebut.                                                                       |
 | WA webhook tidak terpanggil     | URL harus `https://.../webhook` + HTTPS Railway domain                                                                                                                |
 | AI tidak jalan                  | `GROQ_API_KEY` invalid di Variables Railway                                                                                                                           |
 
 
-### Catatan dependency bot
+### Catatan dependency
 
-Bot butuh paket dari `kita-cuan-wa-bot/requirements.txt` (fastapi, uvicorn, httpx, dotenv).  
+Bot WhatsApp sudah **dipisah** ke repo [`157vis/kita-cuan-wa-bot`](https://github.com/157vis/kita-cuan-wa-bot). Deploy & env-var di repo tersebut, bukan di monorepo ini.  
 Pastikan root `requirements.txt` sudah lengkap, atau Railway install keduanya — root `requirements.txt` saat ini:
 
 ```

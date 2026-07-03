@@ -1,20 +1,26 @@
 # Panduan Setup Railway Service untuk Bot WhatsApp
 
-Dokumen ini menjelaskan langkah-langkah untuk menambahkan/memperbaiki 2 service Railway
-yang menjalankan bot WhatsApp CS (`bukuwarung-ai-larisai`) dan bot pencatatan
-(`kita-cuan-wa-bot-larisai`).
+Dokumen ini menjelaskan langkah-langkah untuk service Railway:
+
+- `bukuwarung-ai-larisai` — Bot CS (BukuWarung-AI webhook) — **dari monorepo `bukuwarung-ai`**
+- `kita-cuan-wa-bot-larisai` — Bot pencatatan WhatsApp — **dari repo TERPISAH [`157vis/kita-cuan-wa-bot`](https://github.com/157vis/kita-cuan-wa-bot)**
 
 > Kedua service ini terpisah dari service `larisai.my.id` yang menjalankan Streamlit dashboard.
+
+> **Migrasi 2026-07-03**: Bot `kita-cuan-wa-bot` sudah dipisah dari
+> monorepo ke repo GitHub tersendiri. Ini menghindari Root Directory
+> conflict di Nixpacks (parent folder tidak ter-deploy). Setup service
+> Railway di repo baru — lihat Langkah di bawah.
 
 ---
 
 ## Status Saat Ini
 
-| Service | URL | Status | Realita |
+| Service | URL | Repo | Status |
 |---|---|---|---|
-| **CS Webhook** | `bukuwarung-ai-larisai.up.railway.app` | 200 (tapi Streamlit) | ❌ Root Dir salah — menjalankan Streamlit |
-| **WA Catat** | `kita-cuan-wa-bot-larisai.up.railway.app` | 404 | ❌ Service tidak jalan |
-| **Streamlit** | `larisai.my.id` | 200 (benar) | ✅ Dashboard hidup |
+| **CS Webhook** | `bukuwarung-ai-larisai.up.railway.app` | `157vis/bukuwarung-ai` | Setup via monorepo (Root Directory = /) |
+| **WA Catat** | `kita-cuan-wa-bot-larisai.up.railway.app` | `157vis/kita-cuan-wa-bot` (TERPISAH) | Setup via repo baru |
+| **Streamlit** | `larisai.my.id` | `157vis/bukuwarung-ai` | ✅ Dashboard hidup |
 
 ---
 
@@ -100,26 +106,34 @@ Expected response (contoh):
 
 ---
 
-## Service 2: kita-cuan-wa-bot-larisai (WA Catat)
+## Service 2: kita-cuan-wa-bot-larisai (WA Catat) — **REPO TERPISAH**
 
-> **Penting**: Service ini mungkin BELUM dibuat di Railway. Kalau tidak ada,
-> Anda perlu create new service dari GitHub repo yang sama.
+> ⚠️ **Migrasi 2026-07-03**: Bot ini sudah **dipisah** ke repo
+> GitHub tersendiri: 👉 **https://github.com/157vis/kita-cuan-wa-bot**
+>
+> Alasan: monorepo `bukuwarung-ai` menyebabkan conflict di Railway
+> (parent folder tidak ter-deploy kalau Root Directory = sub-folder).
+> Repo baru `kita-cuan-wa-bot` sudah **self-contained** (`paths.py`,
+> `brand.py`, `laris_core.py` semua di-copy ke repo baru).
 
-### A. Kalau Service Belum Ada
+### A. Buat service di Railway dari repo baru
 
 1. Di project workspace Railway, klik **+ New Service**
-2. Pilih **GitHub Repo** → `157vis/bukuwarung-ai`
+2. Pilih **GitHub Repo** → **`157vis/kita-cuan-wa-bot`** (bukan `bukuwarung-ai`)
 3. Setelah service dibuat, klik → tab **Settings**
 
 ### B. Settings
 
 - **Service Name**: `kita-cuan-wa-bot-larisai`
-- **Root Directory**: **KOSONGKAN** (default `/`). Service ini butuh
-  `brand.py`, `laris_core.py` di root repo, jadi push seluruh repo.
-- **Custom Start Command**:
+- **Root Directory**: **KOSONGKAN** (default `/`). Repo ini self-contained,
+  tidak butuh akses ke parent.
+- **Custom Start Command**: **WAJIB ON toggle** (Custom Start Command toggle)
+- **Start Command**:
   ```
-  python -m uvicorn kita-cuan-wa-bot.main:app --host 0.0.0.0 --port $PORT
+  python -m uvicorn main:app --host 0.0.0.0 --port $PORT
   ```
+  (Module path TANPA prefix `kita-cuan-wa-bot.` karena repo ini adalah
+  bot folder itu sendiri — `main.py` ada di root repo)
 - **Healthcheck Path**: `/`
 
 ### C. Variables
@@ -137,7 +151,8 @@ Expected response (contoh):
 ### D. Trigger Deploy & Test
 
 1. **Deployments** → **Redeploy**
-2. Cek log — kalau error `ModuleNotFoundError: paths`, berarti Root Directory salah
+2. Cek log — kalau error `ModuleNotFoundError`, berarti ada masalah
+   dependencies. Cek tab Variables.
 3. Test: `https://kita-cuan-wa-bot-larisai.up.railway.app/`
 
 Expected response (contoh):

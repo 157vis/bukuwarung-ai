@@ -50,7 +50,6 @@ def _is_valid_key(k: str) -> bool:
 def _find_credentials() -> tuple[str, str, str]:
     sources = [
         ("bukuwarung-ai/.env", _parse_env_file(ROOT / ".env")),
-        ("kita-cuan-wa-bot/.env", _parse_env_file(REPO / "kita-cuan-wa-bot" / ".env")),
         ("root/.env", _parse_env_file(REPO / ".env")),
         (".streamlit/secrets.toml", _parse_toml_secrets(REPO / ".streamlit" / "secrets.toml")),
     ]
