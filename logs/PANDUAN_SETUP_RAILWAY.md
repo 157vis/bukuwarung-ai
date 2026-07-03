@@ -37,15 +37,24 @@ Cari bagian **"Source"** atau **"Build"**:
 > Ini memberitahu Railway bahwa source code untuk service ini ada di folder `bukuwarung-ai/`,
 > bukan di root repo.
 
-### Langkah 3 — Start Command
+### Langkah 3 — Start Command (**WAJIB ON toggle Custom Start Command**)
 
 Bagian **"Deploy"** → **"Custom Start Command"**:
 
-```
-python -m uvicorn main:app --host 0.0.0.0 --port $PORT
-```
+1. **Aktifkan toggle "Use Custom Start Command"** (harus ON / biru).
+   > ⚠️ **Ini WAJIB di-toggle ON!** Kalau tidak, Railway akan membaca
+   > `Procfile` / `railway.toml` di root repo (yang berisi
+   > `streamlit run app.py`). Hasilnya runtime error:
+   > `/bin/bash: line 1: streamlit: command not found`
 
-> Klik toggle **"Use Custom Start Command"** agar override Procfile/railway.json.
+2. Isi start command dengan:
+   ```
+   python -m uvicorn main:app --host 0.0.0.0 --port $PORT
+   ```
+
+> Root Directory = `bukuwarung-ai` + Custom Start Command ON = Nixpacks
+> tidak lagi membaca `Procfile`/`railway.toml` di root. Aman dari
+> `streamlit: command not found`.
 
 ### Langkah 4 — Environment Variables
 
@@ -143,6 +152,20 @@ Expected response (contoh):
 
 ### Build failed: exit code 127 (pip not found)
 Sudah difix di commit `8a68a2e`. Trigger redeploy.
+
+### Runtime error: `/bin/bash: line 1: streamlit: command not found`
+Artinya service menjalankan `streamlit run app.py` (dari `Procfile` /
+`railway.toml` di root repo), tapi `streamlit` **tidak terinstall** di
+environment service ini (karena `requirements.txt` di sub-folder
+`tidak` memuat `streamlit`).
+
+**Fix**:
+1. Buka Settings service → Deploy
+2. **Aktifkan toggle "Use Custom Start Command"** (wajib ON)
+3. Isi start command yang benar:
+   - bukuwarung-ai-larisai: `python -m uvicorn main:app --host 0.0.0.0 --port $PORT`
+   - kita-cuan-wa-bot-larisai: `python -m uvicorn main:app --host 0.0.0.0 --port $PORT`
+4. Save & redeploy
 
 ### Service running tapi `/health` return 404
 - Cek **Root Directory** di Settings — harus sesuai dengan folder source code.
