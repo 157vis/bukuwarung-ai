@@ -2,11 +2,10 @@
 builder = "NIXPACKS"
 
 [deploy]
-# Root Directory = kita-cuan-wa-bot (sub-folder). Setelah cd ke
-# sub-folder, package 'kita-cuan-wa-bot' tidak ada di sys.path (cwd
-# sudah di dalamnya). Jadi start command reference 'main' langsung,
-# bukan 'kita-cuan-wa-bot.main'.
-startCommand = "python -m uvicorn main:app --host 0.0.0.0 --port $PORT"
+# Root Directory di Railway diset ke / (root repo), sehingga SELURUH
+# repo (paths.py, brand.py, laris_core.py, dll) ter-deploy ke /app/.
+# Start command reference module path lengkap.
+startCommand = "python -m uvicorn kita-cuan-wa-bot.main:app --host 0.0.0.0 --port $PORT"
 healthcheckPath = "/"
 healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"

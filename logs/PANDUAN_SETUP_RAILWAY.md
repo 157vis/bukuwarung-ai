@@ -27,15 +27,20 @@ yang menjalankan bot WhatsApp CS (`bukuwarung-ai-larisai`) dan bot pencatatan
 3. Klik service **`bukuwarung-ai-larisai`**
 4. Klik tab **Settings** (ikon gear)
 
-### Langkah 2 — Perbaiki Root Directory
+### Langkah 2A — Root Directory: **KOSONGKAN** (default `/`)
 
 Cari bagian **"Source"** atau **"Build"**:
 
-- **Root Directory**: ubah dari `/` (kosong) menjadi `bukuwarung-ai`
-- **Watch Paths**: opsional, kosongkan
+- **Root Directory**: **KOSONGKAN** (jangan isi sub-folder). Biarkan
+  default Railway = repo root.
 
-> Ini memberitahu Railway bahwa source code untuk service ini ada di folder `bukuwarung-ai/`,
-> bukan di root repo.
+> **Kenapa?** Service `bukuwarung-ai` butuh import `laris_core`,
+> `paths`, `brand` yang ada di **root repo** (`/app/...` di container).
+> Kalau Root Directory = sub-folder, Railway/Nixpacks **hanya push
+> sub-folder** ke container (`/app/bukuwarung-ai/`) dan parent
+> (root repo) TIDAK ter-deploy → `ModuleNotFoundError: brand` /
+> `laris_core` / `paths`. Setting Root Directory = `/` push seluruh
+> repo, sehingga semua module di root bisa di-import.
 
 ### Langkah 3 — Start Command (**WAJIB ON toggle Custom Start Command**)
 
@@ -43,18 +48,19 @@ Bagian **"Deploy"** → **"Custom Start Command"**:
 
 1. **Aktifkan toggle "Use Custom Start Command"** (harus ON / biru).
    > ⚠️ **Ini WAJIB di-toggle ON!** Kalau tidak, Railway akan membaca
-   > `Procfile` / `railway.toml` di root repo (yang berisi
-   > `streamlit run app.py`). Hasilnya runtime error:
+   > `Procfile` di root repo (yang berisi `streamlit run app.py`).
+   > Hasilnya runtime error:
    > `/bin/bash: line 1: streamlit: command not found`
 
 2. Isi start command dengan:
    ```
-   python -m uvicorn main:app --host 0.0.0.0 --port $PORT
+   python -m uvicorn bukuwarung-ai.main:app --host 0.0.0.0 --port $PORT
    ```
 
-> Root Directory = `bukuwarung-ai` + Custom Start Command ON = Nixpacks
-> tidak lagi membaca `Procfile`/`railway.toml` di root. Aman dari
-> `streamlit: command not found`.
+> Root Directory kosong (default `/`) + Custom Start Command ON =
+> SELURUH repo ter-deploy ke `/app/`, start command pakai module path
+> lengkap. Aman dari `streamlit: command not found` dan
+> `ModuleNotFoundError: brand/paths/laris_core`.
 
 ### Langkah 4 — Environment Variables
 
@@ -108,10 +114,11 @@ Expected response (contoh):
 ### B. Settings
 
 - **Service Name**: `kita-cuan-wa-bot-larisai`
-- **Root Directory**: `kita-cuan-wa-bot`  ← **WAJIB, kalau tidak akan error build**
+- **Root Directory**: **KOSONGKAN** (default `/`). Service ini butuh
+  `brand.py`, `laris_core.py` di root repo, jadi push seluruh repo.
 - **Custom Start Command**:
   ```
-  python -m uvicorn main:app --host 0.0.0.0 --port $PORT
+  python -m uvicorn kita-cuan-wa-bot.main:app --host 0.0.0.0 --port $PORT
   ```
 - **Healthcheck Path**: `/`
 
@@ -163,26 +170,30 @@ environment service ini (karena `requirements.txt` di sub-folder
 1. Buka Settings service → Deploy
 2. **Aktifkan toggle "Use Custom Start Command"** (wajib ON)
 3. Isi start command yang benar:
-   - bukuwarung-ai-larisai: `python -m uvicorn main:app --host 0.0.0.0 --port $PORT`
-   - kita-cuan-wa-bot-larisai: `python -m uvicorn main:app --host 0.0.0.0 --port $PORT`
+   - bukuwarung-ai-larisai: `python -m uvicorn bukuwarung-ai.main:app --host 0.0.0.0 --port $PORT`
+   - kita-cuan-wa-bot-larisai: `python -m uvicorn kita-cuan-wa-bot.main:app --host 0.0.0.0 --port $PORT`
 4. Save & redeploy
 
-### Runtime error: `ModuleNotFoundError: No module named 'kita-cuan-wa-bot'` (atau 'bukuwarung-ai')
-Artinya start command reference module path lengkap (`kita-cuan-wa-bot.main:app`)
-padahal `Root Directory` di service ini **sudah diset ke sub-folder**
-(`kita-cuan-wa-bot/`). Setelah `cd` ke sub-folder, Python tidak menemukan
-package dengan nama yang sama dengan cwd.
+### Runtime error: `ModuleNotFoundError: No module named 'brand'` / `'laris_core'` / `'paths'`
+Artinya service jalan dengan `Root Directory = sub-folder` (mis.
+`bukuwarung-ai/` atau `kita-cuan-wa-bot/`). Nixpacks/Railway **hanya
+push sub-folder** ke container, sehingga `brand.py`, `laris_core.py`,
+`paths.py` di root repo **TIDAK ada** di `/app/`.
 
 **Fix**:
-- Start command **tanpa** prefix sub-folder:
-  - `python -m uvicorn main:app --host 0.0.0.0 --port $PORT`
-- Sudah difix di `railway.toml`/`railway.json`/`Procfile` sub-folder.
-  Trigger redeploy.
+1. Buka Settings service → Source
+2. **Kosongkan "Root Directory"** (default Railway = `/`, push seluruh repo)
+3. **Aktifkan toggle "Use Custom Start Command"** (wajib ON)
+4. Isi start command module path lengkap:
+   - bukuwarung-ai-larisai: `python -m uvicorn bukuwarung-ai.main:app --host 0.0.0.0 --port $PORT`
+   - kita-cuan-wa-bot-larisai: `python -m uvicorn kita-cuan-wa-bot.main:app --host 0.0.0.0 --port $PORT`
+5. Save & redeploy
 
-> **Konvensi**:
-> - Root Directory = sub-folder → start command = `main:app`
-> - Root Directory = root repo → start command = `kita-cuan-wa-bot.main:app`
->   (perlu `paths.py` di PYTHONPATH atau symlink)
+> **Konvensi** (sudah difix di `railway.toml`/`railway.json`/`Procfile`):
+> - Root Directory = `/` → start command = `module.submodule:app`
+>   (pakai module path lengkap karena cwd = `/app/`)
+> - **JANGAN set Root Directory = sub-folder** untuk service ini
+>   (parent folder tidak ter-deploy)
 
 ### Service running tapi `/health` return 404
 - Cek **Root Directory** di Settings — harus sesuai dengan folder source code.
