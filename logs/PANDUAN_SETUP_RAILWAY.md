@@ -48,30 +48,35 @@ Cari bagian **"Source"** atau **"Build"**:
 > `laris_core` / `paths`. Setting Root Directory = `/` push seluruh
 > repo, sehingga semua module di root bisa di-import.
 
-### Langkah 3 — Start Command (**WAJIB ON toggle Custom Start Command**)
+### Langkah 3 — Start Command
 
-Bagian **"Deploy"** → **"Custom Start Command"**:
+Bagian **"Deploy"** → field **"Custom Start Command"**:
 
-1. **Aktifkan toggle "Use Custom Start Command"** (harus ON / biru).
-   > ⚠️ **PENTING — toggle "Use Custom BUILD Command" harus OFF!**
-   > Kalau Build Command toggle ON, Railway auto-set `buildCommand`
-   > dari `Procfile` (yang punya `web: python -m uvicorn ...`), dan
-   > validator Railway akan reject kalau `startCommand` isinya sama.
-   > Error: `buildCommand and startCommand cannot be the same`.
-   > Pastikan **Build Command toggle = OFF** dan **Start Command
-   > toggle = ON**.
+> ⚠️ **Perhatikan:** Railway UI modern **TIDAK pakai toggle** —
+> cukup ada **1 text field** untuk Start Command (default-nya
+> `npm start`). Kalau field itu berisi **APAPUN** yang valid, itu
+> yang dijalankan sebagai start command. Jadi tinggal **ganti**
+> isinya.
 
-2. Isi **Start Command** dengan:
+1. **Ganti field "Custom Start Command"** (yang saat ini isinya
+   `npm start` atau default lain) dengan:
    ```
    python -m uvicorn bukuwarung-ai.main:app --host 0.0.0.0 --port $PORT
    ```
 
-3. **JANGAN isi Build Command** (toggle OFF → Railway pakai Nixpacks
-   auto-detect: `pip install -r requirements.txt` di root).
+2. **JANGAN ada field "Custom Build Command"** di Railway UI
+   modern. Railway otomatis pakai Nixpacks auto-detect
+   (`pip install -r requirements.txt`).
 
-> Root Directory kosong (default `/`) + Custom Start Command ON =
-> SELURUH repo ter-deploy ke `/app/`, start command pakai module path
-> lengkap. Aman dari `streamlit: command not found` dan
+3. Kalau di UI lama ada **toggle "Use Custom Build Command"**,
+   pastikan **OFF** (Railway auto-detect, tidak override build
+   dengan Procfile). Kalau **ON** dan field Build Command isinya
+   sama dengan Start Command, validator Railway reject:
+   `buildCommand and startCommand cannot be the same`.
+
+> Root Directory kosong (default `/`) + Start Command benar =
+> SELURUH repo ter-deploy ke `/app/`, start command pakai module
+> path lengkap. Aman dari `streamlit: command not found` dan
 > `ModuleNotFoundError: brand/paths/laris_core`.
 
 ### Langkah 4 — Environment Variables
