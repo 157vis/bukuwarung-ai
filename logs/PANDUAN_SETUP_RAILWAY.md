@@ -167,6 +167,23 @@ environment service ini (karena `requirements.txt` di sub-folder
    - kita-cuan-wa-bot-larisai: `python -m uvicorn main:app --host 0.0.0.0 --port $PORT`
 4. Save & redeploy
 
+### Runtime error: `ModuleNotFoundError: No module named 'kita-cuan-wa-bot'` (atau 'bukuwarung-ai')
+Artinya start command reference module path lengkap (`kita-cuan-wa-bot.main:app`)
+padahal `Root Directory` di service ini **sudah diset ke sub-folder**
+(`kita-cuan-wa-bot/`). Setelah `cd` ke sub-folder, Python tidak menemukan
+package dengan nama yang sama dengan cwd.
+
+**Fix**:
+- Start command **tanpa** prefix sub-folder:
+  - `python -m uvicorn main:app --host 0.0.0.0 --port $PORT`
+- Sudah difix di `railway.toml`/`railway.json`/`Procfile` sub-folder.
+  Trigger redeploy.
+
+> **Konvensi**:
+> - Root Directory = sub-folder → start command = `main:app`
+> - Root Directory = root repo → start command = `kita-cuan-wa-bot.main:app`
+>   (perlu `paths.py` di PYTHONPATH atau symlink)
+
 ### Service running tapi `/health` return 404
 - Cek **Root Directory** di Settings — harus sesuai dengan folder source code.
 - Cek **Custom Start Command** — harus pakai `python -m uvicorn main:app ...`
