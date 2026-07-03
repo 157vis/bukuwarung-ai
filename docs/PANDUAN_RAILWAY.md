@@ -42,8 +42,9 @@ Supabase tetap di cloud (database). Railway men-host **2 service** dari repo Git
 | Setting            | Nilai                                              |
 | ------------------ | -------------------------------------------------- |
 | **Root Directory** | `/` (kosong / root repo)                           |
+| **Custom Build Command** | **OFF** (toggle mati, jangan ON)            |
 | **Custom Start Command** | **ON** (toggle aktif)                        |
-| **Start Command**  | `streamlit run app.py --server.address 0.0.0.0 --server.port $PORT --server.headless true` |
+| **Start Command**  | `python -m streamlit run app.py --server.address 0.0.0.0 --server.port $PORT --server.headless true` |
 
 
 ### Settings → Variables (Environment)

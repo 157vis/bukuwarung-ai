@@ -53,15 +53,21 @@ Cari bagian **"Source"** atau **"Build"**:
 Bagian **"Deploy"** → **"Custom Start Command"**:
 
 1. **Aktifkan toggle "Use Custom Start Command"** (harus ON / biru).
-   > ⚠️ **Ini WAJIB di-toggle ON!** Kalau tidak, Railway akan membaca
-   > `Procfile` di root repo (yang berisi `streamlit run app.py`).
-   > Hasilnya runtime error:
-   > `/bin/bash: line 1: streamlit: command not found`
+   > ⚠️ **PENTING — toggle "Use Custom BUILD Command" harus OFF!**
+   > Kalau Build Command toggle ON, Railway auto-set `buildCommand`
+   > dari `Procfile` (yang punya `web: python -m uvicorn ...`), dan
+   > validator Railway akan reject kalau `startCommand` isinya sama.
+   > Error: `buildCommand and startCommand cannot be the same`.
+   > Pastikan **Build Command toggle = OFF** dan **Start Command
+   > toggle = ON**.
 
-2. Isi start command dengan:
+2. Isi **Start Command** dengan:
    ```
    python -m uvicorn bukuwarung-ai.main:app --host 0.0.0.0 --port $PORT
    ```
+
+3. **JANGAN isi Build Command** (toggle OFF → Railway pakai Nixpacks
+   auto-detect: `pip install -r requirements.txt` di root).
 
 > Root Directory kosong (default `/`) + Custom Start Command ON =
 > SELURUH repo ter-deploy ke `/app/`, start command pakai module path
@@ -127,6 +133,7 @@ Expected response (contoh):
 - **Service Name**: `kita-cuan-wa-bot-larisai`
 - **Root Directory**: **KOSONGKAN** (default `/`). Repo ini self-contained,
   tidak butuh akses ke parent.
+- **Custom Build Command**: toggle **OFF** (jangan ON!)
 - **Custom Start Command**: **WAJIB ON toggle** (Custom Start Command toggle)
 - **Start Command**:
   ```
