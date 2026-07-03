@@ -2,7 +2,9 @@
 builder = "NIXPACKS"
 
 [deploy]
-startCommand = "python -m uvicorn main:app --host 0.0.0.0 --port $PORT"
+# Jalankan dari sub-folder. Root Directory = root repo, start command
+# reference module di dalam sub-folder.
+startCommand = "python -m uvicorn kita-cuan-wa-bot.main:app --host 0.0.0.0 --port $PORT"
 healthcheckPath = "/"
 healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"
