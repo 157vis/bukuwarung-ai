@@ -330,7 +330,14 @@
             margin-top: 0.85rem;
         }
         .laris-3d-alur { background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%); }
+        .laris-3d-stok { background: linear-gradient(180deg, #f1f5f9 0%, #fef9c3 100%); }
+        .laris-3d-omzet { background: linear-gradient(180deg, #fef9c3 0%, #0c4a6e 12%, #082f49 100%); color: #fff; }
+        .laris-3d-omzet .section-title, .laris-3d-omzet .section-subtitle, .laris-3d-omzet .section-badge { color: #fff; }
+        .laris-3d-omzet .section-badge { background: rgba(103, 232, 249, 0.18); color: #67e8f9; }
+        .laris-3d-omzet .laris-3d-caption { color: rgba(255,255,255,0.75); }
         .laris-3d-frame-dark { background: #0f172a; }
+        .laris-3d-frame-warm { background: #fef3c7; }
+        .laris-3d-frame-cool { background: #0c4a6e; }
 
         /* ========== AGENTS ========== */
         .agents-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
@@ -772,6 +779,49 @@
                 </div>
             </div>
             <p class="laris-3d-caption">4 node Â· 3 jalur data Â· ~120 partikel hidup. Bukti teknis alur AI multi-agent laris.AI.</p>
+        </div>
+    </section>
+
+    <!-- ==================== 3D RAK STOK ==================== -->
+    <!-- Visualisasi rak gudang 3D: 3 shelf Ã— 5 kolom Ã— 4 baris = 60 slot
+         produk. Warna = kategori (minuman, makanan, snack, bahan dapur).
+         Kotak merah = stok menipis. Klik produk untuk lihat detail.
+         File sumber: static/laris-3d/stok_3d.html -->
+    <section class="section laris-3d-stok" id="stok-3d">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-badge">ðŸ“¦ Rak Stok 3D</div>
+                <h2 class="section-title">Pantau stok UMKM dari sudut manapun.</h2>
+                <p class="section-subtitle">Drag untuk memutar Â· Scroll untuk zoom Â· Klik kotak untuk lihat detail barang & status stok.</p>
+            </div>
+            <div class="laris-3d-frame laris-3d-frame-warm">
+                <iframe src="/laris-3d/stok_3d.html" title="Rak Stok UMKM 3D" loading="lazy" allow="autoplay; fullscreen"></iframe>
+                <div class="laris-3d-fallback">
+                    <p>Browser Anda tidak mendukung 3D interaktif. <a href="/laris-3d/stok_3d.html" target="_blank" rel="noopener">Buka di tab baru</a>.</p>
+                </div>
+            </div>
+            <p class="laris-3d-caption">60 slot produk Â· 4 kategori Â· highlight otomatis untuk stok menipis.</p>
+        </div>
+    </section>
+
+    <!-- ==================== 3D GRAFIK OMZET ==================== -->
+    <!-- Bar chart 3D 7/30 hari dengan animasi tumbuh. Klik bar untuk
+         lihat nominal hari tersebut. Stats panel: total, rata-rata,
+         hari tertinggi, tren. File sumber: static/laris-3d/omzet_3d.html -->
+    <section class="section laris-3d-omzet" id="omzet-3d">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-badge">ðŸ“ˆ Grafik Omzet 3D</div>
+                <h2 class="section-title">Visualisasikan omzet bisnis Anda dalam 3D.</h2>
+                <p class="section-subtitle">Drag untuk memutar Â· Scroll untuk zoom Â· Toggle 7/30 hari Â· Klik bar untuk lihat nominal.</p>
+            </div>
+            <div class="laris-3d-frame laris-3d-frame-cool">
+                <iframe src="/laris-3d/omzet_3d.html" title="Grafik Omzet UMKM 3D" loading="lazy" allow="autoplay; fullscreen"></iframe>
+                <div class="laris-3d-fallback">
+                    <p>Browser Anda tidak mendukung 3D interaktif. <a href="/laris-3d/omzet_3d.html" target="_blank" rel="noopener">Buka di tab baru</a>.</p>
+                </div>
+            </div>
+            <p class="laris-3d-caption">Animasi bar tumbuh Â· 7 & 30 hari Â· statistik otomatis (total, rata-rata, puncak, tren).</p>
         </div>
     </section>
 

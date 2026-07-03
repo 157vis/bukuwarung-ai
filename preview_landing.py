@@ -8,6 +8,8 @@ from pathlib import Path
 from landing import (
     _3d_alur_html,
     _3d_lab_html,
+    _3d_omzet_html,
+    _3d_stok_html,
     _cta_html,
     _features_html,
     _flow_html,
@@ -41,6 +43,8 @@ body {{ margin:0; padding:0; }}
 {_features_html()}
 {_3d_lab_html()}
 {_3d_alur_html()}
+{_3d_stok_html()}
+{_3d_omzet_html()}
 {_flow_html()}
 {_cta_html()}
 {_footer_html()}

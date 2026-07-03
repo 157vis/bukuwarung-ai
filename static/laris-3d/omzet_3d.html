@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>laris.AI — Grafik Omzet 3D (Demo)</title>
+<style>
+  body { margin:0; overflow:hidden; background: linear-gradient(135deg,#0c4a6e 0%, #0e7490 50%, #155e75 100%); font-family: system-ui,-apple-system,Segoe UI,Roboto,sans-serif; color:#fff; }
+  #wrap { position:fixed; inset:0; }
+  #panel { position:fixed; left:1.25rem; top:1.25rem; max-width:340px; background: rgba(255,255,255,0.1); backdrop-filter: blur(12px); border:1px solid rgba(255,255,255,0.18); border-radius:.9rem; padding:1rem 1.15rem; line-height:1.45; }
+  #panel h2 { margin:0 0 .4rem 0; font-size:1.05rem; }
+  #panel p  { margin:0; opacity:.92; font-size:.88rem; }
+  #panel .tip { margin-top:.5rem; font-size:.78rem; opacity:.65; }
+  #stats { position:fixed; right:1.25rem; top:1.25rem; background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border:1px solid rgba(255,255,255,0.18); border-radius:.75rem; padding:.75rem .95rem; font-size:.82rem; line-height:1.7; min-width:200px; }
+  #stats .row { display:flex; justify-content:space-between; gap:1rem; }
+  #stats b { color:#67e8f9; font-weight:700; }
+  #tooltip { position:fixed; left:50%; bottom:1.5rem; transform:translateX(-50%); background: rgba(8,51,68,0.95); color:#fff; padding:.7rem 1.1rem; border-radius:.7rem; font-size:.88rem; opacity:0; transition: opacity .2s; pointer-events:none; border:1px solid rgba(103,232,249,0.4); }
+  #tooltip.show { opacity:1; }
+  #tooltip b { color:#67e8f9; }
+  #loading { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:#0c4a6e; color:#67e8f9; font-size:.95rem; z-index:10; transition: opacity .5s; }
+  #loading.hidden { opacity:0; pointer-events:none; }
+  .toggle { position:fixed; right:1.25rem; bottom:1.25rem; display:flex; gap:.4rem; }
+  .toggle button { background: rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); padding:.5rem .85rem; border-radius:.6rem; cursor:pointer; font-size:.8rem; font-weight:600; backdrop-filter: blur(8px); }
+  .toggle button.active { background: #67e8f9; color:#0c4a6e; border-color:#67e8f9; }
+  .toggle button:hover:not(.active) { background: rgba(255,255,255,0.18); }
+</style>
+</head>
+<body>
+<div id="wrap"></div>
+<div id="loading">📊 Memuat grafik 3D…</div>
+<div id="panel">
+  <h2>📈 Omzet 7 Hari</h2>
+  <p>Drag untuk memutar · Scroll untuk zoom · Klik bar untuk lihat detail hari.</p>
+  <div class="tip">Grafik 3D dari data dummy — bisa diganti dengan data asli via API.</div>
+</div>
+<div id="stats">
+  <div class="row"><span>Total minggu ini</span><b id="s-total">—</b></div>
+  <div class="row"><span>Rata-rata/hari</span><b id="s-avg">—</b></div>
+  <div class="row"><span>Hari tertinggi</span><b id="s-peak">—</b></div>
+  <div class="row"><span>Tren</span><b id="s-trend">—</b></div>
+</div>
+<div id="tooltip"></div>
+<div class="toggle">
+  <button id="btn-week" class="active">7 Hari</button>
+  <button id="btn-month">30 Hari</button>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
+
+const wrap = document.getElementById('wrap');
+const loading = document.getElementById('loading');
+const tooltip = document.getElementById('tooltip');
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0x000000, 0);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+wrap.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 200);
+camera.position.set(0, 6, 11);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.minDistance = 6;
+controls.maxDistance = 22;
+controls.maxPolarAngle = Math.PI * 0.5;
+controls.target.set(0, 1.5, 0);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const key = new THREE.DirectionalLight(0xffffff, 1.0);
+key.position.set(5, 10, 5);
+key.castShadow = true;
+key.shadow.mapSize.set(1024, 1024);
+scene.add(key);
+const fill = new THREE.PointLight(0x67e8f9, 0.7, 30);
+fill.position.set(-5, 3, 4);
+scene.add(fill);
+
+// Lantai
+const floor = new THREE.Mesh(
+  new THREE.PlaneGeometry(30, 30),
+  new THREE.MeshStandardMaterial({ color: 0x083344, roughness: 0.9 })
+);
+floor.rotation.x = -Math.PI / 2;
+floor.receiveShadow = true;
+scene.add(floor);
+
+// === Data ===
+const DATA_WEEK = [
+  { day: 'Sen', amount: 1850000, label: 'Senin' },
+  { day: 'Sel', amount: 2400000, label: 'Selasa' },
+  { day: 'Rab', amount: 1620000, label: 'Rabu' },
+  { day: 'Kam', amount: 3100000, label: 'Kamis' },
+  { day: 'Jum', amount: 4250000, label: 'Jumat' },
+  { day: 'Sab', amount: 5680000, label: 'Sabtu' },
+  { day: 'Min', amount: 3920000, label: 'Minggu' },
+];
+
+function makeMonthData() {
+  const arr = [];
+  for (let i = 1; i <= 30; i++) {
+    const base = 1.5 + Math.sin(i * 0.4) * 0.8;
+    const noise = Math.random() * 1.2;
+    arr.push({ day: String(i), amount: Math.floor((base + noise) * 2000000), label: `Hari ${i}` });
+  }
+  return arr;
+}
+
+let currentData = DATA_WEEK;
+let bars = [];
+let gridLines = [];
+
+// === Render bar chart ===
+function buildBars(data) {
+  // Hapus bar lama
+  bars.forEach(b => { scene.remove(b.mesh); scene.remove(b.label); b.mesh.geometry.dispose(); });
+  bars = [];
+  gridLines.forEach(g => scene.remove(g));
+  gridLines = [];
+
+  const max = Math.max(...data.map(d => d.amount));
+  const barWidth = Math.min(0.9, 5 / data.length);
+  const spacing = 1.4;
+  const totalWidth = data.length * spacing;
+  const startX = -totalWidth / 2 + spacing / 2;
+
+  // Grid lines horizontal
+  for (let i = 1; i <= 4; i++) {
+    const y = (i / 4) * (max / 2000000) * 0.95 + 0.05;
+    const points = [
+      new THREE.Vector3(-totalWidth / 2 - 0.5, y, 0),
+      new THREE.Vector3( totalWidth / 2 + 0.5, y, 0),
+    ];
+    const geo = new THREE.BufferGeometry().setFromPoints(points);
+    const mat = new THREE.LineBasicMaterial({ color: 0x155e75, transparent: true, opacity: 0.6 });
+    const line = new THREE.Line(geo, mat);
+    scene.add(line);
+    gridLines.push(line);
+  }
+
+  // Bars
+  data.forEach((d, i) => {
+    const x = startX + i * spacing;
+    const h = (d.amount / max) * 5.5 + 0.2;
+    const w = barWidth;
+    const geom = new THREE.BoxGeometry(w, h, w);
+    const ratio = d.amount / max;
+    // Gradient cyan→teal→ungu
+    const color = new THREE.Color().setHSL(0.52 - ratio * 0.15, 0.75, 0.55);
+    const mat = new THREE.MeshStandardMaterial({
+      color, metalness: 0.3, roughness: 0.4,
+      emissive: color, emissiveIntensity: 0.18,
+    });
+    const mesh = new THREE.Mesh(geom, mat);
+    mesh.position.set(x, h / 2, 0);
+    mesh.castShadow = true;
+    mesh.userData = d;
+    scene.add(mesh);
+
+    bars.push({ mesh, data: d, targetHeight: h });
+  });
+
+  // Update stats
+  const total = data.reduce((s, d) => s + d.amount, 0);
+  const avg = total / data.length;
+  const peak = data.reduce((p, d) => d.amount > p.amount ? d : p, data[0]);
+  const firstHalf = data.slice(0, Math.floor(data.length/2)).reduce((s,d) => s+d.amount, 0);
+  const secondHalf = data.slice(Math.floor(data.length/2)).reduce((s,d) => s+d.amount, 0);
+  const trend = secondHalf > firstHalf ? '📈 Naik' : secondHalf < firstHalf ? '📉 Turun' : '➖ Stabil';
+  document.getElementById('s-total').textContent = 'Rp ' + (total/1000000).toFixed(1) + 'jt';
+  document.getElementById('s-avg').textContent = 'Rp ' + (avg/1000000).toFixed(2) + 'jt';
+  document.getElementById('s-peak').textContent = peak.label + ' · ' + (peak.amount/1000000).toFixed(1) + 'jt';
+  document.getElementById('s-trend').textContent = trend;
+}
+
+// === Label hari (3D TextGeometry) ===
+const fontLoader = new FontLoader();
+let labelMeshes = [];
+function buildLabels(data) {
+  labelMeshes.forEach(m => { scene.remove(m); m.geometry.dispose(); });
+  labelMeshes = [];
+  fontLoader.load('https://unpkg.com/three@0.160.0/examples/fonts/helvetiker_regular.typeface.json', (font) => {
+    const totalWidth = data.length * 1.4;
+    const startX = -totalWidth / 2 + 0.7;
+    data.forEach((d, i) => {
+      const x = startX + i * 1.4;
+      const tg = new TextGeometry(d.day, {
+        font, size: 0.32, height: 0.04, curveSegments: 4, bevelEnabled: false,
+      });
+      tg.computeBoundingBox();
+      const w = tg.boundingBox.max.x - tg.boundingBox.min.x;
+      const m = new THREE.Mesh(tg, new THREE.MeshBasicMaterial({ color: 0xe0f2fe }));
+      m.position.set(x - w/2, -0.2, 0);
+      scene.add(m);
+      labelMeshes.push(m);
+    });
+  });
+}
+
+buildBars(currentData);
+buildLabels(currentData);
+setTimeout(() => loading.classList.add('hidden'), 800);
+
+// === Toggle 7/30 hari ===
+document.getElementById('btn-week').addEventListener('click', () => {
+  currentData = DATA_WEEK;
+  buildBars(currentData);
+  buildLabels(currentData);
+  document.getElementById('btn-week').classList.add('active');
+  document.getElementById('btn-month').classList.remove('active');
+});
+document.getElementById('btn-month').addEventListener('click', () => {
+  currentData = makeMonthData();
+  buildBars(currentData);
+  buildLabels(currentData);
+  document.getElementById('btn-month').classList.add('active');
+  document.getElementById('btn-week').classList.remove('active');
+});
+
+// === Animasi masuk: bar tumbuh dari 0 ===
+const startT = performance.now();
+const ANIM_DURATION = 1200;
+
+// === Interaksi ===
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+let hover = null;
+addEventListener('pointermove', (e) => {
+  pointer.x = (e.clientX / innerWidth) * 2 - 1;
+  pointer.y = -(e.clientY / innerHeight) * 2 + 1;
+});
+addEventListener('click', () => {
+  if (hover) {
+    const d = hover.userData;
+    tooltip.innerHTML = `<b>${d.label}</b> · Rp ${(d.amount/1000000).toFixed(2)}jt`;
+    tooltip.classList.add('show');
+    setTimeout(() => tooltip.classList.remove('show'), 2500);
+  }
+});
+
+function loop(t) {
+  requestAnimationFrame(loop);
+  controls.update();
+
+  // Animate bars in
+  const elapsed = performance.now() - startT;
+  const k = Math.min(1, elapsed / ANIM_DURATION);
+  const ease = 1 - Math.pow(1 - k, 3);
+  bars.forEach((b, i) => {
+    const stagger = (i / bars.length) * 0.5;
+    const localK = Math.max(0, Math.min(1, (ease - stagger) / 0.5));
+    const eased = 1 - Math.pow(1 - localK, 3);
+    b.mesh.scale.y = Math.max(0.01, eased);
+    b.mesh.position.y = (b.targetHeight * eased) / 2;
+  });
+
+  // Subtle idle motion
+  bars.forEach((b, i) => {
+    b.mesh.position.y += Math.sin(t/1500 + i * 0.4) * 0.0008;
+  });
+
+  raycaster.setFromCamera(pointer, camera);
+  const hits = raycaster.intersectObjects(bars.map(b => b.mesh));
+  hover = hits[0]?.object || null;
+  document.body.style.cursor = hover ? 'pointer' : 'default';
+  bars.forEach(b => {
+    b.mesh.material.emissiveIntensity = (b.mesh === hover) ? 0.5 : 0.18;
+  });
+
+  renderer.render(scene, camera);
+}
+loop(0);
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>

@@ -71,10 +71,18 @@ _INLINE_LANDING_CSS = """
 .laris-feature-card p { color:#637381; font-size:.92rem; line-height:1.55; margin:0; }
 .laris-3d-lab { padding:4.5rem 1.25rem; background:linear-gradient(180deg,#f9fafb 0%,#ffffff 100%); }
 .laris-3d-alur { padding:4.5rem 1.25rem; background:linear-gradient(180deg,#ffffff 0%,#f1f5f9 100%); }
+.laris-3d-stok { padding:4.5rem 1.25rem; background:linear-gradient(180deg,#f1f5f9 0%,#fef9c3 100%); }
+.laris-3d-omzet { padding:4.5rem 1.25rem; background:linear-gradient(180deg,#fef9c3 0%,#0c4a6e 10%,#082f49 100%); color:#fff; }
+.laris-3d-omzet .laris-section-head h2,
+.laris-3d-omzet .laris-section-head p { color:#fff; }
+.laris-3d-omzet .laris-pill-soft { background:rgba(103,232,249,.18); color:#67e8f9; }
 .laris-3d-frame { width:100%; height:520px; border-radius:1.25rem; overflow:hidden; box-shadow:0 18px 40px rgba(15,23,42,.18); background:#0f172a; }
 .laris-3d-frame-dark { background:#0f172a; }
+.laris-3d-frame-warm { background:#fef3c7; }
+.laris-3d-frame-cool { background:#0c4a6e; }
 .laris-3d-frame iframe { width:100%; height:100%; border:0; display:block; }
 .laris-3d-caption { text-align:center; font-size:.85rem; color:#6b7280; margin-top:.85rem; }
+.laris-3d-omzet .laris-3d-caption { color:rgba(255,255,255,.75); }
 @media (max-width: 768px) { .laris-3d-frame { height:420px; } }
 .laris-flow { padding:4.5rem 1.25rem; background:#fff; }
 .laris-flow-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1.25rem; }
@@ -285,6 +293,44 @@ def _3d_alur_html() -> str:
     """
 
 
+def _3d_stok_html() -> str:
+    """Section rak stok 3D — butuh file /static/laris-3d/stok_3d.html."""
+    return """
+    <section class="laris-3d-stok" id="stok-3d">
+      <div class="laris-section-inner">
+        <div class="laris-section-head">
+          <span class="laris-pill laris-pill-soft">Rak Stok 3D</span>
+          <h2>Pantau stok UMKM dari sudut manapun.</h2>
+          <p>Drag untuk memutar · Scroll untuk zoom · Klik kotak untuk lihat detail barang & status stok.</p>
+        </div>
+        <div class="laris-3d-frame laris-3d-frame-warm">
+          <iframe src="/laris-3d/stok_3d.html" title="Rak Stok UMKM 3D" loading="lazy"></iframe>
+        </div>
+        <p class="laris-3d-caption">60 slot produk · 4 kategori · highlight otomatis untuk stok menipis.</p>
+      </div>
+    </section>
+    """
+
+
+def _3d_omzet_html() -> str:
+    """Section grafik omzet 3D — butuh file /static/laris-3d/omzet_3d.html."""
+    return """
+    <section class="laris-3d-omzet" id="omzet-3d">
+      <div class="laris-section-inner">
+        <div class="laris-section-head">
+          <span class="laris-pill laris-pill-soft">Grafik Omzet 3D</span>
+          <h2>Visualisasikan omzet bisnis Anda dalam 3D.</h2>
+          <p>Drag untuk memutar · Scroll untuk zoom · Toggle 7/30 hari · Klik bar untuk lihat nominal.</p>
+        </div>
+        <div class="laris-3d-frame laris-3d-frame-cool">
+          <iframe src="/laris-3d/omzet_3d.html" title="Grafik Omzet UMKM 3D" loading="lazy"></iframe>
+        </div>
+        <p class="laris-3d-caption">Animasi bar tumbuh · 7 & 30 hari · statistik otomatis (total, rata-rata, puncak, tren).</p>
+      </div>
+    </section>
+    """
+
+
 def _flow_html() -> str:
     steps = [
         ("ti-message-circle", "01", "Owner kirim pesan WA", "Bisa bahasa sehari-hari: 'beli kopi 50rb'."),
@@ -386,6 +432,8 @@ def render_landing() -> None:
         _features_html(),
         _3d_lab_html(),
         _3d_alur_html(),
+        _3d_stok_html(),
+        _3d_omzet_html(),
         _flow_html(),
         _cta_html(),
         _footer_html(),
@@ -407,7 +455,7 @@ def render_landing() -> None:
   <div class="laris-landing">{html_content}</div>
 </body>
 </html>"""
-    components.html(full_doc, height=2400, scrolling=True)
+    components.html(full_doc, height=5200, scrolling=True)
 
 
 def render_landing_fallback() -> None:
