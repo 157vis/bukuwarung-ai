@@ -1,27 +1,27 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>laris.AI — Partner AI UMKM Indonesia | Catat Keuangan & Stok via WhatsApp</title>
-    <meta name="description" content="laris.AI — partner AI untuk UMKM Indonesia. Catat keuangan, stok, dan laporan KUR lewat WhatsApp. Dashboard Dasher modern, AI Multi-Agent, multi-tenant aman.">
+    <title>laris.AI â€” Partner AI UMKM Indonesia | Catat Keuangan & Stok via WhatsApp</title>
+    <meta name="description" content="laris.AI â€” partner AI untuk UMKM Indonesia. Catat keuangan, stok, dan laporan KUR lewat WhatsApp. Dashboard Dasher modern, AI Multi-Agent, multi-tenant aman.">
     <meta name="keywords" content="larisai, laris.ai, AI UMKM, AI kasir WhatsApp, pencatatan keuangan warung, aplikasi kasir UMKM, laporan KUR, dasher UMKM, multi-agent AI Indonesia">
     <meta name="author" content="laris.AI">
     <link rel="canonical" href="https://www.larisai.my.id/">
-    <meta property="og:title" content="laris.AI — Partner AI UMKM Indonesia">
+    <meta property="og:title" content="laris.AI â€” Partner AI UMKM Indonesia">
     <meta property="og:description" content="Catat keuangan & stok UMKM lewat WhatsApp. AI Multi-Agent, dashboard Dasher, laporan KUR.">
     <meta property="og:url" content="https://www.larisai.my.id/">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="laris.AI">
     <meta property="og:image" content="https://www.larisai.my.id/static/assets/laris/logo-icon.svg">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="laris.AI — Partner AI UMKM Indonesia">
+    <meta name="twitter:title" content="laris.AI â€” Partner AI UMKM Indonesia">
     <meta name="twitter:description" content="Catat keuangan & stok UMKM lewat WhatsApp dengan AI Multi-Agent.">
     <meta name="twitter:image" content="https://www.larisai.my.id/static/assets/laris/logo-icon.svg">
     <meta name="theme-color" content="#1e40af">
     <meta name="robots" content="index, follow">
     <link rel="alternate" hreflang="id" href="https://www.larisai.my.id/">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>ðŸš€</text></svg>">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
@@ -302,6 +302,34 @@
         .laris-feature-card h4 { font-size: 1.05rem; font-weight: 700; margin-bottom: 8px; }
         .laris-feature-card p { font-size: 0.92rem; color: #6b7280; line-height: 1.6; }
 
+        /* 3D Lab section */
+        .laris-3d-lab { background: linear-gradient(180deg, #f9fafb 0%, #ffffff 100%); }
+        .laris-3d-frame {
+            position: relative;
+            width: 100%;
+            height: 520px;
+            border-radius: 1.25rem;
+            overflow: hidden;
+            box-shadow: 0 18px 40px rgba(15,23,42,0.18);
+            background: #0f172a;
+        }
+        .laris-3d-frame iframe {
+            width: 100%; height: 100%; border: 0; display: block;
+        }
+        .laris-3d-fallback {
+            position: absolute; inset: 0; display: none;
+            align-items: center; justify-content: center;
+            color: #fff; background: #0f172a; padding: 1.5rem; text-align: center;
+        }
+        .laris-3d-fallback a { color: #34d399; text-decoration: underline; }
+        @media (max-width: 768px) {
+            .laris-3d-frame { height: 420px; }
+        }
+        .laris-3d-caption {
+            text-align: center; font-size: 0.85rem; color: #6b7280;
+            margin-top: 0.85rem;
+        }
+
         /* ========== AGENTS ========== */
         .agents-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
         .agent-card {
@@ -499,14 +527,14 @@
             color: #fff; border: 2px solid #fff;
         }
 
-        /* ========== RESPONSIVE — TABLET ========== */
+        /* ========== RESPONSIVE â€” TABLET ========== */
         @media (max-width: 1024px) {
             .hero h1 { font-size: 2.4rem; }
             .section-title { font-size: 2rem; }
             .footer-grid { grid-template-columns: 1fr 1fr; }
         }
 
-        /* ========== RESPONSIVE — MOBILE ========== */
+        /* ========== RESPONSIVE â€” MOBILE ========== */
         @media (max-width: 768px) {
             .nav-links { display: none; }
             .hamburger { display: flex; }
@@ -581,14 +609,14 @@
     <section class="hero">
         <div class="container">
             <div class="fade-in">
-                <div class="hero-badge">📱 WA-First — Buku Kas & Stok UMKM</div>
+                <div class="hero-badge">ðŸ“± WA-First â€” Buku Kas & Stok UMKM</div>
                 <h1>
                     Catat Penjualan & Keuangan<br>Langsung dari WhatsApp<br>
                     <span class="highlight">AI Multi-Agent UMKM<br>Bekerja untuk Bisnis Anda</span>
                 </h1>
                 <p class="hero-text">
                     laris.AI membantu owner UMKM mencatat pemasukan/pengeluaran, memantau stok,
-                    dan mengambil keputusan lewat Ruang Komando — tanpa spreadsheet rumit.
+                    dan mengambil keputusan lewat Ruang Komando â€” tanpa spreadsheet rumit.
                     Kirim teks, foto struk, atau voice note; AI yang merapikan.
                 </p>
                 <div class="hero-buttons">
@@ -614,15 +642,15 @@
                     <div class="agent-item">
                         <div class="agent-icon"><i class="fas fa-calculator"></i></div>
                         <div>
-                            <div class="agent-name">Admin AI 🔵</div>
-                            <div class="agent-desc">Catat: jual nasi goreng 25rb, beli gula 10rb ✅</div>
+                            <div class="agent-name">Admin AI ðŸ”µ</div>
+                            <div class="agent-desc">Catat: jual nasi goreng 25rb, beli gula 10rb âœ…</div>
                         </div>
                     </div>
                     <div class="agent-item">
                         <div class="agent-icon"><i class="fas fa-boxes-stacked"></i></div>
                         <div>
-                            <div class="agent-name">Logistik AI 🟣</div>
-                            <div class="agent-desc">Stok indomie 3 — saran restock menunggu approval</div>
+                            <div class="agent-name">Logistik AI ðŸŸ£</div>
+                            <div class="agent-desc">Stok indomie 3 â€” saran restock menunggu approval</div>
                         </div>
                     </div>
                 </div>
@@ -658,7 +686,7 @@
     <section class="section laris-features" id="fitur">
         <div class="container">
             <div class="section-header">
-                <div class="section-badge">✨ Fitur Utama</div>
+                <div class="section-badge">âœ¨ Fitur Utama</div>
                 <h2 class="section-title">Semua yang UMKM butuhkan, dalam satu platform.</h2>
                 <p class="section-subtitle">Catat, lihat, dan ambil keputusan lebih cepat dengan AI Multi-Agent.</p>
             </div>
@@ -666,7 +694,7 @@
                 <div class="laris-feature-card">
                     <div class="laris-feature-icon"><i class="ti ti-brand-whatsapp"></i></div>
                     <h4>Catat via WhatsApp</h4>
-                    <p>Kirim pesan seperti 'jual kopi 50rb' lewat WA — AI langsung catat ke Buku Kas.</p>
+                    <p>Kirim pesan seperti 'jual kopi 50rb' lewat WA â€” AI langsung catat ke Buku Kas.</p>
                 </div>
 
                 <div class="laris-feature-card">
@@ -702,11 +730,33 @@
         </div>
     </section>
 
+    <!-- ==================== 3D KNOWLEDGE LAB ==================== -->
+    <!-- Section ini interaktif: 3 koin 3D yang bisa di-drag. Tiap klik
+         koin akan menampilkan insight berbeda (transaksi / stok / pelanggan).
+         File sumber: static/laris-3d/koin_3d.html
+         Cara edit: buka file itu, ubah label/warna, deploy ulang. -->
+    <section class="section laris-3d-lab" id="3d">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-badge">ðŸŽ“ Lab Pengetahuan 3D</div>
+                <h2 class="section-title">Belajar Bisnis UMKM dengan Visual Interaktif.</h2>
+                <p class="section-subtitle">Drag untuk memutar Â· Scroll untuk zoom Â· Klik koin untuk melihat insight dari data UMKM.</p>
+            </div>
+            <div class="laris-3d-frame">
+                <iframe src="/laris-3d/koin_3d.html" title="Koin Pengetahuan UMKM 3D" loading="lazy" allow="autoplay; fullscreen"></iframe>
+                <div class="laris-3d-fallback">
+                    <p>Browser Anda tidak mendukung 3D interaktif. <a href="/laris-3d/koin_3d.html" target="_blank" rel="noopener">Buka di tab baru</a>.</p>
+                </div>
+            </div>
+            <p class="laris-3d-caption">Snippet ringan &lt; 200KB Â· Three.js via CDN Â· tidak mengganggu loading landing.</p>
+        </div>
+    </section>
+
     <!-- ==================== MULTI-AGENT ==================== -->
     <section class="section">
         <div class="container">
             <div class="section-header">
-                <div class="section-badge">🤖 Solusi Cerdas</div>
+                <div class="section-badge">ðŸ¤– Solusi Cerdas</div>
                 <h2 class="section-title">AI yang Terdaftar di Platform</h2>
                 <p class="section-subtitle">Aktifkan agent sesuai kebutuhan operasional: layanan pelanggan, order, pembayaran, pencatatan, dan logistik.</p>
             </div>
@@ -715,14 +765,14 @@
                     <div class="agent-card-header">
                         <div class="agent-card-icon"><i class="fas fa-calculator"></i></div>
                         <div>
-                            <h3>Admin AI 🔵</h3>
+                            <h3>Admin AI ðŸ”µ</h3>
                             <div class="role">Buku Kas, Ringkasan, Laporan KUR</div>
                         </div>
                     </div>
                     <ul>
                         <li><i class="fas fa-check-circle"></i> Catat transaksi dari teks WA</li>
                         <li><i class="fas fa-check-circle"></i> Baca struk / foto belanja</li>
-                        <li><i class="fas fa-check-circle"></i> Voice note → otomatis jadi entri</li>
+                        <li><i class="fas fa-check-circle"></i> Voice note â†’ otomatis jadi entri</li>
                         <li><i class="fas fa-check-circle"></i> Ringkasan & Laris Score</li>
                     </ul>
                 </div>
@@ -730,7 +780,7 @@
                     <div class="agent-card-header">
                         <div class="agent-card-icon"><i class="fas fa-boxes-stacked"></i></div>
                         <div>
-                            <h3>Logistik AI 🟣</h3>
+                            <h3>Logistik AI ðŸŸ£</h3>
                             <div class="role">Stok & Approval Restock</div>
                         </div>
                     </div>
@@ -745,7 +795,7 @@
                     <div class="agent-card-header">
                         <div class="agent-card-icon"><i class="fas fa-comments"></i></div>
                         <div>
-                            <h3>CS + Support AI 🟢</h3>
+                            <h3>CS + Support AI ðŸŸ¢</h3>
                             <div class="role">Respon Chat Pelanggan</div>
                         </div>
                     </div>
@@ -760,7 +810,7 @@
                     <div class="agent-card-header">
                         <div class="agent-card-icon"><i class="fas fa-receipt"></i></div>
                         <div>
-                            <h3>Order + Payment AI 🟠</h3>
+                            <h3>Order + Payment AI ðŸŸ </h3>
                             <div class="role">Pesanan & Pembayaran</div>
                         </div>
                     </div>
@@ -779,7 +829,7 @@
     <section class="section steps-section" id="cara-kerja">
         <div class="container">
             <div class="section-header">
-                <div class="section-badge">⚡ Super Mudah</div>
+                <div class="section-badge">âš¡ Super Mudah</div>
                 <h2 class="section-title">Mulai dalam 3 Langkah Mudah</h2>
                 <p class="section-subtitle">Tidak perlu keahlian teknis. Kami yang handle semuanya!</p>
             </div>
@@ -792,7 +842,7 @@
                 <div class="step">
                     <div class="step-number">2</div>
                     <h3>Catat lewat WhatsApp</h3>
-                    <p>Kirim "jual indomie 5", foto struk, atau voice note — Admin AI merapikan ke buku kas.</p>
+                    <p>Kirim "jual indomie 5", foto struk, atau voice note â€” Admin AI merapikan ke buku kas.</p>
                 </div>
                 <div class="step">
                     <div class="step-number">3</div>
@@ -807,25 +857,25 @@
     <section class="section testimonials" id="testimoni">
         <div class="container">
             <div class="section-header">
-                <div class="section-badge">🎯 Cocok Untuk</div>
+                <div class="section-badge">ðŸŽ¯ Cocok Untuk</div>
                 <h2 class="section-title">Use Case yang Sudah Didukung Produk</h2>
-                <p class="section-subtitle">Fokus operasional nyata — bukan janji marketing generik</p>
+                <p class="section-subtitle">Fokus operasional nyata â€” bukan janji marketing generik</p>
             </div>
             <div class="testi-grid">
                 <div class="testi-card">
                     <div class="testi-stars"><i class="fas fa-store"></i></div>
                     <p class="testi-quote">Warung & toko kelontong: catat jual/beli harian lewat WA, lihat saldo & Laris Score di dashboard.</p>
-                    <div class="testi-result">📒 Buku kas + ringkasan</div>
+                    <div class="testi-result">ðŸ“’ Buku kas + ringkasan</div>
                 </div>
                 <div class="testi-card">
                     <div class="testi-stars"><i class="fas fa-warehouse"></i></div>
                     <p class="testi-quote">UMKM dengan stok barang: "jual indomie 5" otomatis mengurangi stok dan memicu saran restock.</p>
-                    <div class="testi-result">📦 Logistik + approval</div>
+                    <div class="testi-result">ðŸ“¦ Logistik + approval</div>
                 </div>
                 <div class="testi-card">
                     <div class="testi-stars"><i class="fas fa-file-contract"></i></div>
                     <p class="testi-quote">Owner yang butuh data rapi untuk evaluasi usaha atau persiapan laporan KUR.</p>
-                    <div class="testi-result">📊 Laporan KUR & insight</div>
+                    <div class="testi-result">ðŸ“Š Laporan KUR & insight</div>
                 </div>
             </div>
         </div>
@@ -835,13 +885,13 @@
     <section class="section" id="harga">
         <div class="container">
             <div class="section-header">
-                <div class="section-badge">💰 Paket & Trial</div>
+                <div class="section-badge">ðŸ’° Paket & Trial</div>
                 <h2 class="section-title">Harga Jelas, Bisa Upgrade Kapan Saja</h2>
                 <p class="section-subtitle">Pilih paket sesuai tahap usaha Anda. Semua paket termasuk onboarding awal via WhatsApp.</p>
             </div>
             <div class="pricing-grid">
                 <div class="price-card">
-                    <div class="price-emoji">🌱</div>
+                    <div class="price-emoji">ðŸŒ±</div>
                     <div class="price-name">Starter (1 Nomor)</div>
                     <div class="price-amount">Rp 99.000<span>/bulan</span></div>
                     <div class="price-desc">Warung, kios, usaha rumahan (hemat)</div>
@@ -859,8 +909,8 @@
                     </a>
                 </div>
                 <div class="price-card popular">
-                    <div class="popular-tag">⭐ PALING POPULER</div>
-                    <div class="price-emoji">📦</div>
+                    <div class="popular-tag">â­ PALING POPULER</div>
+                    <div class="price-emoji">ðŸ“¦</div>
                     <div class="price-name">Growth (2 Nomor)</div>
                     <div class="price-amount">Rp 249.000<span>/bulan</span></div>
                     <div class="price-desc">Stok, approval, laporan KUR</div>
@@ -878,7 +928,7 @@
                     </a>
                 </div>
                 <div class="price-card">
-                    <div class="price-emoji">🏢</div>
+                    <div class="price-emoji">ðŸ¢</div>
                     <div class="price-name">Pro Multi-Outlet (Full AI)</div>
                     <div class="price-amount">Rp 499.000<span>/bulan</span></div>
                     <div class="price-desc">Untuk usaha dengan tim & cabang</div>
@@ -895,7 +945,7 @@
                     </a>
                 </div>
             </div>
-            <p class="price-note">✅ Setup awal (onboarding + mapping WhatsApp) Rp 199.000 sekali bayar. Tersedia demo publik untuk coba alur sebelum berlangganan.</p>
+            <p class="price-note">âœ… Setup awal (onboarding + mapping WhatsApp) Rp 199.000 sekali bayar. Tersedia demo publik untuk coba alur sebelum berlangganan.</p>
         </div>
     </section>
 
@@ -903,7 +953,7 @@
     <section class="section faq-section" id="faq">
         <div class="container">
             <div class="section-header">
-                <div class="section-badge">❓ FAQ</div>
+                <div class="section-badge">â“ FAQ</div>
                 <h2 class="section-title">Pertanyaan yang Sering Ditanyakan</h2>
                 <p class="section-subtitle">Belum yakin? Mungkin jawabannya ada di sini.</p>
             </div>
@@ -932,7 +982,7 @@
                         <i class="fas fa-chevron-down"></i>
                     </button>
                     <div class="faq-answer">
-                        <div class="faq-answer-inner">Input utama lewat WhatsApp. Dashboard web dipakai owner untuk melihat ringkasan, Ruang Komando, dan laporan — cukup browser, tanpa install app khusus.</div>
+                        <div class="faq-answer-inner">Input utama lewat WhatsApp. Dashboard web dipakai owner untuk melihat ringkasan, Ruang Komando, dan laporan â€” cukup browser, tanpa install app khusus.</div>
                     </div>
                 </div>
                 <div class="faq-item">
@@ -969,7 +1019,7 @@
     <!-- ==================== CTA FINAL ==================== -->
     <section class="cta-final">
         <div class="container">
-            <h2>Siap Coba Trial 1 Akun + WhatsApp? 🚀</h2>
+            <h2>Siap Coba Trial 1 Akun + WhatsApp? ðŸš€</h2>
             <p>Lihat demo publik dulu, atau hubungi kami untuk setup akun trial dan integrasi bot.</p>
             <a href="https://larisai.my.id/?demo=1" class="btn btn-outline" style="margin-right:12px;" target="_blank" rel="noopener">
                 <i class="fas fa-eye"></i> Lihat Demo
@@ -1016,7 +1066,7 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                © 2026 Laris.AI — All rights reserved. Dibuat dengan ❤️ untuk UMKM Indonesia.
+                Â© 2026 Laris.AI â€” All rights reserved. Dibuat dengan â¤ï¸ untuk UMKM Indonesia.
             </div>
         </div>
     </footer>
@@ -1102,3 +1152,4 @@
 
 </body>
 </html>
+

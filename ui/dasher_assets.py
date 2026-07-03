@@ -1,4 +1,4 @@
-"""Muat CSS Dasher asli ke Streamlit."""
+"""Muat CSS Dasher asli ke Streamlit (link stylesheet + fallback inline)."""
 
 from __future__ import annotations
 
@@ -17,18 +17,30 @@ def _read_css(name: str) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
 
+def _head_html() -> str:
+    """Tag <link>/<style> yang perlu disuntik ke <head> halaman.
+
+    `st.html` (Streamlit >= 1.32) merender ini ke head sehingga stylesheet
+    benar-benar diload — tidak seperti `st.markdown('<link …>')` yang
+    sering di-sanitize oleh iframe Streamlit.
+    """
+    return (
+        '<link rel="preconnect" href="https://fonts.googleapis.com">'
+        '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
+        '<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">'
+        '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">'
+        '<link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.45.0/tabler-icons.min.css" rel="stylesheet">'
+    )
+
+
 def inject_dasher_styles(*, login: bool = False) -> None:
     """Bootstrap 5 + Tabler + theme.css Dasher + override Streamlit."""
-    st.markdown(
-        """
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-        <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.45.0/tabler-icons.min.css" rel="stylesheet">
-        """,
-        unsafe_allow_html=True,
-    )
+    try:
+        st.html(_head_html())
+    except AttributeError:
+        # Fallback untuk Streamlit lama — pakai st.markdown, meski sering di-block.
+        st.markdown(_head_html(), unsafe_allow_html=True)
+
     theme = _read_css("theme.css")
     overrides = _read_css("streamlit-overrides.css")
     login_extra = ""

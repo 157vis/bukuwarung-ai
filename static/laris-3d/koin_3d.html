@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>laris.AI — Koin 3D Interaktif (Demo)</title>
+<style>
+  body { margin:0; overflow:hidden; background: linear-gradient(135deg,#0f172a 0%,#1e3a8a 100%); font-family: system-ui,sans-serif; color:#fff; }
+  #wrap { position:fixed; inset:0; }
+  #panel { position:fixed; left:1.5rem; bottom:1.5rem; max-width:360px; background: rgba(255,255,255,0.08); backdrop-filter: blur(10px); border:1px solid rgba(255,255,255,0.18); border-radius:1rem; padding:1.25rem 1.4rem; line-height:1.45; }
+  #panel h2 { margin:0 0 0.5rem 0; font-size:1.15rem; }
+  #panel p  { margin:0; opacity:0.9; font-size:0.95rem; }
+  #panel .tip { margin-top:0.6rem; opacity:0.7; font-size:0.82rem; }
+  #credit { position:fixed; right:1rem; top:0.75rem; opacity:0.55; font-size:0.78rem; }
+</style>
+</head>
+<body>
+<div id="wrap"></div>
+<div id="panel">
+  <h2>💰 Koin Pengetahuan UMKM</h2>
+  <p>Drag untuk memutar · Scroll untuk zoom · Klik koin untuk lihat insight.</p>
+  <div class="tip">Snippet 3D ringan — Three.js via CDN, ~120KB gzip.</div>
+</div>
+<div id="credit">laris.AI · Three.js demo</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const wrap = document.getElementById('wrap');
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(window.innerWidth, window.innerHeight);
+wrap.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 100);
+camera.position.set(0, 0, 7);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.minDistance = 4;
+controls.maxDistance = 12;
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const key = new THREE.DirectionalLight(0xffffff, 1.1);
+key.position.set(4, 6, 5);
+scene.add(key);
+const rim = new THREE.PointLight(0x7c4dff, 1.2, 30);
+rim.position.set(-4, -2, -3);
+scene.add(rim);
+
+const INSIGHTS = {
+  hijau: 'Transaksi minggu ini: 124 · margin rata-rata 32%',
+  emas:  'Stok gudang: 8 kategori · otomatis restock diaktifkan',
+  biru:  'Pelanggan baru: +9 · 3 di antaranya repeat order',
+};
+
+function buatKoin({ warna, label, posisi }) {
+  const group = new THREE.Group();
+  const geom = new THREE.CylinderGeometry(1, 1, 0.22, 64);
+  const mat  = new THREE.MeshStandardMaterial({
+    color: warna, metalness: 0.85, roughness: 0.25,
+    emissive: warna, emissiveIntensity: 0.15,
+  });
+  const coin = new THREE.Mesh(geom, mat);
+  coin.rotation.x = Math.PI / 2;
+  group.add(coin);
+
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(1.02, 0.05, 16, 64),
+    new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 1, roughness: 0.2 })
+  );
+  ring.position.z = 0;
+  group.add(ring);
+
+  const tex = (() => {
+    const c = document.createElement('canvas');
+    c.width = 256; c.height = 256;
+    const g = c.getContext('2d');
+    g.fillStyle = '#ffffff';
+    g.beginPath(); g.arc(128,128,110,0,Math.PI*2); g.fill();
+    g.fillStyle = '#111827';
+    g.font = 'bold 60px system-ui';
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(label, 128, 138);
+    return new THREE.CanvasTexture(c);
+  })();
+  const face = new THREE.Mesh(
+    new THREE.CircleGeometry(0.95, 48),
+    new THREE.MeshStandardMaterial({ map: tex, metalness: 0.2, roughness: 0.6 })
+  );
+  face.position.z = 0.12;
+  group.add(face);
+  const face2 = face.clone();
+  face2.position.z = -0.12;
+  face2.rotation.y = Math.PI;
+  group.add(face2);
+
+  group.position.copy(posisi);
+  group.userData = { label, warna, INSIGHT: INSIGHTS[label] };
+  return group;
+}
+
+const coins = [
+  buatKoin({ warna: 0x10b981, label: 'hijau', posisi: new THREE.Vector3(-2.4, 0.4, 0) }),
+  buatKoin({ warna: 0xf59e0b, label: 'emas',  posisi: new THREE.Vector3( 0.0, -0.3, 0.3) }),
+  buatKoin({ warna: 0x3b82f6, label: 'biru',  posisi: new THREE.Vector3( 2.4, 0.4, 0) }),
+];
+coins.forEach(c => scene.add(c));
+
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+let hover = null;
+const tip = document.getElementById('panel');
+
+addEventListener('pointermove', (e) => {
+  pointer.x = (e.clientX / innerWidth) * 2 - 1;
+  pointer.y = -(e.clientY / innerHeight) * 2 + 1;
+});
+addEventListener('click', () => {
+  if (hover) {
+    const q = hover.userData.INSIGHT;
+    if (q) tip.querySelector('p').textContent = q;
+  }
+});
+
+function loop(t) {
+  requestAnimationFrame(loop);
+  controls.update();
+  coins.forEach((c, i) => {
+    c.rotation.z += 0.003 + i * 0.001;
+    c.position.y = Math.sin(t/1000 + i) * 0.18;
+  });
+  raycaster.setFromCamera(pointer, camera);
+  const hit = raycaster.intersectObjects(coins, true)[0];
+  hover = hit ? hit.object.parent : null;
+  document.body.style.cursor = hover ? 'pointer' : 'default';
+  renderer.render(scene, camera);
+}
+loop(0);
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>

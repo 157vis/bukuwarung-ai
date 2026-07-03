@@ -302,6 +302,34 @@
         .laris-feature-card h4 { font-size: 1.05rem; font-weight: 700; margin-bottom: 8px; }
         .laris-feature-card p { font-size: 0.92rem; color: #6b7280; line-height: 1.6; }
 
+        /* 3D Lab section */
+        .laris-3d-lab { background: linear-gradient(180deg, #f9fafb 0%, #ffffff 100%); }
+        .laris-3d-frame {
+            position: relative;
+            width: 100%;
+            height: 520px;
+            border-radius: 1.25rem;
+            overflow: hidden;
+            box-shadow: 0 18px 40px rgba(15,23,42,0.18);
+            background: #0f172a;
+        }
+        .laris-3d-frame iframe {
+            width: 100%; height: 100%; border: 0; display: block;
+        }
+        .laris-3d-fallback {
+            position: absolute; inset: 0; display: none;
+            align-items: center; justify-content: center;
+            color: #fff; background: #0f172a; padding: 1.5rem; text-align: center;
+        }
+        .laris-3d-fallback a { color: #34d399; text-decoration: underline; }
+        @media (max-width: 768px) {
+            .laris-3d-frame { height: 420px; }
+        }
+        .laris-3d-caption {
+            text-align: center; font-size: 0.85rem; color: #6b7280;
+            margin-top: 0.85rem;
+        }
+
         /* ========== AGENTS ========== */
         .agents-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
         .agent-card {
@@ -699,6 +727,28 @@
                     <p>Ringkasan otomatis untuk pengajuan Kredit Usaha Rakyat ke bank.</p>
                 </div>
             </div>
+        </div>
+    </section>
+
+    <!-- ==================== 3D KNOWLEDGE LAB ==================== -->
+    <!-- Section ini interaktif: 3 koin 3D yang bisa di-drag. Tiap klik
+         koin akan menampilkan insight berbeda (transaksi / stok / pelanggan).
+         File sumber: static/laris-3d/koin_3d.html
+         Cara edit: buka file itu, ubah label/warna, deploy ulang. -->
+    <section class="section laris-3d-lab" id="3d">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-badge">🎓 Lab Pengetahuan 3D</div>
+                <h2 class="section-title">Belajar Bisnis UMKM dengan Visual Interaktif.</h2>
+                <p class="section-subtitle">Drag untuk memutar · Scroll untuk zoom · Klik koin untuk melihat insight dari data UMKM.</p>
+            </div>
+            <div class="laris-3d-frame">
+                <iframe src="/laris-3d/koin_3d.html" title="Koin Pengetahuan UMKM 3D" loading="lazy" allow="autoplay; fullscreen"></iframe>
+                <div class="laris-3d-fallback">
+                    <p>Browser Anda tidak mendukung 3D interaktif. <a href="/laris-3d/koin_3d.html" target="_blank" rel="noopener">Buka di tab baru</a>.</p>
+                </div>
+            </div>
+            <p class="laris-3d-caption">Snippet ringan &lt; 200KB · Three.js via CDN · tidak mengganggu loading landing.</p>
         </div>
     </section>
 

@@ -69,6 +69,11 @@ _INLINE_LANDING_CSS = """
 .laris-feature-icon { width:48px; height:48px; border-radius:12px; background:#c8fad6; color:#007867; display:inline-flex; align-items:center; justify-content:center; font-size:1.35rem; margin-bottom:1rem; }
 .laris-feature-card h4 { font-size:1.05rem; font-weight:700; margin:0 0 .4rem; }
 .laris-feature-card p { color:#637381; font-size:.92rem; line-height:1.55; margin:0; }
+.laris-3d-lab { padding:4.5rem 1.25rem; background:linear-gradient(180deg,#f9fafb 0%,#ffffff 100%); }
+.laris-3d-frame { width:100%; height:520px; border-radius:1.25rem; overflow:hidden; box-shadow:0 18px 40px rgba(15,23,42,.18); background:#0f172a; }
+.laris-3d-frame iframe { width:100%; height:100%; border:0; display:block; }
+.laris-3d-caption { text-align:center; font-size:.85rem; color:#6b7280; margin-top:.85rem; }
+@media (max-width: 768px) { .laris-3d-frame { height:420px; } }
 .laris-flow { padding:4.5rem 1.25rem; background:#fff; }
 .laris-flow-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1.25rem; }
 .laris-flow-item { background:#f9fafb; border:1px solid rgba(28,37,46,.06); border-radius:1rem; padding:1.25rem; text-align:center; }
@@ -240,6 +245,25 @@ def _features_html() -> str:
     """
 
 
+def _3d_lab_html() -> str:
+    """Section 3D interaktif — butuh file /static/laris-3d/koin_3d.html di hosting."""
+    return """
+    <section class="laris-3d-lab" id="3d">
+      <div class="laris-section-inner">
+        <div class="laris-section-head">
+          <span class="laris-pill laris-pill-soft">Lab Pengetahuan 3D</span>
+          <h2>Belajar Bisnis UMKM dengan Visual Interaktif.</h2>
+          <p>Drag untuk memutar · Scroll untuk zoom · Klik koin untuk melihat insight dari data UMKM.</p>
+        </div>
+        <div class="laris-3d-frame">
+          <iframe src="/laris-3d/koin_3d.html" title="Koin Pengetahuan UMKM 3D" loading="lazy"></iframe>
+        </div>
+        <p class="laris-3d-caption">Snippet ringan &lt; 200KB · Three.js via CDN · tidak mengganggu loading landing.</p>
+      </div>
+    </section>
+    """
+
+
 def _flow_html() -> str:
     steps = [
         ("ti-message-circle", "01", "Owner kirim pesan WA", "Bisa bahasa sehari-hari: 'beli kopi 50rb'."),
@@ -339,6 +363,7 @@ def render_landing() -> None:
         _hero_html(),
         _stats_html(),
         _features_html(),
+        _3d_lab_html(),
         _flow_html(),
         _cta_html(),
         _footer_html(),
