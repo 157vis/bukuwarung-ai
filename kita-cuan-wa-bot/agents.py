@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from functools import lru_cache
 
-from paths import bootstrap_paths
+from paths_bot import bootstrap_paths
 
 bootstrap_paths()
 

@@ -22,6 +22,11 @@ from pydantic import BaseModel, Field
 _ROOT = Path(__file__).resolve().parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
+# Repo root — agar 'laris_core', 'paths', dll di root bisa di-import
+# dari container Railway (Root Directory = bukuwarung-ai).
+_REPO_ROOT = _ROOT.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
 from agents import build_agents
 from config import PROJECT_ROOT, ensure_data_dir, get_settings

@@ -10,7 +10,7 @@ import httpx
 from fastapi import FastAPI, Request
 from groq import Groq
 
-from paths import bootstrap_paths, load_project_dotenv
+from paths_bot import bootstrap_paths, load_project_dotenv
 
 bootstrap_paths()
 load_project_dotenv()
