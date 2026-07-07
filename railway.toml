@@ -4,7 +4,7 @@ builder = "NIXPACKS"
 [deploy]
 # Pakai 'python -m streamlit' agar bisa dipanggil walaupun script
 # 'streamlit' tidak di-PATH (umum di Nixpacks runtime).
-startCommand = "python -m streamlit run app.py --server.address 0.0.0.0 --server.port $PORT --server.headless true"
+startCommand = "uvicorn main:app --host 0.0.0.0 --port $PORT"
 healthcheckPath = "/_stcore/health"
 healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"
