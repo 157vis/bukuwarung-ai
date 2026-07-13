@@ -24,6 +24,9 @@ _HERO_STATS = [
 # Nanti cukup ganti kembali APP_DOMAIN ke custom domain app saat sudah sehat.
 LANDING_DOMAIN = "https://www.larisai.my.id"
 APP_DOMAIN = "https://larisai.my.id"
+# URL login Streamlit (Cloud Community) — pakai ?login=1 agar trigger
+# `show_login_page()` di app.py line 1001 (lihat fix commit d20c49d).
+LOGIN_URL = "https://laris-ai.streamlit.app/?login=1"
 WA_NUMBER = "6282112826851"
 WA_BASE = f"https://wa.me/{WA_NUMBER}"
 
@@ -138,7 +141,7 @@ def _navbar_html() -> str:
         </nav>
         <div class="laris-navbar-cta d-flex gap-2">
           <a href="{WA_BASE}?text=Halo%20laris.AI%2C%20saya%20mau%20lihat%20demo" target="_blank" rel="noopener" class="btn btn-ghost">Demo</a>
-          <a href="{WA_BASE}?text=Halo%20laris.AI%2C%20saya%20mau%20mulai%20trial" target="_blank" rel="noopener" class="btn btn-solid">Masuk</a>
+          <a href="{LOGIN_URL}" class="btn btn-solid">Masuk</a>
         </div>
       </div>
     </div>
@@ -163,7 +166,7 @@ def _hero_html() -> str:
           <a href="{LANDING_DOMAIN}/artikel/cara-mencatat-keuangan-warung/" target="_blank" rel="noopener" class="btn btn-ghost btn-lg">
             <i class="ti ti-news"></i> Baca Artikel UMKM
           </a>
-          <a href="{WA_BASE}?text=Halo%20laris.AI%2C%20saya%20mau%20mulai%20trial" target="_blank" rel="noopener" class="btn btn-ghost btn-lg">
+          <a href="{LOGIN_URL}" class="btn btn-ghost btn-lg">
             <i class="ti ti-login"></i> Masuk Akun
           </a>
         </div>
@@ -379,7 +382,7 @@ def _cta_html() -> str:
             <a href="{WA_BASE}?text=Halo%20laris.AI%2C%20saya%20mau%20lihat%20demo" target="_blank" rel="noopener" class="btn btn-solid btn-lg">
               <i class="ti ti-flask"></i> Buka Dashboard Demo
             </a>
-            <a href="{WA_BASE}?text=Halo%20laris.AI%2C%20saya%20mau%20mulai%20trial" target="_blank" rel="noopener" class="btn btn-ghost btn-lg">
+            <a href="{LOGIN_URL}" class="btn btn-ghost btn-lg">
               <i class="ti ti-login"></i> Masuk Akun
             </a>
           </div>
@@ -407,8 +410,8 @@ def _footer_html() -> str:
         </div>
         <div class="laris-footer-col">
           <small class="text-uppercase fw-bold text-muted">Mulai</small>
-          <a href="{WA_BASE}?text=Halo%20laris.AI%2C%20saya%20mau%20mulai%20trial" target="_blank" rel="noopener">Masuk</a>
-          <a href="{WA_BASE}?text=Halo%20laris.AI%2C%20saya%20mau%20coba%20demo" target="_blank" rel="noopener">Coba Demo</a>
+          <a href="{LOGIN_URL}">Masuk</a>
+          <a href="{LOGIN_URL}">Coba Demo</a>
         </div>
       </div>
       <div class="text-center text-muted small py-3">
