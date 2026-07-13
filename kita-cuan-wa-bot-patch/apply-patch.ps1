@@ -1,8 +1,13 @@
 # apply-patch.ps1 — Terapkan patch ke repo kita-cuan-wa-bot
-# Patch ini memperbaiki crash "KeyError: GROQ_API_KEY" dengan membuat
-# inisialisasi Groq client menjadi LAZY (tidak jalan saat import module).
-# Setelah patch: service tetap bisa start meskipun env var belum lengkap,
-# dan endpoint /health akan menampilkan missing_env di response JSON.
+# Patch ini memperbaiki:
+#   1. Multi-tenant Fonnte token via Supabase clients table (fonnte_client.py)
+#   2. Lazy Groq client init (supaya service start meskipun GROQ_API_KEY kosong)
+#   3. /health endpoint menampilkan missing_env & token_source
+#   4. **Import get_core di main.py** (NameError -> HTTP 500 di /webhook)
+#   5. **Global FastAPI exception handler** (tidak ada lagi HTTP 500 crash)
+#   6. send_wa_reply() catch SEMUA Exception (last-resort safety)
+#   7. webhook handler catch NameError, AttributeError, Exception
+# Setelah patch: service stabil, Fonnte ACK selalu dapat 200 + JSON.
 
 param(
     [switch]$AutoPush,
