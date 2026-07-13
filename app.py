@@ -221,7 +221,17 @@ def get_query_value(name: str):
 
 
 def get_query_flag(name: str) -> bool:
-    return get_query_value(name) == "1"
+    value = get_query_value(name)
+    if value is None:
+        return False
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        # Trigger kalau ada query param dengan nama tsb, BAHKAN tanpa "=1"
+        # (mis. ?login, ?login=, ?login=1, ?login=true, ?login=yes)
+        if normalized == "":
+            return True
+        return normalized in ("1", "true", "yes", "on")
+    return bool(value)
 
 
 def render_home() -> None:
