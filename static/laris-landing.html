@@ -1,1228 +1,691 @@
-﻿<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>laris.AI â€” Partner AI UMKM Indonesia | Catat Keuangan & Stok via WhatsApp</title>
-    <meta name="description" content="laris.AI â€” partner AI untuk UMKM Indonesia. Catat keuangan, stok, dan laporan KUR lewat WhatsApp. Dashboard Dasher modern, AI Multi-Agent, multi-tenant aman.">
-    <meta name="keywords" content="larisai, laris.ai, AI UMKM, AI kasir WhatsApp, pencatatan keuangan warung, aplikasi kasir UMKM, laporan KUR, dasher UMKM, multi-agent AI Indonesia">
-    <meta name="author" content="laris.AI">
-    <link rel="canonical" href="https://www.larisai.my.id/">
-    <meta property="og:title" content="laris.AI â€” Partner AI UMKM Indonesia">
-    <meta property="og:description" content="Catat keuangan & stok UMKM lewat WhatsApp. AI Multi-Agent, dashboard Dasher, laporan KUR.">
-    <meta property="og:url" content="https://www.larisai.my.id/">
-    <meta property="og:type" content="website">
-    <meta property="og:site_name" content="laris.AI">
-    <meta property="og:image" content="https://www.larisai.my.id/static/assets/laris/logo-icon.svg">
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="laris.AI â€” Partner AI UMKM Indonesia">
-    <meta name="twitter:description" content="Catat keuangan & stok UMKM lewat WhatsApp dengan AI Multi-Agent.">
-    <meta name="twitter:image" content="https://www.larisai.my.id/static/assets/laris/logo-icon.svg">
-    <meta name="theme-color" content="#1e40af">
-    <meta name="robots" content="index, follow">
-    <link rel="alternate" hreflang="id" href="https://www.larisai.my.id/">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>ðŸš€</text></svg>">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "Organization",
-      "name": "laris.AI",
-      "url": "https://www.larisai.my.id/",
-      "logo": "https://www.larisai.my.id/static/assets/laris/logo-icon.svg",
-      "sameAs": [
-        "https://www.larisai.my.id/"
-      ]
-    }
-    </script>
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      "name": "laris.AI",
-      "applicationCategory": "BusinessApplication",
-      "operatingSystem": "Web",
-      "url": "https://www.larisai.my.id/",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "IDR"
-      }
-    }
-    </script>
+<!doctype html>
+<html lang="id"><head>
+<meta charset="utf-8"><title>Preview Landing laris.AI</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
+<style>
+body { margin:0; padding:0; }
+/* ============================================================
+   LANDING PAGE (single-page, single-layout — no Streamlit widgets)
+   ============================================================ */
+.laris-landing {
+  font-family: "Public Sans", system-ui, sans-serif;
+  color: #1c252e;
+  background: #f9fafb;
+}
+.laris-landing a { text-decoration: none; }
+.laris-landing .laris-section-inner {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+}
 
-    <style>
-        /* ========== RESET & BASE ========== */
-        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-        html { scroll-behavior: smooth; scroll-padding-top: 80px; }
-        body { font-family: 'Inter', sans-serif; color: #1f2937; line-height: 1.6; overflow-x: hidden; background: #fff; }
-        a { text-decoration: none; color: inherit; }
-        ul { list-style: none; }
-        button { cursor: pointer; border: none; font-family: inherit; background: none; }
-        img { max-width: 100%; }
+/* --- Buttons --- */
+.laris-landing .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.1rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  border: 1px solid transparent;
+  transition: transform .15s ease, box-shadow .15s ease, background-color .15s ease;
+  cursor: pointer;
+  line-height: 1;
+}
+.laris-landing .btn-lg { padding: 0.85rem 1.4rem; font-size: 1rem; }
+.laris-landing .btn-solid {
+  background: #00a76f;
+  color: #fff;
+  border-color: #00a76f;
+  box-shadow: 0 6px 16px rgba(0,167,111,0.25);
+}
+.laris-landing .btn-solid:hover { background:#008f5f; border-color:#008f5f; transform: translateY(-1px); }
+.laris-landing .btn-ghost {
+  background: rgba(255,255,255,0.85);
+  color: #1c252e;
+  border-color: #e6eaee;
+}
+.laris-landing .btn-ghost:hover { background:#fff; border-color:#00a76f; color:#007867; }
 
-        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+/* --- Navbar --- */
+.laris-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: saturate(180%) blur(8px);
+  border-bottom: 1px solid rgba(28,37,46,0.06);
+}
+.laris-navbar-inner {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 0.85rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.laris-navbar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: #1c252e;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+.laris-brand-dot {
+  width: 22px; height: 22px;
+  border-radius: 6px;
+  background: linear-gradient(135deg,#00a76f,#007867);
+  box-shadow: 0 3px 8px rgba(0,167,111,0.3);
+  display: inline-block;
+}
+.laris-navbar-links {
+  gap: 1.5rem;
+}
+.laris-navbar-links a {
+  color: #454f5b;
+  font-weight: 500;
+  font-size: 0.92rem;
+}
+.laris-navbar-links a:hover { color:#007867; }
 
-        /* ========== ANIMATIONS ========== */
-        @keyframes pulseWA {
-            0% { box-shadow: 0 0 0 0 rgba(37,211,102,0.7); }
-            70% { box-shadow: 0 0 0 18px rgba(37,211,102,0); }
-            100% { box-shadow: 0 0 0 0 rgba(37,211,102,0); }
-        }
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-12px); }
-        }
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+/* --- Hero --- */
+.laris-hero {
+  background: linear-gradient(94.82deg, #ffe9d5 1.11%, #c8fad6 99.11%);
+  padding: 4.5rem 1.25rem 4.5rem;
+}
+.laris-hero-inner {
+  max-width: 1140px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 3rem;
+  align-items: center;
+}
+.laris-h1 {
+  font-size: clamp(2rem, 4.5vw, 3.4rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin: 0.5rem 0 1rem;
+  color: #1c252e;
+}
+.laris-h1-accent {
+  background: linear-gradient(90deg,#00a76f,#007867);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+.laris-lead {
+  font-size: 1.05rem;
+  color: #454f5b;
+  max-width: 560px;
+  margin-bottom: 1.75rem;
+  line-height: 1.6;
+}
+.laris-pill {
+  display: inline-block;
+  background: rgba(255,255,255,0.6);
+  color: #007867;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  border: 1px solid rgba(0,167,111,0.15);
+}
+.laris-pill-soft {
+  background: var(--ds-primary-bg-subtle, #c8fad6);
+  color: var(--ds-primary-text-emphasis, #007867);
+}
+.laris-hero-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+.laris-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-size: 0.85rem;
+  color: #454f5b;
+}
 
-        .pulse-wa { animation: pulseWA 2s infinite; }
-        .float-anim { animation: float 4s ease-in-out infinite; }
-        .fade-in { animation: fadeInUp 0.8s ease-out both; }
+/* Phone mockup */
+.laris-phone-frame {
+  background: #fff;
+  border-radius: 1.25rem;
+  box-shadow: 0 30px 60px rgba(28,37,46,0.18);
+  padding: 1rem;
+  max-width: 360px;
+  margin-left: auto;
+  border: 1px solid rgba(28,37,46,0.06);
+}
+.laris-phone-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px dashed rgba(28,37,46,0.1);
+}
+.laris-phone-dots span {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #d9dde2;
+  margin-right: 3px;
+}
+.laris-phone-body {
+  padding-top: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+}
+.laris-msg {
+  padding: 0.6rem 0.85rem;
+  border-radius: 1rem;
+  max-width: 85%;
+  line-height: 1.4;
+}
+.laris-msg-user {
+  background: #d4f1d4;
+  align-self: flex-end;
+  border-bottom-right-radius: 0.25rem;
+}
+.laris-msg-bot {
+  background: #f4f6f8;
+  align-self: flex-start;
+  border-bottom-left-radius: 0.25rem;
+}
 
-        /* ========== NAVBAR ========== */
-        .navbar {
-            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
-            background: rgba(255,255,255,0.97);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(0,0,0,0.06);
-            transition: box-shadow 0.3s;
-        }
-        .navbar.scrolled { box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-        .nav-inner {
-            display: flex; align-items: center; justify-content: space-between;
-            height: 70px;
-        }
-        .nav-logo {
-            font-size: 1.5rem; font-weight: 900; color: #7c3aed;
-            display: flex; align-items: center; gap: 8px;
-        }
-        .nav-logo i { color: #1e40af; }
+/* --- Stats strip --- */
+.laris-stats {
+  background: #fff;
+  border-block: 1px solid rgba(28,37,46,0.06);
+  padding: 1.5rem 0;
+}
+.laris-stats-inner {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+.laris-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
+}
+.laris-stat-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #007867;
+  letter-spacing: -0.01em;
+}
+.laris-stat-label {
+  font-size: 0.85rem;
+  color: #637381;
+}
 
-        /* Desktop Nav Links */
-        .nav-links { display: flex; align-items: center; gap: 28px; }
-        .nav-links a {
-            font-size: 0.92rem; font-weight: 600; color: #6b7280;
-            transition: color 0.3s; position: relative;
-        }
-        .nav-links a:not(.nav-cta):hover { color: #1e40af; }
-        .nav-links a:not(.nav-cta)::after {
-            content: ''; position: absolute; bottom: -4px; left: 0;
-            width: 0; height: 2px; background: #1e40af; transition: width 0.3s;
-        }
-        .nav-links a:not(.nav-cta):hover::after { width: 100%; }
-        .nav-cta {
-            background: #25d366; color: #fff !important;
-            padding: 10px 22px; border-radius: 50px;
-            font-weight: 700; font-size: 0.88rem;
-            display: inline-flex; align-items: center; gap: 8px;
-            transition: all 0.3s;
-        }
-        .nav-cta:hover { background: #128c7e; transform: translateY(-2px); }
-        .nav-cta::after { display: none !important; }
+/* --- Section head --- */
+.laris-section-head {
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto 2.5rem;
+}
+.laris-section-head .laris-pill { margin-bottom: 0.85rem; }
+.laris-section-head h2 {
+  font-size: clamp(1.5rem, 3vw, 2.2rem);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  margin: 0.5rem 0;
+  color: #1c252e;
+  line-height: 1.2;
+}
+.laris-section-head p { color: #637381; font-size: 1rem; }
 
-        /* Hamburger Button */
-        .hamburger {
-            display: none; flex-direction: column; gap: 5px;
-            padding: 8px; cursor: pointer; z-index: 1001;
-        }
-        .hamburger span {
-            width: 24px; height: 3px; background: #1f2937;
-            border-radius: 3px; transition: all 0.3s;
-        }
-        .hamburger.active span:nth-child(1) { transform: rotate(45deg) translate(5px, 6px); }
-        .hamburger.active span:nth-child(2) { opacity: 0; }
-        .hamburger.active span:nth-child(3) { transform: rotate(-45deg) translate(5px, -6px); }
+/* --- Features grid (CSS Grid, 3 cols @ desktop, 2 @ tablet, 1 @ mobile) --- */
+.laris-features {
+  padding: 4.5rem 1.25rem;
+  background: #f9fafb;
+}
+.laris-features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+}
+.laris-feature-card {
+  background: #fff;
+  border: 1px solid rgba(28,37,46,0.06);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(28,37,46,0.04);
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.laris-feature-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(28,37,46,0.10);
+  border-color: rgba(0,167,111,0.25);
+}
+.laris-feature-icon {
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  background: var(--ds-primary-bg-subtle, #c8fad6);
+  color: var(--ds-primary-text-emphasis, #007867);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  margin-bottom: 1rem;
+}
+.laris-feature-card h4 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 0.4rem;
+  color: #1c252e;
+}
+.laris-feature-card p {
+  color: #637381;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  margin: 0;
+}
 
-        /* Mobile Menu */
-        .mobile-menu {
-            display: none; position: fixed; top: 70px; left: 0; right: 0;
-            background: #fff; box-shadow: 0 10px 40px rgba(0,0,0,0.12);
-            max-height: 0; overflow: hidden;
-            transition: max-height 0.4s ease;
-            z-index: 999;
-        }
-        .mobile-menu.open { max-height: 500px; }
-        .mobile-menu a {
-            display: flex; align-items: center; gap: 10px;
-            padding: 18px 24px; font-weight: 600; font-size: 1rem;
-            color: #1f2937; border-bottom: 1px solid #f3f4f6;
-            transition: all 0.3s;
-        }
-        .mobile-menu a:hover { background: #f8fafc; color: #1e40af; }
-        .mobile-menu .nav-cta {
-            margin: 16px 24px; justify-content: center;
-            border-bottom: none; border-radius: 50px;
-            padding: 14px 24px;
-        }
-        .mobile-menu .nav-cta:hover { background: #128c7e; }
+/* --- Flow (4 langkah) --- */
+.laris-flow {
+  padding: 4.5rem 1.25rem;
+  background: #fff;
+}
+.laris-flow-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+  align-items: stretch;
+}
+.laris-flow-item {
+  background: #f9fafb;
+  border: 1px solid rgba(28,37,46,0.06);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  text-align: center;
+}
+.laris-flow-step {
+  position: relative;
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  margin: 0.25rem auto 1rem;
+  background: linear-gradient(135deg,#00a76f,#007867);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(0,167,111,0.25);
+}
+.laris-flow-step span {
+  position: absolute;
+  top: 4px; right: 4px;
+  background: #fff;
+  color: #007867;
+  font-weight: 800;
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 999px;
+}
+.laris-flow-step i { font-size: 1.5rem; }
+.laris-flow-item h5 {
+  font-size: 0.98rem;
+  font-weight: 700;
+  margin: 0.5rem 0 0.4rem;
+  color: #1c252e;
+}
+.laris-flow-item p {
+  font-size: 0.85rem;
+  color: #637381;
+  line-height: 1.5;
+  margin: 0;
+}
 
-        /* ========== HERO ========== */
-        .hero {
-            padding: 130px 0 80px;
-            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 30%, #1e40af 60%, #7c3aed 100%);
-            color: #fff; position: relative; overflow: hidden;
-        }
-        .hero::before {
-            content: ''; position: absolute; inset: 0;
-            background: radial-gradient(circle at 20% 80%, rgba(124,58,237,0.3) 0%, transparent 50%),
-                        radial-gradient(circle at 80% 20%, rgba(37,211,102,0.2) 0%, transparent 50%);
-        }
-        .hero .container {
-            display: grid; grid-template-columns: 1fr 1fr;
-            gap: 60px; align-items: center; position: relative; z-index: 1;
-        }
-        .hero-badge {
-            display: inline-flex; align-items: center; gap: 8px;
-            background: rgba(255,255,255,0.15); backdrop-filter: blur(10px);
-            padding: 8px 20px; border-radius: 50px; font-size: 0.85rem;
-            font-weight: 600; margin-bottom: 24px;
-            border: 1px solid rgba(255,255,255,0.2);
-        }
-        .hero h1 { font-size: 3rem; font-weight: 900; line-height: 1.15; margin-bottom: 20px; }
-        .hero h1 .highlight {
-            background: linear-gradient(135deg, #fbbf24, #f59e0b);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        .hero-text {
-            font-size: 1.12rem; color: rgba(255,255,255,0.85);
-            margin-bottom: 32px; max-width: 520px; line-height: 1.7;
-        }
-        .hero-buttons { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 28px; }
+/* --- CTA section --- */
+.laris-cta {
+  padding: 4rem 1.25rem;
+  background: linear-gradient(180deg, #f9fafb 0%, #f4f6f8 100%);
+}
+.laris-cta-card {
+  background: linear-gradient(94.82deg, #c8fad6 1.11%, #ffe9d5 99.11%);
+  border-radius: 1.25rem;
+  padding: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  border: 1px solid rgba(0,167,111,0.18);
+}
+.laris-cta-card h2 {
+  font-size: clamp(1.4rem, 2.5vw, 1.9rem);
+  font-weight: 800;
+  margin: 0.5rem 0 0.5rem;
+  color: #1c252e;
+  letter-spacing: -0.01em;
+}
+.laris-cta-card p { color: #454f5b; margin: 0; }
+.laris-cta-buttons { display: flex; flex-wrap: wrap; gap: 0.75rem; }
 
-        /* Buttons */
-        .btn {
-            display: inline-flex; align-items: center; justify-content: center;
-            gap: 10px; padding: 16px 32px; border-radius: 50px;
-            font-size: 1rem; font-weight: 700; transition: all 0.3s;
-        }
-        .btn-wa {
-            background: linear-gradient(135deg, #25d366, #128c7e);
-            color: #fff; box-shadow: 0 8px 30px rgba(37,211,102,0.4);
-        }
-        .btn-wa:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(37,211,102,0.6); }
-        .btn-outline {
-            background: transparent; color: #fff;
-            border: 2px solid rgba(255,255,255,0.4);
-        }
-        .btn-outline:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.7); }
+/* --- Footer --- */
+.laris-footer {
+  background: #1c252e;
+  color: #fff;
+  padding-top: 2.5rem;
+  margin-top: 0;
+}
+.laris-footer-inner {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 2rem;
+  padding-bottom: 2rem;
+}
+.laris-footer-col { display: flex; flex-direction: column; gap: 0.5rem; }
+.laris-footer-col strong { font-size: 1.05rem; }
+.laris-footer-col a {
+  color: rgba(255,255,255,0.75);
+  font-size: 0.9rem;
+}
+.laris-footer-col a:hover { color: #00a76f; }
+.laris-footer .text-muted { color: rgba(255,255,255,0.55) !important; }
 
-        .hero-trust {
-            display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
-            color: rgba(255,255,255,0.7); font-size: 0.88rem;
-        }
-        .hero-trust span { display: flex; align-items: center; gap: 6px; }
-        .hero-trust i { color: #25d366; }
-
-        /* Hero Card */
-        .hero-card {
-            background: #fff; border-radius: 20px; padding: 28px;
-            box-shadow: 0 25px 60px rgba(0,0,0,0.3);
-        }
-        .agent-item {
-            display: flex; align-items: center; gap: 14px;
-            padding: 14px 16px; border-radius: 12px; margin-bottom: 10px;
-            transition: all 0.3s;
-        }
-        .agent-item:last-child { margin-bottom: 0; }
-        .agent-item:hover { transform: translateX(4px); }
-        .agent-item:nth-child(1) { background: #f0fdf4; }
-        .agent-item:nth-child(2) { background: #eff6ff; }
-        .agent-item:nth-child(3) { background: #faf5ff; }
-        .agent-icon {
-            width: 46px; height: 46px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.1rem; flex-shrink: 0;
-        }
-        .agent-item:nth-child(1) .agent-icon { background: #bbf7d0; color: #166534; }
-        .agent-item:nth-child(2) .agent-icon { background: #bfdbfe; color: #1e40af; }
-        .agent-item:nth-child(3) .agent-icon { background: #e9d5ff; color: #6b21a8; }
-        .agent-name { font-weight: 700; font-size: 0.92rem; }
-        .agent-desc { font-size: 0.82rem; color: #6b7280; }
-
-        /* ========== STATS ========== */
-        .stats { padding: 48px 0; background: #fff; border-bottom: 1px solid #f3f4f6; }
-        .stats-grid {
-            display: grid; grid-template-columns: repeat(4, 1fr);
-            gap: 32px; text-align: center;
-        }
-        .stat-number {
-            font-size: 2.4rem; font-weight: 900;
-            background: linear-gradient(135deg, #1e40af, #7c3aed);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        .stat-label { font-size: 0.92rem; color: #6b7280; font-weight: 500; margin-top: 4px; }
-
-        /* ========== SECTION COMMON ========== */
-        .section { padding: 80px 0; }
-        .section-badge {
-            display: inline-block; background: #f3f4f6; color: #7c3aed;
-            padding: 6px 18px; border-radius: 50px; font-size: 0.78rem;
-            font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
-            margin-bottom: 14px;
-        }
-        .section-title {
-            font-size: 2.4rem; font-weight: 800; text-align: center;
-            margin-bottom: 14px; line-height: 1.2;
-        }
-        .section-subtitle {
-            font-size: 1.05rem; color: #6b7280; text-align: center;
-            max-width: 600px; margin: 0 auto 48px; line-height: 1.7;
-        }
-        .section-header { text-align: center; margin-bottom: 48px; }
-
-        /* ========== FEATURE CARDS ========== */
-        .laris-features { background: #f9fafb; }
-        .laris-features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-        .laris-feature-card {
-            background: #fff;
-            border: 1px solid rgba(28,37,46,.08);
-            border-radius: 16px;
-            padding: 24px;
-            box-shadow: 0 6px 20px rgba(28,37,46,.06);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        .laris-feature-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 30px rgba(28,37,46,.10);
-        }
-        .laris-feature-icon {
-            width: 48px; height: 48px; border-radius: 12px;
-            background: #c8fad6; color: #007867;
-            display: inline-flex; align-items: center; justify-content: center;
-            font-size: 1.4rem; margin-bottom: 16px;
-        }
-        .laris-feature-card h4 { font-size: 1.05rem; font-weight: 700; margin-bottom: 8px; }
-        .laris-feature-card p { font-size: 0.92rem; color: #6b7280; line-height: 1.6; }
-
-        /* 3D Lab section */
-        .laris-3d-lab { background: linear-gradient(180deg, #f9fafb 0%, #ffffff 100%); }
-        .laris-3d-frame {
-            position: relative;
-            width: 100%;
-            height: 520px;
-            border-radius: 1.25rem;
-            overflow: hidden;
-            box-shadow: 0 18px 40px rgba(15,23,42,0.18);
-            background: #0f172a;
-        }
-        .laris-3d-frame iframe {
-            width: 100%; height: 100%; border: 0; display: block;
-        }
-        .laris-3d-fallback {
-            position: absolute; inset: 0; display: none;
-            align-items: center; justify-content: center;
-            color: #fff; background: #0f172a; padding: 1.5rem; text-align: center;
-        }
-        .laris-3d-fallback a { color: #34d399; text-decoration: underline; }
-        @media (max-width: 768px) {
-            .laris-3d-frame { height: 420px; }
-        }
-        .laris-3d-caption {
-            text-align: center; font-size: 0.85rem; color: #6b7280;
-            margin-top: 0.85rem;
-        }
-        .laris-3d-alur { background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%); }
-        .laris-3d-stok { background: linear-gradient(180deg, #f1f5f9 0%, #fef9c3 100%); }
-        .laris-3d-omzet { background: linear-gradient(180deg, #fef9c3 0%, #0c4a6e 12%, #082f49 100%); color: #fff; }
-        .laris-3d-omzet .section-title, .laris-3d-omzet .section-subtitle, .laris-3d-omzet .section-badge { color: #fff; }
-        .laris-3d-omzet .section-badge { background: rgba(103, 232, 249, 0.18); color: #67e8f9; }
-        .laris-3d-omzet .laris-3d-caption { color: rgba(255,255,255,0.75); }
-        .laris-3d-frame-dark { background: #0f172a; }
-        .laris-3d-frame-warm { background: #fef3c7; }
-        .laris-3d-frame-cool { background: #0c4a6e; }
-
-        /* ========== AGENTS ========== */
-        .agents-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
-        .agent-card {
-            background: #fff; border-radius: 20px; padding: 32px;
-            border: 2px solid #f3f4f6; transition: all 0.3s;
-            position: relative; overflow: hidden;
-        }
-        .agent-card:hover { transform: translateY(-6px); box-shadow: 0 15px 40px rgba(0,0,0,0.1); border-color: #c4b5fd; }
-        .agent-card::before {
-            content: ''; position: absolute; top: 0; left: 0; right: 0;
-            height: 4px; border-radius: 4px 4px 0 0;
-        }
-        .agent-card:nth-child(1)::before { background: #16a34a; }
-        .agent-card:nth-child(2)::before { background: #f59e0b; }
-        .agent-card:nth-child(3)::before { background: #2563eb; }
-        .agent-card:nth-child(4)::before { background: #7c3aed; }
-        .agent-card-header { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
-        .agent-card-icon {
-            width: 52px; height: 52px; border-radius: 14px;
-            display: flex; align-items: center; justify-content: center; font-size: 1.4rem;
-        }
-        .agent-card:nth-child(1) .agent-card-icon { background: #dcfce7; color: #16a34a; }
-        .agent-card:nth-child(2) .agent-card-icon { background: #fef3c7; color: #d97706; }
-        .agent-card:nth-child(3) .agent-card-icon { background: #dbeafe; color: #2563eb; }
-        .agent-card:nth-child(4) .agent-card-icon { background: #ede9fe; color: #7c3aed; }
-        .agent-card h3 { font-size: 1.15rem; font-weight: 800; }
-        .agent-card .role { font-size: 0.83rem; color: #6b7280; margin-bottom: 16px; }
-        .agent-card ul { display: flex; flex-direction: column; gap: 10px; }
-        .agent-card li { display: flex; align-items: center; gap: 10px; font-size: 0.92rem; }
-        .agent-card li i { color: #25d366; font-size: 0.85rem; }
-
-        /* ========== STEPS ========== */
-        .steps-section { background: linear-gradient(180deg, #f8fafc, #fff); }
-        .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
-        .step { text-align: center; }
-        .step-number {
-            width: 80px; height: 80px; border-radius: 50%;
-            background: linear-gradient(135deg, #7c3aed, #1e40af);
-            color: #fff; font-size: 2rem;
-            display: flex; align-items: center; justify-content: center;
-            margin: 0 auto 20px; box-shadow: 0 8px 30px rgba(124,58,237,0.3);
-        }
-        .step h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; }
-        .step p { font-size: 0.92rem; color: #6b7280; max-width: 280px; margin: 0 auto; line-height: 1.6; }
-
-        /* ========== TESTIMONIALS ========== */
-        .testimonials { background: #f8fafc; }
-        .testi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-        .testi-card {
-            background: #fff; border-radius: 20px; padding: 32px;
-            border: 1px solid #f3f4f6; transition: all 0.3s;
-        }
-        .testi-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(0,0,0,0.08); }
-        .testi-stars { color: #fbbf24; margin-bottom: 16px; font-size: 0.9rem; }
-        .testi-quote { font-size: 0.93rem; line-height: 1.7; margin-bottom: 20px; font-style: italic; color: #374151; }
-        .testi-author { display: flex; align-items: center; gap: 12px; }
-        .testi-avatar {
-            width: 48px; height: 48px; border-radius: 50%;
-            background: linear-gradient(135deg, #7c3aed, #1e40af);
-            color: #fff; display: flex; align-items: center;
-            justify-content: center; font-weight: 800; font-size: 1rem;
-        }
-        .testi-name { font-weight: 700; font-size: 0.93rem; }
-        .testi-role { font-size: 0.82rem; color: #6b7280; }
-        .testi-result {
-            display: inline-block; background: #dcfce7; color: #166534;
-            padding: 5px 14px; border-radius: 50px; font-size: 0.82rem;
-            font-weight: 700; margin-top: 12px;
-        }
-
-        /* ========== PRICING ========== */
-        .pricing-grid {
-            display: grid; grid-template-columns: repeat(3, 1fr);
-            gap: 24px; max-width: 1080px; margin: 0 auto;
-        }
-        .price-card {
-            background: #fff; border-radius: 20px; padding: 40px 32px;
-            border: 2px solid #f3f4f6; transition: all 0.3s; position: relative;
-        }
-        .price-card:hover { transform: translateY(-6px); box-shadow: 0 15px 40px rgba(0,0,0,0.1); }
-        .price-card.popular { border-color: #7c3aed; box-shadow: 0 10px 40px rgba(124,58,237,0.12); }
-        .popular-tag {
-            position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
-            background: linear-gradient(135deg, #f59e0b, #ef4444);
-            color: #fff; padding: 6px 24px; border-radius: 50px;
-            font-size: 0.82rem; font-weight: 700; white-space: nowrap;
-        }
-        .price-emoji { font-size: 2.5rem; margin-bottom: 14px; }
-        .price-name { font-size: 1.3rem; font-weight: 800; margin-bottom: 8px; }
-        .price-amount { font-size: 2.2rem; font-weight: 900; color: #1e40af; }
-        .price-amount span { font-size: 1rem; font-weight: 500; color: #6b7280; }
-        .price-desc { font-size: 0.85rem; color: #6b7280; margin-bottom: 24px; margin-top: 4px; }
-        .price-features { display: flex; flex-direction: column; gap: 12px; margin-bottom: 28px; }
-        .price-features li { display: flex; align-items: flex-start; gap: 10px; font-size: 0.92rem; }
-        .price-features li i { color: #25d366; margin-top: 3px; flex-shrink: 0; }
-        .price-btn {
-            display: flex; align-items: center; justify-content: center; gap: 8px;
-            width: 100%; padding: 16px; border-radius: 50px;
-            font-weight: 700; font-size: 1rem; transition: all 0.3s;
-        }
-        .price-btn-outline {
-            background: transparent; color: #1e40af; border: 2px solid #1e40af;
-        }
-        .price-btn-outline:hover { background: #1e40af; color: #fff; }
-        .price-btn-filled {
-            background: linear-gradient(135deg, #25d366, #128c7e);
-            color: #fff; border: 2px solid transparent;
-            box-shadow: 0 6px 20px rgba(37,211,102,0.3);
-        }
-        .price-btn-filled:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(37,211,102,0.5); }
-        .price-note { text-align: center; margin-top: 28px; font-size: 0.9rem; color: #6b7280; }
-
-        /* ========== FAQ ========== */
-        .faq-section { background: #f8fafc; }
-        .faq-list { max-width: 760px; margin: 0 auto; }
-        .faq-item {
-            background: #fff; border-radius: 12px; margin-bottom: 12px;
-            border: 1px solid #f3f4f6; overflow: hidden; transition: all 0.3s;
-        }
-        .faq-item:hover { border-color: #c4b5fd; }
-        .faq-question {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 20px 24px; cursor: pointer; font-weight: 600;
-            font-size: 0.98rem; width: 100%; text-align: left; color: #1f2937;
-            gap: 16px;
-        }
-        .faq-question:hover { color: #7c3aed; }
-        .faq-question i { color: #7c3aed; font-size: 0.85rem; transition: transform 0.3s; flex-shrink: 0; }
-        .faq-item.open .faq-question i { transform: rotate(180deg); }
-        .faq-answer {
-            max-height: 0; overflow: hidden;
-            transition: max-height 0.4s ease;
-        }
-        .faq-item.open .faq-answer { max-height: 300px; }
-        .faq-answer-inner { padding: 0 24px 20px; font-size: 0.92rem; color: #6b7280; line-height: 1.7; }
-
-        /* ========== CTA FINAL ========== */
-        .cta-final {
-            padding: 80px 0; text-align: center; color: #fff;
-            background: linear-gradient(135deg, #1e1b4b 0%, #1e40af 50%, #7c3aed 100%);
-            position: relative; overflow: hidden;
-        }
-        .cta-final::before {
-            content: ''; position: absolute; inset: 0;
-            background: radial-gradient(circle at 30% 50%, rgba(37,211,102,0.15) 0%, transparent 60%);
-        }
-        .cta-final .container { position: relative; z-index: 1; }
-        .cta-final h2 { font-size: 2.5rem; font-weight: 900; margin-bottom: 16px; }
-        .cta-final p {
-            font-size: 1.1rem; color: rgba(255,255,255,0.8);
-            margin-bottom: 36px; max-width: 550px; margin-left: auto; margin-right: auto;
-        }
-
-        /* ========== FOOTER ========== */
-        .footer { background: #0f172a; color: rgba(255,255,255,0.7); padding: 48px 0 24px; }
-        .footer-grid {
-            display: grid; grid-template-columns: 2fr 1fr 1fr;
-            gap: 48px; margin-bottom: 40px;
-        }
-        .footer-brand .nav-logo { color: #a78bfa; margin-bottom: 16px; }
-        .footer-brand p { font-size: 0.88rem; max-width: 320px; line-height: 1.7; }
-        .footer-title { font-weight: 700; color: #fff; margin-bottom: 16px; font-size: 0.95rem; }
-        .footer-links { display: flex; flex-direction: column; gap: 10px; }
-        .footer-links a { font-size: 0.88rem; transition: color 0.3s; }
-        .footer-links a:hover { color: #25d366; }
-        .footer-socials { display: flex; gap: 12px; margin-top: 16px; }
-        .footer-socials a {
-            width: 40px; height: 40px; border-radius: 50%;
-            background: rgba(255,255,255,0.1); display: flex;
-            align-items: center; justify-content: center; transition: all 0.3s;
-        }
-        .footer-socials a:hover { background: #25d366; color: #fff; transform: translateY(-3px); }
-        .footer-bottom {
-            border-top: 1px solid rgba(255,255,255,0.1);
-            padding-top: 24px; text-align: center; font-size: 0.85rem;
-        }
-
-        /* ========== FLOATING WA ========== */
-        .wa-float { position: fixed; bottom: 24px; right: 24px; z-index: 9999; }
-        .wa-float a {
-            display: flex; align-items: center; gap: 10px;
-            background: linear-gradient(135deg, #25d366, #128c7e);
-            color: #fff; padding: 16px 28px; border-radius: 50px;
-            font-weight: 700; font-size: 0.95rem;
-            box-shadow: 0 8px 30px rgba(37,211,102,0.45);
-            transition: all 0.3s; animation: pulseWA 2s infinite;
-        }
-        .wa-float a:hover { transform: translateY(-3px) scale(1.03); box-shadow: 0 12px 40px rgba(37,211,102,0.6); }
-        .wa-float a i { font-size: 1.3rem; }
-        .wa-badge {
-            position: absolute; top: -4px; right: -4px;
-            width: 20px; height: 20px; background: #ef4444;
-            border-radius: 50%; display: flex; align-items: center;
-            justify-content: center; font-size: 0.65rem; font-weight: 800;
-            color: #fff; border: 2px solid #fff;
-        }
-
-        /* ========== RESPONSIVE â€” TABLET ========== */
-        @media (max-width: 1024px) {
-            .hero h1 { font-size: 2.4rem; }
-            .section-title { font-size: 2rem; }
-            .footer-grid { grid-template-columns: 1fr 1fr; }
-        }
-
-        /* ========== RESPONSIVE â€” MOBILE ========== */
-        @media (max-width: 768px) {
-            .nav-links { display: none; }
-            .hamburger { display: flex; }
-            .mobile-menu { display: block; }
-
-            .hero { padding: 110px 0 60px; }
-            .hero .container { grid-template-columns: 1fr; gap: 40px; }
-            .hero h1 { font-size: 2rem; }
-            .hero-text { font-size: 1rem; }
-            .hero-buttons { flex-direction: column; }
-            .hero-buttons .btn { width: 100%; }
-
-            .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 20px; }
-            .stat-number { font-size: 1.8rem; }
-
-            .section { padding: 60px 0; }
-            .section-title { font-size: 1.7rem; }
-
-            .laris-features-grid, .agents-grid, .testi-grid, .pricing-grid { grid-template-columns: 1fr; }
-            .steps-grid { grid-template-columns: 1fr; gap: 40px; }
-            .cta-final h2 { font-size: 1.8rem; }
-            .footer-grid { grid-template-columns: 1fr; gap: 32px; }
-
-            .wa-float a span { display: none; }
-            .wa-float a { padding: 16px; border-radius: 50%; }
-        }
-    </style>
-</head>
+/* --- Responsive --- */
+@media (max-width: 992px) {
+  .laris-hero-inner { grid-template-columns: 1fr; text-align: center; }
+  .laris-lead { margin-left: auto; margin-right: auto; }
+  .laris-hero-cta, .laris-hero-meta { justify-content: center; }
+  .laris-phone-frame { margin: 0 auto; }
+  .laris-stats-inner { grid-template-columns: repeat(2, 1fr); }
+  .laris-features-grid { grid-template-columns: repeat(2, 1fr); }
+  .laris-flow-grid { grid-template-columns: repeat(2, 1fr); }
+  .laris-footer-inner { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 576px) {
+  .laris-hero { padding: 3rem 1rem; }
+  .laris-features, .laris-flow, .laris-cta { padding: 3rem 1rem; }
+  .laris-features-grid, .laris-flow-grid { grid-template-columns: 1fr; }
+  .laris-stats-inner { grid-template-columns: 1fr 1fr; }
+  .laris-cta-card { padding: 1.5rem; }
+}
+</style></head>
 <body>
 
-    <!-- ==================== NAVBAR ==================== -->
-    <nav class="navbar" id="navbar">
-        <div class="container nav-inner">
-            <a href="#" class="nav-logo">
-                <i class="fas fa-rocket"></i> Laris.AI
-            </a>
-
-            <div class="nav-links">
-                <a href="https://www.larisai.my.id/fitur/">Fitur</a>
-                <a href="#cara-kerja">Cara Kerja</a>
-                <a href="https://www.larisai.my.id/harga/">Harga</a>
-                <a href="#testimoni">Testimoni</a>
-                <a href="https://www.larisai.my.id/artikel/cara-mencatat-keuangan-warung/" target="_blank" rel="noopener">Artikel</a>
-                <a href="#faq">FAQ</a>
-                <a href="https://wa.me/6282112826851?text=Halo%20laris.AI%2C%20saya%20tertarik%20konsultasi%20gratis" class="nav-cta" target="_blank" rel="noopener">
-                    <i class="fab fa-whatsapp"></i> Konsultasi Gratis
-                </a>
-            </div>
-
-            <button class="hamburger" id="hamburger" aria-label="Buka menu">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
-        </div>
-
-        <!-- Mobile Menu -->
-        <div class="mobile-menu" id="mobileMenu">
-            <a href="https://www.larisai.my.id/fitur/" class="mobile-link"><i class="fas fa-star"></i> Fitur</a>
-            <a href="#cara-kerja" class="mobile-link"><i class="fas fa-cog"></i> Cara Kerja</a>
-            <a href="https://www.larisai.my.id/harga/" class="mobile-link"><i class="fas fa-tag"></i> Harga</a>
-            <a href="#testimoni" class="mobile-link"><i class="fas fa-heart"></i> Testimoni</a>
-            <a href="https://www.larisai.my.id/artikel/cara-mencatat-keuangan-warung/" class="mobile-link" target="_blank" rel="noopener"><i class="fas fa-newspaper"></i> Artikel</a>
-            <a href="#faq" class="mobile-link"><i class="fas fa-question-circle"></i> FAQ</a>
-            <a href="https://wa.me/6282112826851?text=Halo%20laris.AI%2C%20saya%20tertarik%20konsultasi%20gratis" class="nav-cta" target="_blank" rel="noopener">
-                <i class="fab fa-whatsapp"></i> Konsultasi Gratis
-            </a>
-        </div>
-    </nav>
-
-    <!-- ==================== HERO ==================== -->
-    <section class="hero">
-        <div class="container">
-            <div class="fade-in">
-                <div class="hero-badge">ðŸ“± WA-First â€” Buku Kas & Stok UMKM</div>
-                <h1>
-                    Catat Penjualan & Keuangan<br>Langsung dari WhatsApp<br>
-                    <span class="highlight">AI Multi-Agent UMKM<br>Bekerja untuk Bisnis Anda</span>
-                </h1>
-                <p class="hero-text">
-                    laris.AI membantu owner UMKM mencatat pemasukan/pengeluaran, memantau stok,
-                    dan mengambil keputusan lewat Ruang Komando â€” tanpa spreadsheet rumit.
-                    Kirim teks, foto struk, atau voice note; AI yang merapikan.
-                </p>
-                <div class="hero-buttons">
-                    <a href="https://wa.me/6282112826851?text=Halo%20laris.AI%2C%20saya%20tertarik%20konsultasi%20gratis" class="btn btn-wa pulse-wa" target="_blank" rel="noopener">
-                        <i class="fab fa-whatsapp"></i> Konsultasi Gratis via WA
-                    </a>
-                    <a href="https://www.larisai.my.id/artikel/cara-mencatat-keuangan-warung/" class="btn btn-outline" target="_blank" rel="noopener">
-                        <i class="fas fa-newspaper"></i> Baca Artikel UMKM
-                    </a>
-                    <a href="#cara-kerja" class="btn btn-outline">
-                        <i class="fas fa-play-circle"></i> Lihat Cara Kerja
-                    </a>
-                </div>
-                <div class="hero-trust">
-                    <span><i class="fas fa-check-circle"></i> Catat via WhatsApp</span>
-                    <span><i class="fas fa-check-circle"></i> Dashboard real-time</span>
-                    <span><i class="fas fa-check-circle"></i> Trial & demo tersedia</span>
-                </div>
-            </div>
-
-            <div class="float-anim fade-in">
-                <div class="hero-card">
-                    <div class="agent-item">
-                        <div class="agent-icon"><i class="fas fa-calculator"></i></div>
-                        <div>
-                            <div class="agent-name">Admin AI ðŸ”µ</div>
-                            <div class="agent-desc">Catat: jual nasi goreng 25rb, beli gula 10rb âœ…</div>
-                        </div>
-                    </div>
-                    <div class="agent-item">
-                        <div class="agent-icon"><i class="fas fa-boxes-stacked"></i></div>
-                        <div>
-                            <div class="agent-name">Logistik AI ðŸŸ£</div>
-                            <div class="agent-desc">Stok indomie 3 â€” saran restock menunggu approval</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ==================== STATS ==================== -->
-    <section class="stats">
-        <div class="container">
-            <div class="stats-grid">
-                <div>
-                    <div class="stat-number">2</div>
-                    <div class="stat-label">Agent AI Aktif</div>
-                </div>
-                <div>
-                    <div class="stat-number">WA</div>
-                    <div class="stat-label">Input Teks / Foto / Suara</div>
-                </div>
-                <div>
-                    <div class="stat-number">KUR</div>
-                    <div class="stat-label">Ringkasan Laporan</div>
-                </div>
-                <div>
-                    <div class="stat-number">24/7</div>
-                    <div class="stat-label">Dashboard Online</div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ==================== FEATURE CARDS ==================== -->
-    <section class="section laris-features" id="fitur">
-        <div class="container">
-            <div class="section-header">
-                <div class="section-badge">âœ¨ Fitur Utama</div>
-                <h2 class="section-title">Semua yang UMKM butuhkan, dalam satu platform.</h2>
-                <p class="section-subtitle">Catat, lihat, dan ambil keputusan lebih cepat dengan AI Multi-Agent.</p>
-            </div>
-            <div class="laris-features-grid">
-                <div class="laris-feature-card">
-                    <div class="laris-feature-icon"><i class="ti ti-brand-whatsapp"></i></div>
-                    <h4>Catat via WhatsApp</h4>
-                    <p>Kirim pesan seperti 'jual kopi 50rb' lewat WA â€” AI langsung catat ke Buku Kas.</p>
-                </div>
-
-                <div class="laris-feature-card">
-                    <div class="laris-feature-icon"><i class="ti ti-robot"></i></div>
-                    <h4>Asisten Multi-Agent</h4>
-                    <p>Admin AI kelola ringkasan & stok. Logistik AI kasih rekomendasi PO otomatis.</p>
-                </div>
-
-                <div class="laris-feature-card">
-                    <div class="laris-feature-icon"><i class="ti ti-chart-bar"></i></div>
-                    <h4>Dashboard Real-Time</h4>
-                    <p>Pantau omzet, laba, dan stok UMKM di satu layar Dasher yang modern.</p>
-                </div>
-
-                <div class="laris-feature-card">
-                    <div class="laris-feature-icon"><i class="ti ti-shield-check"></i></div>
-                    <h4>Multi-Tenant Aman</h4>
-                    <p>RLS Supabase: tiap toko hanya lihat data sendiri. Owner tenang.</p>
-                </div>
-
-                <div class="laris-feature-card">
-                    <div class="laris-feature-icon"><i class="ti ti-bolt"></i></div>
-                    <h4>Auto-Restock</h4>
-                    <p>AI kasih peringatan ketika stok produk menyentuh ambang minimum.</p>
-                </div>
-
-                <div class="laris-feature-card">
-                    <div class="laris-feature-icon"><i class="ti ti-report-money"></i></div>
-                    <h4>Laporan KUR</h4>
-                    <p>Ringkasan otomatis untuk pengajuan Kredit Usaha Rakyat ke bank.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ==================== 3D KNOWLEDGE LAB ==================== -->
-    <!-- Section ini interaktif: 3 koin 3D yang bisa di-drag. Tiap klik
-         koin akan menampilkan insight berbeda (transaksi / stok / pelanggan).
-         File sumber: laris-3d/koin_3d.html
-         Cara edit: buka file itu, ubah label/warna, deploy ulang. -->
-    <section class="section laris-3d-lab" id="3d">
-        <div class="container">
-            <div class="section-header">
-                <div class="section-badge">ðŸŽ“ Lab Pengetahuan 3D</div>
-                <h2 class="section-title">Belajar Bisnis UMKM dengan Visual Interaktif.</h2>
-                <p class="section-subtitle">Drag untuk memutar Â· Scroll untuk zoom Â· Klik koin untuk melihat insight dari data UMKM.</p>
-            </div>
-            <div class="laris-3d-frame">
-                <iframe src="/laris-3d/koin_3d.html" title="Koin Pengetahuan UMKM 3D" loading="lazy" allow="autoplay; fullscreen"></iframe>
-                <div class="laris-3d-fallback">
-                    <p>Browser Anda tidak mendukung 3D interaktif. <a href="/laris-3d/koin_3d.html" target="_blank" rel="noopener">Buka di tab baru</a>.</p>
-                </div>
-            </div>
-            <p class="laris-3d-caption">Snippet ringan &lt; 200KB Â· Three.js via CDN Â· tidak mengganggu loading landing.</p>
-        </div>
-    </section>
-
-    <!-- ==================== 3D ALUR DATA ==================== -->
-    <!-- Diagram 3D: WhatsApp â†’ AI â†’ Supabase â†’ Dashboard, dengan partikel
-         data yang mengalir di setiap tahap. Klik node untuk lihat detail.
-         File sumber: laris-3d/alur_3d.html -->
-    <section class="section laris-3d-alur" id="alur-3d">
-        <div class="container">
-            <div class="section-header">
-                <div class="section-badge">ðŸ› ï¸ Alur Data 3D</div>
-                <h2 class="section-title">Lihat data mengalir dari chat WhatsApp ke dashboard bisnis Anda.</h2>
-                <p class="section-subtitle">Drag untuk memutar Â· Scroll untuk zoom Â· Klik node untuk melihat penjelasan tiap tahap.</p>
-            </div>
-            <div class="laris-3d-frame laris-3d-frame-dark">
-                <iframe src="/laris-3d/alur_3d.html" title="Alur Data UMKM 3D" loading="lazy" allow="autoplay; fullscreen"></iframe>
-                <div class="laris-3d-fallback">
-                    <p>Browser Anda tidak mendukung 3D interaktif. <a href="/laris-3d/alur_3d.html" target="_blank" rel="noopener">Buka di tab baru</a>.</p>
-                </div>
-            </div>
-            <p class="laris-3d-caption">4 node Â· 3 jalur data Â· ~120 partikel hidup. Bukti teknis alur AI multi-agent laris.AI.</p>
-        </div>
-    </section>
-
-    <!-- ==================== 3D RAK STOK ==================== -->
-    <!-- Visualisasi rak gudang 3D: 3 shelf Ã— 5 kolom Ã— 4 baris = 60 slot
-         produk. Warna = kategori (minuman, makanan, snack, bahan dapur).
-         Kotak merah = stok menipis. Klik produk untuk lihat detail.
-         File sumber: laris-3d/stok_3d.html -->
-    <section class="section laris-3d-stok" id="stok-3d">
-        <div class="container">
-            <div class="section-header">
-                <div class="section-badge">ðŸ“¦ Rak Stok 3D</div>
-                <h2 class="section-title">Pantau stok UMKM dari sudut manapun.</h2>
-                <p class="section-subtitle">Drag untuk memutar Â· Scroll untuk zoom Â· Klik kotak untuk lihat detail barang & status stok.</p>
-            </div>
-            <div class="laris-3d-frame laris-3d-frame-warm">
-                <iframe src="/laris-3d/stok_3d.html" title="Rak Stok UMKM 3D" loading="lazy" allow="autoplay; fullscreen"></iframe>
-                <div class="laris-3d-fallback">
-                    <p>Browser Anda tidak mendukung 3D interaktif. <a href="/laris-3d/stok_3d.html" target="_blank" rel="noopener">Buka di tab baru</a>.</p>
-                </div>
-            </div>
-            <p class="laris-3d-caption">60 slot produk Â· 4 kategori Â· highlight otomatis untuk stok menipis.</p>
-        </div>
-    </section>
-
-    <!-- ==================== 3D GRAFIK OMZET ==================== -->
-    <!-- Bar chart 3D 7/30 hari dengan animasi tumbuh. Klik bar untuk
-         lihat nominal hari tersebut. Stats panel: total, rata-rata,
-         hari tertinggi, tren. File sumber: laris-3d/omzet_3d.html -->
-    <section class="section laris-3d-omzet" id="omzet-3d">
-        <div class="container">
-            <div class="section-header">
-                <div class="section-badge">ðŸ“ˆ Grafik Omzet 3D</div>
-                <h2 class="section-title">Visualisasikan omzet bisnis Anda dalam 3D.</h2>
-                <p class="section-subtitle">Drag untuk memutar Â· Scroll untuk zoom Â· Toggle 7/30 hari Â· Klik bar untuk lihat nominal.</p>
-            </div>
-            <div class="laris-3d-frame laris-3d-frame-cool">
-                <iframe src="/laris-3d/omzet_3d.html" title="Grafik Omzet UMKM 3D" loading="lazy" allow="autoplay; fullscreen"></iframe>
-                <div class="laris-3d-fallback">
-                    <p>Browser Anda tidak mendukung 3D interaktif. <a href="/laris-3d/omzet_3d.html" target="_blank" rel="noopener">Buka di tab baru</a>.</p>
-                </div>
-            </div>
-            <p class="laris-3d-caption">Animasi bar tumbuh Â· 7 & 30 hari Â· statistik otomatis (total, rata-rata, puncak, tren).</p>
-        </div>
-    </section>
-
-    <!-- ==================== MULTI-AGENT ==================== -->
-    <section class="section">
-        <div class="container">
-            <div class="section-header">
-                <div class="section-badge">ðŸ¤– Solusi Cerdas</div>
-                <h2 class="section-title">AI yang Terdaftar di Platform</h2>
-                <p class="section-subtitle">Aktifkan agent sesuai kebutuhan operasional: layanan pelanggan, order, pembayaran, pencatatan, dan logistik.</p>
-            </div>
-            <div class="agents-grid">
-                <div class="agent-card">
-                    <div class="agent-card-header">
-                        <div class="agent-card-icon"><i class="fas fa-calculator"></i></div>
-                        <div>
-                            <h3>Admin AI ðŸ”µ</h3>
-                            <div class="role">Buku Kas, Ringkasan, Laporan KUR</div>
-                        </div>
-                    </div>
-                    <ul>
-                        <li><i class="fas fa-check-circle"></i> Catat transaksi dari teks WA</li>
-                        <li><i class="fas fa-check-circle"></i> Baca struk / foto belanja</li>
-                        <li><i class="fas fa-check-circle"></i> Voice note â†’ otomatis jadi entri</li>
-                        <li><i class="fas fa-check-circle"></i> Ringkasan & Laris Score</li>
-                    </ul>
-                </div>
-                <div class="agent-card">
-                    <div class="agent-card-header">
-                        <div class="agent-card-icon"><i class="fas fa-boxes-stacked"></i></div>
-                        <div>
-                            <h3>Logistik AI ðŸŸ£</h3>
-                            <div class="role">Stok & Approval Restock</div>
-                        </div>
-                    </div>
-                    <ul>
-                        <li><i class="fas fa-check-circle"></i> Deteksi penjualan: "jual indomie 5"</li>
-                        <li><i class="fas fa-check-circle"></i> Kurangi stok otomatis</li>
-                        <li><i class="fas fa-check-circle"></i> Saran PO jika stok kritis</li>
-                        <li><i class="fas fa-check-circle"></i> Owner Setujui/Tolak di Ruang Komando</li>
-                    </ul>
-                </div>
-                <div class="agent-card">
-                    <div class="agent-card-header">
-                        <div class="agent-card-icon"><i class="fas fa-comments"></i></div>
-                        <div>
-                            <h3>CS + Support AI ðŸŸ¢</h3>
-                            <div class="role">Respon Chat Pelanggan</div>
-                        </div>
-                    </div>
-                    <ul>
-                        <li><i class="fas fa-check-circle"></i> Jawab pertanyaan umum & jam operasional</li>
-                        <li><i class="fas fa-check-circle"></i> Tangani komplain awal pelanggan</li>
-                        <li><i class="fas fa-check-circle"></i> Eskalasi kasus sensitif ke owner</li>
-                        <li><i class="fas fa-check-circle"></i> Jaga konsistensi bahasa brand toko</li>
-                    </ul>
-                </div>
-                <div class="agent-card">
-                    <div class="agent-card-header">
-                        <div class="agent-card-icon"><i class="fas fa-receipt"></i></div>
-                        <div>
-                            <h3>Order + Payment AI ðŸŸ </h3>
-                            <div class="role">Pesanan & Pembayaran</div>
-                        </div>
-                    </div>
-                    <ul>
-                        <li><i class="fas fa-check-circle"></i> Proses order dari chat pelanggan</li>
-                        <li><i class="fas fa-check-circle"></i> Hitung total & metode bayar</li>
-                        <li><i class="fas fa-check-circle"></i> Konfirmasi status pembayaran</li>
-                        <li><i class="fas fa-check-circle"></i> Sinkron ke alur stok & laporan</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ==================== CARA KERJA ==================== -->
-    <section class="section steps-section" id="cara-kerja">
-        <div class="container">
-            <div class="section-header">
-                <div class="section-badge">âš¡ Super Mudah</div>
-                <h2 class="section-title">Mulai dalam 3 Langkah Mudah</h2>
-                <p class="section-subtitle">Tidak perlu keahlian teknis. Kami yang handle semuanya!</p>
-            </div>
-            <div class="steps-grid">
-                <div class="step">
-                    <div class="step-number">1</div>
-                    <h3>Admin buat akun trial</h3>
-                    <p>Owner UMKM dapat akses dashboard. Nomor WhatsApp dihubungkan ke akun client.</p>
-                </div>
-                <div class="step">
-                    <div class="step-number">2</div>
-                    <h3>Catat lewat WhatsApp</h3>
-                    <p>Kirim "jual indomie 5", foto struk, atau voice note â€” Admin AI merapikan ke buku kas.</p>
-                </div>
-                <div class="step">
-                    <div class="step-number">3</div>
-                    <h3>Pantau Ruang Komando</h3>
-                    <p>Logistik AI usulkan restock; owner Setujui/Tolak langsung dari dashboard.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ==================== USE CASES (bukan testimoni fiktif) ==================== -->
-    <section class="section testimonials" id="testimoni">
-        <div class="container">
-            <div class="section-header">
-                <div class="section-badge">ðŸŽ¯ Cocok Untuk</div>
-                <h2 class="section-title">Use Case yang Sudah Didukung Produk</h2>
-                <p class="section-subtitle">Fokus operasional nyata â€” bukan janji marketing generik</p>
-            </div>
-            <div class="testi-grid">
-                <div class="testi-card">
-                    <div class="testi-stars"><i class="fas fa-store"></i></div>
-                    <p class="testi-quote">Warung & toko kelontong: catat jual/beli harian lewat WA, lihat saldo & Laris Score di dashboard.</p>
-                    <div class="testi-result">ðŸ“’ Buku kas + ringkasan</div>
-                </div>
-                <div class="testi-card">
-                    <div class="testi-stars"><i class="fas fa-warehouse"></i></div>
-                    <p class="testi-quote">UMKM dengan stok barang: "jual indomie 5" otomatis mengurangi stok dan memicu saran restock.</p>
-                    <div class="testi-result">ðŸ“¦ Logistik + approval</div>
-                </div>
-                <div class="testi-card">
-                    <div class="testi-stars"><i class="fas fa-file-contract"></i></div>
-                    <p class="testi-quote">Owner yang butuh data rapi untuk evaluasi usaha atau persiapan laporan KUR.</p>
-                    <div class="testi-result">ðŸ“Š Laporan KUR & insight</div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ==================== PRICING ==================== -->
-    <section class="section" id="harga">
-        <div class="container">
-            <div class="section-header">
-                <div class="section-badge">ðŸ’° Paket & Trial</div>
-                <h2 class="section-title">Harga Jelas, Bisa Upgrade Kapan Saja</h2>
-                <p class="section-subtitle">Pilih paket sesuai tahap usaha Anda. Semua paket termasuk onboarding awal via WhatsApp.</p>
-            </div>
-            <div class="pricing-grid">
-                <div class="price-card">
-                    <div class="price-emoji">ðŸŒ±</div>
-                    <div class="price-name">Starter (1 Nomor)</div>
-                    <div class="price-amount">Rp 99.000<span>/bulan</span></div>
-                    <div class="price-desc">Warung, kios, usaha rumahan (hemat)</div>
-                    <ul class="price-features">
-                        <li><i class="fas fa-check-circle"></i> <strong>1 nomor WhatsApp saja</strong> (owner/admin)</li>
-                        <li><i class="fas fa-check-circle"></i> <strong>Admin AI aktif</strong> untuk pencatatan</li>
-                        <li><i class="fas fa-check-circle"></i> Pencatatan pemasukan & pengeluaran</li>
-                        <li><i class="fas fa-check-circle"></i> Buku kas sederhana</li>
-                        <li><i class="fas fa-check-circle"></i> Input WhatsApp teks</li>
-                        <li><i class="fas fa-check-circle"></i> 1 user owner</li>
-                        <li><i class="fas fa-check-circle"></i> Support chat jam kerja</li>
-                    </ul>
-                    <a href="https://wa.me/6282112826851?text=Halo%20laris.AI%2C%20saya%20mau%20paket%20Starter" class="price-btn price-btn-outline" target="_blank" rel="noopener">
-                        Pilih Starter
-                    </a>
-                </div>
-                <div class="price-card popular">
-                    <div class="popular-tag">â­ PALING POPULER</div>
-                    <div class="price-emoji">ðŸ“¦</div>
-                    <div class="price-name">Growth (2 Nomor)</div>
-                    <div class="price-amount">Rp 249.000<span>/bulan</span></div>
-                    <div class="price-desc">Stok, approval, laporan KUR</div>
-                    <ul class="price-features">
-                        <li><i class="fas fa-check-circle"></i> <strong>2 nomor terpisah:</strong> CS + AI Catat</li>
-                        <li><i class="fas fa-check-circle"></i> <strong>4 AI aktif:</strong> Admin, Logistik, Order, Payment</li>
-                        <li><i class="fas fa-check-circle"></i> Input teks, foto struk, voice</li>
-                        <li><i class="fas fa-check-circle"></i> Ruang Komando (Setujui/Tolak)</li>
-                        <li><i class="fas fa-check-circle"></i> Gudang & inventaris</li>
-                        <li><i class="fas fa-check-circle"></i> Laporan KUR & Laris Score</li>
-                        <li><i class="fas fa-check-circle"></i> Hingga 3 user</li>
-                    </ul>
-                    <a href="https://wa.me/6282112826851?text=Halo%20laris.AI%2C%20saya%20mau%20paket%20Growth" class="price-btn price-btn-filled" target="_blank" rel="noopener">
-                        <i class="fab fa-whatsapp"></i> Pilih Growth
-                    </a>
-                </div>
-                <div class="price-card">
-                    <div class="price-emoji">ðŸ¢</div>
-                    <div class="price-name">Pro Multi-Outlet (Full AI)</div>
-                    <div class="price-amount">Rp 499.000<span>/bulan</span></div>
-                    <div class="price-desc">Untuk usaha dengan tim & cabang</div>
-                    <ul class="price-features">
-                        <li><i class="fas fa-check-circle"></i> <strong>Semua AI aktif:</strong> CS, Sales, Order, Payment, Support, Admin, Logistik</li>
-                        <li><i class="fas fa-check-circle"></i> Semua fitur Growth</li>
-                        <li><i class="fas fa-check-circle"></i> Hingga 10 user</li>
-                        <li><i class="fas fa-check-circle"></i> Multi-gudang & kontrol stok</li>
-                        <li><i class="fas fa-check-circle"></i> Priority support</li>
-                        <li><i class="fas fa-check-circle"></i> Review KPI bulanan</li>
-                    </ul>
-                    <a href="https://wa.me/6282112826851?text=Halo%20laris.AI%2C%20saya%20mau%20paket%20Pro" class="price-btn price-btn-outline" target="_blank" rel="noopener">
-                        Pilih Pro
-                    </a>
-                </div>
-            </div>
-            <p class="price-note">âœ… Setup awal (onboarding + mapping WhatsApp) Rp 199.000 sekali bayar. Tersedia demo publik untuk coba alur sebelum berlangganan.</p>
-        </div>
-    </section>
-
-    <!-- ==================== FAQ ==================== -->
-    <section class="section faq-section" id="faq">
-        <div class="container">
-            <div class="section-header">
-                <div class="section-badge">â“ FAQ</div>
-                <h2 class="section-title">Pertanyaan yang Sering Ditanyakan</h2>
-                <p class="section-subtitle">Belum yakin? Mungkin jawabannya ada di sini.</p>
-            </div>
-            <div class="faq-list">
-                <div class="faq-item">
-                    <button class="faq-question">
-                        Bagaimana cara dapat akun trial?
-                        <i class="fas fa-chevron-down"></i>
-                    </button>
-                    <div class="faq-answer">
-                        <div class="faq-answer-inner">Akun trial dibuat oleh admin laris.AI. Hubungi kami via WhatsApp atau minta admin internal membuat client di menu Pengaturan, lalu hubungkan nomor WA client.</div>
-                    </div>
-                </div>
-                <div class="faq-item">
-                    <button class="faq-question">
-                        Apa yang bisa dikirim lewat WhatsApp?
-                        <i class="fas fa-chevron-down"></i>
-                    </button>
-                    <div class="faq-answer">
-                        <div class="faq-answer-inner">Teks (mis. "jual indomie 5"), foto struk belanja, atau voice note. Admin AI merapikan ke buku kas; Logistik AI memantau stok jika produk terdaftar.</div>
-                    </div>
-                </div>
-                <div class="faq-item">
-                    <button class="faq-question">
-                        Apakah perlu install aplikasi?
-                        <i class="fas fa-chevron-down"></i>
-                    </button>
-                    <div class="faq-answer">
-                        <div class="faq-answer-inner">Input utama lewat WhatsApp. Dashboard web dipakai owner untuk melihat ringkasan, Ruang Komando, dan laporan â€” cukup browser, tanpa install app khusus.</div>
-                    </div>
-                </div>
-                <div class="faq-item">
-                    <button class="faq-question">
-                        Agent apa saja yang sudah aktif?
-                        <i class="fas fa-chevron-down"></i>
-                    </button>
-                    <div class="faq-answer">
-                        <div class="faq-answer-inner">Agent yang tersedia: <strong>CS, Sales, Order, Payment, Support, Admin,</strong> dan <strong>Logistik AI</strong>. Untuk paket Starter kami sarankan mode hemat: <strong>1 nomor</strong> dengan fokus Admin AI pencatatan.</div>
-                    </div>
-                </div>
-                <div class="faq-item">
-                    <button class="faq-question">
-                        Bisa dipakai untuk bisnis apa saja?
-                        <i class="fas fa-chevron-down"></i>
-                    </button>
-                    <div class="faq-answer">
-                        <div class="faq-answer-inner">Cocok untuk warung, toko kelontong, kios, usaha rumahan, dan UMKM yang perlu pencatatan keuangan + stok sederhana.</div>
-                    </div>
-                </div>
-                <div class="faq-item">
-                    <button class="faq-question">
-                        Bagaimana harga final ditentukan?
-                        <i class="fas fa-chevron-down"></i>
-                    </button>
-                    <div class="faq-answer">
-                        <div class="faq-answer-inner">Kami sesuaikan dengan kedalaman workflow (buku kas saja vs stok + approval + laporan KUR), jumlah user, dan kebutuhan integrasi bot WhatsApp. Konsultasi gratis via WA.</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ==================== CTA FINAL ==================== -->
-    <section class="cta-final">
-        <div class="container">
-            <h2>Siap Coba Trial 1 Akun + WhatsApp? ðŸš€</h2>
-            <p>Lihat demo publik dulu, atau hubungi kami untuk setup akun trial dan integrasi bot.</p>
-            <a href="https://wa.me/6282112826851?text=Halo%20laris.AI%2C%20saya%20mau%20lihat%20demo" class="btn btn-outline" style="margin-right:12px;" target="_blank" rel="noopener">
-                <i class="fab fa-whatsapp"></i> Lihat Demo via WA
-            </a>
-            <a href="https://wa.me/6282112826851?text=Halo%20laris.AI%2C%20saya%20mau%20tanya%20trial" class="btn btn-wa pulse-wa" target="_blank" rel="noopener">
-                <i class="fab fa-whatsapp"></i> Chat WhatsApp Sekarang
-            </a>
-        </div>
-    </section>
-
-    <!-- ==================== FOOTER ==================== -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-grid">
-                <div class="footer-brand">
-                    <div class="nav-logo"><i class="fas fa-rocket"></i> Laris.AI</div>
-                    <p>AI buku kas & stok untuk UMKM Indonesia. Catat via WhatsApp, pantau di dashboard, putuskan di Ruang Komando.</p>
-                    <div class="footer-socials">
-                        <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
-                        <a href="#" aria-label="TikTok"><i class="fab fa-tiktok"></i></a>
-                        <a href="#" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
-                        <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
-                    </div>
-                </div>
-                <div>
-                    <div class="footer-title">Navigasi</div>
-                    <div class="footer-links">
-                        <a href="https://www.larisai.my.id/fitur/">Fitur</a>
-                        <a href="#cara-kerja">Cara Kerja</a>
-                        <a href="https://www.larisai.my.id/harga/">Harga</a>
-                        <a href="#testimoni">Testimoni</a>
-                        <a href="#faq">FAQ</a>
-                        <a href="https://www.larisai.my.id/artikel/cara-mencatat-keuangan-warung/" target="_blank" rel="noopener">Artikel UMKM</a>
-                    </div>
-                </div>
-                <div>
-                    <div class="footer-title">Legal</div>
-                    <div class="footer-links">
-                        <a href="#">Tentang Kami</a>
-                        <a href="#">Kebijakan Privasi</a>
-                        <a href="#">Syarat & Ketentuan</a>
-                        <a href="https://wa.me/6282112826851" target="_blank" rel="noopener">Hubungi Kami</a>
-                    </div>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                Â© 2026 Laris.AI â€” All rights reserved. Dibuat dengan â¤ï¸ untuk UMKM Indonesia.
-            </div>
-        </div>
-    </footer>
-
-    <!-- ==================== FLOATING WA ==================== -->
-    <div class="wa-float">
-        <a href="https://wa.me/6282112826851?text=Halo%20laris.AI%2C%20saya%20mau%20tanya" target="_blank" rel="noopener" aria-label="Chat WhatsApp">
-            <span class="wa-badge">1</span>
-            <i class="fab fa-whatsapp"></i>
-            <span>Chat Sekarang!</span>
+    <div class="laris-navbar">
+      <div class="laris-navbar-inner">
+        <a href="#" class="laris-navbar-brand">
+          <span class="laris-brand-dot"></span>
+          <strong>laris.AI</strong>
+          <small class="text-muted ms-2">AI Multi-Agent untuk UMKM Indonesia</small>
         </a>
+        <nav class="laris-navbar-links d-none d-md-flex">
+          <a href="https://www.larisai.my.id/fitur/">Fitur</a>
+          <a href="#alur">Alur</a>
+          <a href="https://www.larisai.my.id/harga/">Harga</a>
+          <a href="https://www.larisai.my.id/artikel/cara-mencatat-keuangan-warung/" target="_blank" rel="noopener">Artikel</a>
+          <a href="#cta">Mulai</a>
+        </nav>
+        <div class="laris-navbar-cta d-flex gap-2">
+          <a href="https://wa.me/6282112826851?text=Halo%20laris.AI%2C%20saya%20mau%20lihat%20demo" target="_blank" rel="noopener" class="btn btn-ghost">Demo</a>
+          <a href="https://wa.me/6282112826851?text=Halo%20laris.AI%2C%20saya%20mau%20mulai%20trial" target="_blank" rel="noopener" class="btn btn-solid">Masuk</a>
+        </div>
+      </div>
     </div>
+    
 
-    <!-- ==================== JAVASCRIPT ==================== -->
-    <script>
-        // ===== NAVBAR SCROLL =====
-        window.addEventListener('scroll', function() {
-            var navbar = document.getElementById('navbar');
-            if (window.scrollY > 50) {
-                navbar.classList.add('scrolled');
-            } else {
-                navbar.classList.remove('scrolled');
-            }
-        });
+    <section class="laris-hero">
+      <div class="laris-hero-inner">
+        <span class="laris-pill">🚀 UMKM-First · Multi-Agent</span>
+        <h1 class="laris-h1">Catat jualan lewat <span class="laris-h1-accent">WhatsApp</span>,<br/>dashboard otomatis terisi.</h1>
+        <p class="laris-lead">
+          laris.AI adalah partner AI untuk toko, warung, dan UMKM Indonesia.
+          Cukup kirim pesan <em>"jual kopi 50rb"</em>, Admin AI langsung catat ke Buku Kas,
+          Logistik AI pantau stok, dan Dashboard Dasher Anda terisi secara real-time.
+        </p>
+        <div class="laris-hero-cta">
+          <a href="https://wa.me/6282112826851?text=Halo%20laris.AI%2C%20saya%20mau%20lihat%20demo" target="_blank" rel="noopener" class="btn btn-solid btn-lg">
+            <i class="ti ti-flask"></i> Buka Dashboard Demo
+          </a>
+          <a href="https://www.larisai.my.id/artikel/cara-mencatat-keuangan-warung/" target="_blank" rel="noopener" class="btn btn-ghost btn-lg">
+            <i class="ti ti-news"></i> Baca Artikel UMKM
+          </a>
+          <a href="https://wa.me/6282112826851?text=Halo%20laris.AI%2C%20saya%20mau%20mulai%20trial" target="_blank" rel="noopener" class="btn btn-ghost btn-lg">
+            <i class="ti ti-login"></i> Masuk Akun
+          </a>
+        </div>
+        <div class="laris-hero-meta">
+          <span>✅ Setup gratis via Supabase</span>
+          <span>✅ RLS Multi-Tenant aman</span>
+          <span>✅ AI Groq & OpenRouter</span>
+        </div>
+      </div>
+      <div class="laris-hero-visual d-none d-lg-block">
+        <div class="laris-phone-frame">
+          <div class="laris-phone-header">
+            <div class="laris-phone-dots"><span></span><span></span><span></span></div>
+            <small>WA Owner · Catat Transaksi</small>
+          </div>
+          <div class="laris-phone-body">
+            <div class="laris-msg laris-msg-user">jual kopi 50rb, indomie 5 bungkus</div>
+            <div class="laris-msg laris-msg-bot">
+              ✅ <strong>2 transaksi</strong> tercatat.<br/>
+              • Kopi · Rp50.000<br/>
+              • Indomie x5 · Rp17.500
+            </div>
+            <div class="laris-msg laris-msg-user">stok mie tinggal berapa?</div>
+            <div class="laris-msg laris-msg-bot">
+              📦 Mie Instan: <strong>18 pcs</strong>.<br/>
+              Saran restock: <strong>6 dus</strong>.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+<section class="laris-stats"><div class="laris-stats-inner"><div class="laris-stat-item"><span class="laris-stat-value">100%</span><span class="laris-stat-label">Gratis coba demo publik</span></div><div class="laris-stat-item"><span class="laris-stat-value">< 30s</span><span class="laris-stat-label">Waktu catat transaksi via WA</span></div><div class="laris-stat-item"><span class="laris-stat-value">24/7</span><span class="laris-stat-label">AI menyala otomatis</span></div><div class="laris-stat-item"><span class="laris-stat-value">Multi-Tenant</span><span class="laris-stat-label">RLS per toko</span></div></div></section>
 
-        // ===== HAMBURGER MENU =====
-        var hamburger = document.getElementById('hamburger');
-        var mobileMenu = document.getElementById('mobileMenu');
+    <section class="laris-features" id="fitur">
+      <div class="laris-section-inner">
+        <div class="laris-section-head">
+          <span class="laris-pill laris-pill-soft">Kenapa laris.AI?</span>
+          <h2>Semua yang UMKM butuhkan, dalam satu platform.</h2>
+          <p>Catat, lihat, dan ambil keputusan lebih cepat dengan AI Multi-Agent.</p>
+        </div>
+        <div class="laris-features-grid">
+            <div class="laris-feature-card">
+                <div class="laris-feature-icon"><i class="ti ti-brand-whatsapp"></i></div>
+                <h4>Catat via WhatsApp</h4>
+                <p>Kirim pesan seperti 'jual kopi 50rb' lewat WA — AI langsung catat ke Buku Kas.</p>
+            </div>
 
-        hamburger.addEventListener('click', function() {
-            hamburger.classList.toggle('active');
-            mobileMenu.classList.toggle('open');
-        });
+            <div class="laris-feature-card">
+                <div class="laris-feature-icon"><i class="ti ti-robot"></i></div>
+                <h4>Asisten Multi-Agent</h4>
+                <p>Admin AI kelola ringkasan & stok. Logistik AI kasih rekomendasi PO otomatis.</p>
+            </div>
 
-        // Close menu when clicking a link
-        var mobileLinks = document.querySelectorAll('.mobile-link');
-        for (var i = 0; i < mobileLinks.length; i++) {
-            mobileLinks[i].addEventListener('click', function() {
-                hamburger.classList.remove('active');
-                mobileMenu.classList.remove('open');
-            });
-        }
+            <div class="laris-feature-card">
+                <div class="laris-feature-icon"><i class="ti ti-chart-bar"></i></div>
+                <h4>Dashboard Real-Time</h4>
+                <p>Pantau omzet, laba, dan stok UMKM di satu layar Dasher yang modern.</p>
+            </div>
 
-        // ===== FAQ ACCORDION =====
-        var faqButtons = document.querySelectorAll('.faq-question');
-        for (var j = 0; j < faqButtons.length; j++) {
-            faqButtons[j].addEventListener('click', function() {
-                var item = this.parentElement;
-                var isOpen = item.classList.contains('open');
+            <div class="laris-feature-card">
+                <div class="laris-feature-icon"><i class="ti ti-shield-check"></i></div>
+                <h4>Multi-Tenant Aman</h4>
+                <p>RLS Supabase: tiap toko hanya lihat data sendiri. Owner tenang.</p>
+            </div>
 
-                // Close all
-                var allItems = document.querySelectorAll('.faq-item');
-                for (var k = 0; k < allItems.length; k++) {
-                    allItems[k].classList.remove('open');
-                }
+            <div class="laris-feature-card">
+                <div class="laris-feature-icon"><i class="ti ti-bolt"></i></div>
+                <h4>Auto-Restock</h4>
+                <p>AI kasih peringatan ketika stok produk menyentuh ambang minimum.</p>
+            </div>
 
-                // Open clicked if was closed
-                if (!isOpen) {
-                    item.classList.add('open');
-                }
-            });
-        }
+            <div class="laris-feature-card">
+                <div class="laris-feature-icon"><i class="ti ti-report-money"></i></div>
+                <h4>Laporan KUR</h4>
+                <p>Ringkasan otomatis untuk pengajuan Kredit Usaha Rakyat ke bank.</p>
+            </div>
+        </div>
+      </div>
+    </section>
+    
 
-        // ===== SMOOTH SCROLL =====
-        var anchorLinks = document.querySelectorAll('a[href^="#"]');
-        for (var m = 0; m < anchorLinks.length; m++) {
-            anchorLinks[m].addEventListener('click', function(e) {
-                var href = this.getAttribute('href');
-                if (href === '#') return;
+    <section class="laris-3d-lab" id="3d">
+      <div class="laris-section-inner">
+        <div class="laris-section-head">
+          <span class="laris-pill laris-pill-soft">Lab Pengetahuan 3D</span>
+          <h2>Belajar Bisnis UMKM dengan Visual Interaktif.</h2>
+          <p>Drag untuk memutar · Scroll untuk zoom · Klik koin untuk melihat insight dari data UMKM.</p>
+        </div>
+        <div class="laris-3d-frame">
+          <iframe src="/laris-3d/koin_3d.html" title="Koin Pengetahuan UMKM 3D" loading="lazy"></iframe>
+        </div>
+        <p class="laris-3d-caption">Snippet ringan &lt; 200KB · Three.js via CDN · tidak mengganggu loading landing.</p>
+      </div>
+    </section>
+    
 
-                var target = document.querySelector(href);
-                if (target) {
-                    e.preventDefault();
-                    target.scrollIntoView({ behavior: 'smooth' });
+    <section class="laris-3d-alur" id="alur-3d">
+      <div class="laris-section-inner">
+        <div class="laris-section-head">
+          <span class="laris-pill laris-pill-soft">Alur Data 3D</span>
+          <h2>Lihat data mengalir dari chat WhatsApp ke dashboard bisnis Anda.</h2>
+          <p>Drag untuk memutar · Scroll untuk zoom · Klik node untuk melihat penjelasan tiap tahap.</p>
+        </div>
+        <div class="laris-3d-frame laris-3d-frame-dark">
+          <iframe src="/laris-3d/alur_3d.html" title="Alur Data UMKM 3D" loading="lazy"></iframe>
+        </div>
+        <p class="laris-3d-caption">4 node · 3 jalur data · ~120 partikel hidup. Bukti teknis alur AI multi-agent laris.AI.</p>
+      </div>
+    </section>
+    
 
-                    // Close mobile menu
-                    hamburger.classList.remove('active');
-                    mobileMenu.classList.remove('open');
-                }
-            });
-        }
-    </script>
+    <section class="laris-3d-stok" id="stok-3d">
+      <div class="laris-section-inner">
+        <div class="laris-section-head">
+          <span class="laris-pill laris-pill-soft">Rak Stok 3D</span>
+          <h2>Pantau stok UMKM dari sudut manapun.</h2>
+          <p>Drag untuk memutar · Scroll untuk zoom · Klik kotak untuk lihat detail barang & status stok.</p>
+        </div>
+        <div class="laris-3d-frame laris-3d-frame-warm">
+          <iframe src="/laris-3d/stok_3d.html" title="Rak Stok UMKM 3D" loading="lazy"></iframe>
+        </div>
+        <p class="laris-3d-caption">60 slot produk · 4 kategori · highlight otomatis untuk stok menipis.</p>
+      </div>
+    </section>
+    
 
-</body>
-</html>
+    <section class="laris-3d-omzet" id="omzet-3d">
+      <div class="laris-section-inner">
+        <div class="laris-section-head">
+          <span class="laris-pill laris-pill-soft">Grafik Omzet 3D</span>
+          <h2>Visualisasikan omzet bisnis Anda dalam 3D.</h2>
+          <p>Drag untuk memutar · Scroll untuk zoom · Toggle 7/30 hari · Klik bar untuk lihat nominal.</p>
+        </div>
+        <div class="laris-3d-frame laris-3d-frame-cool">
+          <iframe src="/laris-3d/omzet_3d.html" title="Grafik Omzet UMKM 3D" loading="lazy"></iframe>
+        </div>
+        <p class="laris-3d-caption">Animasi bar tumbuh · 7 & 30 hari · statistik otomatis (total, rata-rata, puncak, tren).</p>
+      </div>
+    </section>
+    
 
+    <section class="laris-flow" id="alur">
+      <div class="laris-section-inner">
+        <div class="laris-section-head">
+          <span class="laris-pill laris-pill-soft">Alur kerja</span>
+          <h2>Dari chat WhatsApp ke dashboard bisnis dalam 4 langkah.</h2>
+          <p>Tanpa install, tanpa training — langsung pakai.</p>
+        </div>
+        <div class="laris-flow-grid">
+        <div class="laris-flow-item">
+            <div class="laris-flow-step"><span>01</span><i class="ti ti-message-circle"></i></div>
+            <h5>Owner kirim pesan WA</h5>
+            <p>Bisa bahasa sehari-hari: 'beli kopi 50rb'.</p>
+        </div>
+        
+        <div class="laris-flow-item">
+            <div class="laris-flow-step"><span>02</span><i class="ti ti-robot"></i></div>
+            <h5>AI parsing transaksi</h5>
+            <p>Admin AI parsing kategori, nominal, dan tanggal.</p>
+        </div>
+        
+        <div class="laris-flow-item">
+            <div class="laris-flow-step"><span>03</span><i class="ti ti-database"></i></div>
+            <h5>Tercatat di Supabase</h5>
+            <p>RLS memastikan hanya owner toko itu yang bisa lihat.</p>
+        </div>
+        
+        <div class="laris-flow-item">
+            <div class="laris-flow-step"><span>04</span><i class="ti ti-chart-area"></i></div>
+            <h5>Dashboard Dasher realtime</h5>
+            <p>Statistik, AI Insight, dan Saran Restock terisi otomatis.</p>
+        </div>
+        </div>
+      </div>
+    </section>
+    
+
+    <section class="laris-cta" id="cta">
+      <div class="laris-section-inner">
+        <div class="laris-cta-card">
+          <div>
+            <span class="laris-pill">Mulai sekarang</span>
+            <h2>Siap naik kelas dengan AI?</h2>
+            <p>Coba dashboard contoh publik atau masuk dengan akun toko Anda.</p>
+          </div>
+          <div class="laris-cta-buttons">
+            <a href="https://wa.me/6282112826851?text=Halo%20laris.AI%2C%20saya%20mau%20lihat%20demo" target="_blank" rel="noopener" class="btn btn-solid btn-lg">
+              <i class="ti ti-flask"></i> Buka Dashboard Demo
+            </a>
+            <a href="https://wa.me/6282112826851?text=Halo%20laris.AI%2C%20saya%20mau%20mulai%20trial" target="_blank" rel="noopener" class="btn btn-ghost btn-lg">
+              <i class="ti ti-login"></i> Masuk Akun
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+
+    <footer class="laris-footer">
+      <div class="laris-section-inner laris-footer-inner">
+        <div class="laris-footer-col">
+          <strong>laris.AI</strong>
+          <p class="text-muted small mb-0">Partner AI untuk UMKM Indonesia.</p>
+        </div>
+        <div class="laris-footer-col">
+          <small class="text-uppercase fw-bold text-muted">Produk</small>
+          <a href="https://www.larisai.my.id/fitur/">Fitur</a>
+          <a href="#alur">Alur</a>
+          <a href="https://www.larisai.my.id/harga/">Harga</a>
+          <a href="https://wa.me/6282112826851?text=Halo%20laris.AI%2C%20saya%20mau%20lihat%20demo" target="_blank" rel="noopener">Demo Publik</a>
+          <a href="https://www.larisai.my.id/artikel/cara-mencatat-keuangan-warung/" target="_blank" rel="noopener">Artikel UMKM</a>
+        </div>
+        <div class="laris-footer-col">
+          <small class="text-uppercase fw-bold text-muted">Mulai</small>
+          <a href="https://wa.me/6282112826851?text=Halo%20laris.AI%2C%20saya%20mau%20mulai%20trial" target="_blank" rel="noopener">Masuk</a>
+          <a href="https://wa.me/6282112826851?text=Halo%20laris.AI%2C%20saya%20mau%20coba%20demo" target="_blank" rel="noopener">Coba Demo</a>
+        </div>
+      </div>
+      <div class="text-center text-muted small py-3">
+        © 2026 laris.AI — Partner Bisnis UMKM Indonesia.
+      </div>
+    </footer>
+    
+</body></html>
