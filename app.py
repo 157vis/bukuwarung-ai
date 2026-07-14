@@ -16,7 +16,7 @@ from ui.components import (
     section_card,
     stat_card_row,
 )
-from ui.dasher_nav import render_sidebar_nav
+from ui.dasher_nav import render_sidebar_nav, render_open_sidebar_button
 from ui.laris_theme import inject_dashboard_theme
 from ui.constants import MENU_SESSION_KEY
 from ui.menus import build_menu_keys, display_label
@@ -273,6 +273,11 @@ def render_dashboard(core: LarisCore, user) -> None:
         st.session_state.show_menu = True
 
     warehouse_enabled = core.table_exists("warehouses")
+
+    # Tampilkan floating button "☰" di kiri atas HANYA saat sidebar tertutup.
+    # Ini adalah fallback supaya user SELALU punya cara untuk membuka kembali
+    # sidebar, tanpa tergantung pada tombol Streamlit header.
+    render_open_sidebar_button()
 
     # Sidebar selalu tampil (tidak ada toggle)
     try:
@@ -1088,6 +1093,10 @@ def main() -> None:
     page_config()
     _redirect_legacy_paths()
     render_header()
+
+    # Floating button ☰ di kiri atas supaya user bisa buka sidebar
+    # walaupun sidebar tertutup. Selalu di-render di semua halaman.
+    render_open_sidebar_button()
 
     if get_query_flag("demo"):
         st.session_state["demo_mode"] = True

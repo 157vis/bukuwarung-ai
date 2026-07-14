@@ -8,13 +8,62 @@ import streamlit as st
 
 from brand import APP_NAME
 from ui.components import sidebar_brand
-from ui.constants import MENU_SESSION_KEY
+from ui.constants import MENU_SESSION_KEY, SIDEBAR_OPEN_KEY
 from ui.menus import build_menu_keys, get_menu_item
 
 
 def init_menu(default_key: str) -> None:
     if MENU_SESSION_KEY not in st.session_state:
         st.session_state[MENU_SESSION_KEY] = default_key
+
+
+def is_sidebar_open() -> bool:
+    """Apakah sidebar sedang terbuka? Default True (visible)."""
+    return st.session_state.get(SIDEBAR_OPEN_KEY, True)
+
+
+def toggle_sidebar() -> None:
+    """Toggle state sidebar (open <-> closed)."""
+    st.session_state[SIDEBAR_OPEN_KEY] = not is_sidebar_open()
+
+
+def render_open_sidebar_button() -> None:
+    """Tombol floating '>' di kiri atas yang HANYA muncul saat sidebar
+    tertutup. Klik untuk membuka kembali sidebar.
+    """
+    if is_sidebar_open():
+        return  # sidebar sudah terbuka, tombol tidak perlu
+    # Render floating button di pojok kiri atas
+    st.markdown(
+        """
+        <style>
+        .laris-open-sidebar-btn {
+            position: fixed;
+            top: 0.6rem;
+            left: 0.4rem;
+            z-index: 999999;
+            background: linear-gradient(135deg, #7c3aed, #6366f1);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 0.5rem 0.7rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .laris-open-sidebar-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(124, 58, 237, 0.5);
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    if st.button("☰", key="open_sidebar_btn", help="Buka sidebar (Ctrl+B)"):
+        toggle_sidebar()
+        st.rerun()
 
 
 def get_active_menu(*, warehouse_enabled: bool) -> str:
@@ -40,6 +89,18 @@ def render_sidebar_nav(*, warehouse_enabled: bool, user_email: str | None) -> st
     current = get_active_menu(warehouse_enabled=warehouse_enabled)
 
     sidebar_brand()
+
+    # Tombol close sidebar (X) di kanan atas sidebar
+    close_col, _spacer = st.sidebar.columns([1, 0.1])
+    with close_col:
+        if st.button(
+            "✕ Tutup",
+            key="close_sidebar_btn",
+            help="Tutup sidebar (klik ☰ di kiri atas untuk buka lagi)",
+            use_container_width=False,
+        ):
+            toggle_sidebar()
+            st.rerun()
 
     # Section utama
     st.sidebar.markdown(_section_label("Operasional"), unsafe_allow_html=True)
