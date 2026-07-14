@@ -16,7 +16,7 @@ from ui.components import (
     section_card,
     stat_card_row,
 )
-from ui.dasher_nav import render_sidebar_nav, render_topbar
+from ui.dasher_nav import render_sidebar_nav
 from ui.laris_theme import inject_dashboard_theme
 from ui.constants import MENU_SESSION_KEY
 from ui.menus import build_menu_keys, display_label
@@ -274,31 +274,10 @@ def render_dashboard(core: LarisCore, user) -> None:
 
     warehouse_enabled = core.table_exists("warehouses")
 
-    if not st.session_state.show_menu:
-        st.markdown(
-            "<style>section[data-testid='stSidebar']{display:none!important;}</style>",
-            unsafe_allow_html=True,
-        )
-
-    if st.session_state.show_menu:
-        menu = render_sidebar_nav(
-            warehouse_enabled=warehouse_enabled,
-            user_email=user_email,
-        )
-    else:
-        menu_keys = build_menu_keys(warehouse_enabled=warehouse_enabled)
-        from ui.dasher_nav import init_menu
-
-        init_menu(menu_keys[0] if menu_keys else "Ringkasan")
-        labels = [display_label(k) for k in menu_keys]
-        picked = st.selectbox("Menu", labels)
-        menu = menu_keys[labels.index(picked)]
-        st.session_state[MENU_SESSION_KEY] = menu
-
-    render_topbar(
-        page_title=display_label(menu),
+    # Sidebar selalu tampil (tidak ada toggle)
+    menu = render_sidebar_nav(
+        warehouse_enabled=warehouse_enabled,
         user_email=user_email,
-        show_menu=st.session_state.show_menu,
     )
 
     try:
