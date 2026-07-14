@@ -4,14 +4,8 @@ buildEnvironment = "V3"
 
 [deploy]
 runtime = "V2"
-numReplicas = 1
-# PENTING: Start command untuk Streamlit
-# Path relatif: app.py ada di root repo (../app.py dari folder ini)
-# Tapi Railway dengan Root Directory=streamlit-app tetap di root saat runtime
 startCommand = "streamlit run app.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true"
 healthcheckPath = "/healthz"
-sleepApplication = false
-useLegacyStacker = false
-restartPolicyType = "ON_FAILURE"
 healthcheckTimeout = 180
+restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 5
