@@ -28,40 +28,90 @@ def toggle_sidebar() -> None:
 
 
 def render_open_sidebar_button() -> None:
-    """Tombol floating '>' di kiri atas yang HANYA muncul saat sidebar
-    tertutup. Klik untuk membuka kembali sidebar.
+    """Render 2 floating button yang SELALU di luar kotak sidebar/konten:
+
+    1. Tombol '☰' (di luar, kiri atas) - untuk BUKA sidebar saat tertutup
+    2. Tombol '✕' (di luar, kanan atas) - untuk TUTUP sidebar saat terbuka
+
+    User feedback: "tombol nya ada di luar kotak jangan di dalam kotak"
+
+    Posisi: position: fixed dengan z-index tinggi, di-render via JS overlay
+    sehingga benar-benar di luar area Streamlit (sidebar + main content).
     """
-    if is_sidebar_open():
-        return  # sidebar sudah terbuka, tombol tidak perlu
-    # Render floating button di pojok kiri atas
-    st.markdown(
-        """
-        <style>
-        .laris-open-sidebar-btn {
-            position: fixed;
-            top: 0.6rem;
-            left: 0.4rem;
-            z-index: 999999;
-            background: linear-gradient(135deg, #7c3aed, #6366f1);
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            padding: 0.5rem 0.7rem;
-            font-size: 1.1rem;
-            font-weight: 700;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
-        }
-        .laris-open-sidebar-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 18px rgba(124, 58, 237, 0.5);
-        }
-        </style>
+    sidebar_open = is_sidebar_open()
+    # Render container overlay di luar iframe konten Streamlit via portal.
+    # Kita pakai komponen HTML yang absolute positioned dan di-inject ke body.
+    btn_label = "✕" if sidebar_open else "☰"
+    btn_title = "Tutup sidebar" if sidebar_open else "Buka sidebar"
+    btn_id = "laris-sidebar-toggle-btn"
+    # Gunakan streamlit.components.v1.html dengan height=0 + position:fixed
+    # agar benar-benar overlay di body, bukan di dalam container Streamlit.
+    import streamlit.components.v1 as components
+
+    components.html(
+        f"""
+        <script>
+        (function() {{
+            // Hapus tombol lama kalau ada
+            var existing = document.getElementById('{btn_id}');
+            if (existing) existing.remove();
+            // Buat tombol baru
+            var btn = document.createElement('button');
+            btn.id = '{btn_id}';
+            btn.innerHTML = '{btn_label}';
+            btn.title = '{btn_title}';
+            btn.setAttribute('aria-label', btn.title);
+            // CSS: position fixed di atas segalanya (overlay di body)
+            btn.style.cssText = `
+                position: fixed !important;
+                top: 0.65rem !important;
+                {'right: 0.85rem;' if sidebar_open else 'left: 0.55rem;'}
+                z-index: 999999 !important;
+                width: 38px !important;
+                height: 38px !important;
+                background: linear-gradient(135deg, #7c3aed, #6366f1) !important;
+                color: #fff !important;
+                border: none !important;
+                border-radius: 10px !important;
+                font-size: 1.15rem !important;
+                font-weight: 700 !important;
+                cursor: pointer !important;
+                box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4) !important;
+                transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                line-height: 1 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            `;
+            // Hover effect
+            btn.onmouseenter = function() {{
+                btn.style.transform = 'translateY(-2px)';
+                btn.style.boxShadow = '0 6px 20px rgba(124, 58, 237, 0.55)';
+            }};
+            btn.onmouseleave = function() {{
+                btn.style.transform = 'translateY(0)';
+                btn.style.boxShadow = '0 4px 14px rgba(124, 58, 237, 0.4)';
+            }};
+            // Click handler: kirim event ke Streamlit
+            btn.onclick = function() {{
+                // Trigger Streamlit button click via custom event
+                var evt = new CustomEvent('laris_toggle_sidebar', {{bubbles: true}});
+                document.dispatchEvent(evt);
+            }};
+            document.body.appendChild(btn);
+        }})();
+        </script>
         """,
-        unsafe_allow_html=True,
+        height=0,
     )
-    if st.button("☰", key="open_sidebar_btn", help="Buka sidebar (Ctrl+B)"):
+    # Hidden Streamlit button yang dipicu oleh event JS di atas
+    if st.button(
+        btn_label,
+        key=f"_hidden_toggle_{'close' if sidebar_open else 'open'}",
+        help=btn_title,
+    ):
         toggle_sidebar()
         st.rerun()
 
@@ -89,18 +139,6 @@ def render_sidebar_nav(*, warehouse_enabled: bool, user_email: str | None) -> st
     current = get_active_menu(warehouse_enabled=warehouse_enabled)
 
     sidebar_brand()
-
-    # Tombol close sidebar (X) di kanan atas sidebar
-    close_col, _spacer = st.sidebar.columns([1, 0.1])
-    with close_col:
-        if st.button(
-            "✕ Tutup",
-            key="close_sidebar_btn",
-            help="Tutup sidebar (klik ☰ di kiri atas untuk buka lagi)",
-            use_container_width=False,
-        ):
-            toggle_sidebar()
-            st.rerun()
 
     # Section utama
     st.sidebar.markdown(_section_label("Operasional"), unsafe_allow_html=True)

@@ -112,21 +112,10 @@ section[data-testid="stSidebar"][aria-expanded="true"] {
   left: 0 !important;
 }
 
-/* Tombol "X Tutup" di dalam sidebar - kecil, di kanan atas */
-section[data-testid="stSidebar"] button[kind="secondary"][data-testid="baseButton-secondary"] {
-  background: transparent !important;
-  color: var(--ds-gray-600, #637381) !important;
-  border: 1px solid var(--ds-gray-200, #e6eaee) !important;
-  padding: 0.25rem 0.6rem !important;
-  font-size: 0.75rem !important;
-  border-radius: 0.4rem !important;
-  margin-bottom: 0.5rem !important;
-}
-section[data-testid="stSidebar"] button[kind="secondary"][data-testid="baseButton-secondary"]:hover {
-  background: var(--ds-gray-100, #f9fafb) !important;
-  color: var(--ds-error, #d32f2f) !important;
-  border-color: var(--ds-error, #d32f2f) !important;
-}
+/* Tombol "X Tutup" lama di dalam sidebar sudah dihapus.
+   Sekarang tombol "✕" ada di LUAR kotak sidebar (floating, top-right)
+   via JS overlay di body. Lihat render_open_sidebar_button() di
+   ui/dasher_nav.py. */
 
 /* Tampilkan tombol toggle collapse/expand sidebar di header */
 button[data-testid="baseButton-headerNoSidebar"] {
