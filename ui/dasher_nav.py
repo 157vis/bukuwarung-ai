@@ -85,19 +85,10 @@ def _render_menu_button(key: str, current: str) -> None:
     if not item:
         return
     is_active = key == current
-    icon_html = f'<i class="ti {item.tabler_icon} me-2"></i>'
-    # Ikon tidak ditampilkan pada tombol Streamlit (button label plain),
-    # tapi kita tambahkan via prefix emoji + label.
-    display = f"{icon_html}{html.escape(item.label)}"
-    st.sidebar.markdown(
-        f'<div class="laris-nav-item {"is-active" if is_active else ""}">'
-        f'<span class="laris-nav-icon"><i class="ti {item.tabler_icon}"></i></span>'
-        f'<span class="laris-nav-text">{html.escape(item.label)}</span>'
-        f"</div>",
-        unsafe_allow_html=True,
-    )
+    icon = f":material/dashboard:" if False else ""  # placeholder, Streamlit tabler icon tidak built-in
+    display = f"{item.label}"  # langsung label saja, tidak ada icon
     if st.sidebar.button(
-        " ",
+        display,
         key=f"nav_{key}",
         use_container_width=True,
         type="primary" if is_active else "secondary",
