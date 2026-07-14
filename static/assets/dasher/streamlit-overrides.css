@@ -85,26 +85,32 @@ footer { visibility: hidden; }
 
 /* ============================================================
    SIDEBAR — Dasher #miniSidebar expanded
+   Sidebar bisa di-collapse/expand via tombol toggle di header.
+   User feedback: "saya ingin dia berfungsi disaat di tutup
+   dan di buka bisa di gunakan"
    ============================================================ */
 section[data-testid="stSidebar"] {
   width: 264px !important;
   min-width: 264px !important;
-  /* Override Streamlit collapsed state (transform: translateX(-100%))
-     agar sidebar SELALU visible dan tidak bisa di-collapse.
-     User feedback: "navbar tidak bisa di pencet apapun untuk
-     merespon navbar" — sidebar adalah navigation utama, harus
-     selalu tampil dan tidak hilang. */
+  background-color: var(--ds-navbar-bg, #ffffff) !important;
+  border-right: 1px dashed var(--ds-gray-300, #dfe3e8) !important;
+  transition: transform 0.3s ease, width 0.3s ease;
+}
+/* Saat collapsed, sidebar geser keluar layar (default Streamlit behavior) */
+section[data-testid="stSidebar"][aria-expanded="false"] {
+  transform: translateX(-100%) !important;
+}
+/* Saat expanded, sidebar visible dengan lebar penuh */
+section[data-testid="stSidebar"][aria-expanded="true"] {
   transform: translateX(0) !important;
   visibility: visible !important;
   left: 0 !important;
-  background-color: var(--ds-navbar-bg, #ffffff) !important;
-  border-right: 1px dashed var(--ds-gray-300, #dfe3e8) !important;
 }
 
-/* Sembunyikan tombol collapse sidebar (">" di header) karena
-   kita tidak ingin user collapse sidebar. */
+/* Tampilkan tombol toggle collapse/expand sidebar di header.
+   User ingin tombol ini berfungsi untuk buka/tutup sidebar. */
 button[data-testid="baseButton-headerNoSidebar"] {
-  display: none !important;
+  display: flex !important;
 }
 
 section[data-testid="stSidebar"] > div {
