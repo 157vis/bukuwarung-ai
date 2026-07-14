@@ -1,0 +1,16 @@
+# Normalisasi line ending — laris.AI repo
+# Pakai LF untuk semua file, CRLF hanya untuk Windows batch
+* text=auto eol=lf
+
+# Script Windows yang butuh CRLF
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary lock files
+*.lock binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary

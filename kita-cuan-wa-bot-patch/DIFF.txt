@@ -1,0 +1,127 @@
+﻿- groq = Groq(api_key=os.environ["GROQ_API_KEY"])
+
+=== HANYA DI FILE PATCHED (++) - baris yang ditambah ===
++         "missing_env": missing,
++         "service": WA_BOT_TITLE,
++ 
++         )
++     required = ("SUPABASE_URL", "SUPABASE_KEY", "GROQ_API_KEY", "WA_API_KEY")
++     """Healthcheck endpoint â€” Railway akan panggil path ini berkala."""
++         "status": "ok" if not missing else "degraded",
++     missing = [k for k in required if not os.environ.get(k)]
++ 
++         "bot_logic_version": BOT_LOGIC_VERSION,
++         "provider": WA_PROVIDER,
++ # Lazy Groq client â€” jangan instantiate saat module-level, supaya
++     }
++ 
++ 
++     return {
++ 
++     global _groq_client
++     """Ambil (atau buat) Groq client. Raise RuntimeError jika env var hilang."""
++         return _groq_client
++     if _groq_client is not None:
++ # (Railway Variables). Validasi dilakukan saat pertama kali dipakai.
++ # service tetap bisa start meskipun GROQ_API_KEY belum di-set di env
++ def get_groq() -> Groq:
++ _groq_client: Groq | None = None
++     api_key = os.environ.get("GROQ_API_KEY")
++     return _groq_client
++     _groq_client = Groq(api_key=api_key)
++ def health() -> dict:
++ @app.get("/health")
++         raise RuntimeError(
++     if not api_key:
++             "(tab Variables di service kita-cuan-wa-bot-larisai)."
++             "GROQ_API_KEY belum di-set. Tambahkan di Railway Variables "
+
+
+=== railway.toml DIFF ===
+
+--- ORIGINAL (commit 0733bec) ---
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+# Repo ini standalone (bukan monorepo). Root Directory di Railway
+# dikosongkan (default /), push seluruh repo. Start command reference
+# main:app langsung karena cwd = /app/ dan main.py ada di root repo.
+startCommand = "python -m uvicorn main:app --host 0.0.0.0 --port $PORT"
+healthcheckPath = "/"
+healthcheckTimeout = 120
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5
+
+--- PATCHED ---
+[build]
+builder = "NIXPACKS"
+buildEnvironment = "V3"
+
+[deploy]
+# Repo ini standalone (bukan monorepo). Root Directory di Railway
+# dikosongkan (default /), push seluruh repo. Start command reference
+# main:app langsung karena cwd = /app/ dan main.py ada di root repo.
+runtime = "V2"
+numReplicas = 1
+startCommand = "python -m uvicorn main:app --host 0.0.0.0 --port $PORT"
+healthcheckPath = "/health"
+sleepApplication = false
+useLegacyStacker = false
+ipv6EgressEnabled = false
+# Format TOML valid (pakai '=' bukan ':' JSON).
+# Region default Railway saat ini biasanya asia-southeast1-eqsg3a
+# untuk project di Singapore. Valid IDs:
+#   us-west2 | us-east4-eqdc4a | europe-west4-drams3a | asia-southeast1-eqsg3a
+# Catatan: "sfo" bukan ID valid (lihat #4 di pencarian).
+# multiRegionConfig = { "asia-southeast1-eqsg3a" = { "numReplicas" = 1 } }
+restartPolicyType = "ON_FAILURE"
+healthcheckTimeout = 120
+restartPolicyMaxRetries = 5
+
+--- LINE-LEVEL DIFF ---
+
+Dihapus (-):
+- healthcheckPath = "/"
+
+Ditambah (+):
++ buildEnvironment = "V3"
++ runtime = "V2"
++ numReplicas = 1
++ healthcheckPath = "/health"
++ sleepApplication = false
++ useLegacyStacker = false
++ ipv6EgressEnabled = false
++ # Format TOML valid (pakai '=' bukan ':' JSON).
++ # Region default Railway saat ini biasanya asia-southeast1-eqsg3a
++ # untuk project di Singapore. Valid IDs:
++ #   us-west2 | us-east4-eqdc4a | europe-west4-drams3a | asia-southeast1-eqsg3a
++ # Catatan: "sfo" bukan ID valid (lihat #4 di pencarian).
++ # multiRegionConfig = { "asia-southeast1-eqsg3a" = { "numReplicas" = 1 } }
+
+=== PATCH v2 (commit 27b2dc6) ===
+
+Bug: NameError di webhook handler line 196.
+Penyebab: function call pakai prefix '_' tapi import tanpa prefix.
+
+`diff
+--- a/main.py
++++ b/main.py
+@@ -193,7 +193,7 @@ async def webhook(request: Request):
+         logger.error("webhook: nomor tidak ditemukan. body=%s", str(body)[:500])
+         return {"status": "error", "detail": "No phone number"}
+ 
+-    if _is_outgoing_or_bot_echo(body, phone, text, _normalize_wa_phone):
++    if is_outgoing_or_bot_echo(body, phone, text, _normalize_wa_phone):
+         logger.debug("ignored echo/outgoing: %s", phone)
+         return {"status": "ignored", "reason": "outgoing_or_bot_echo"}
+`
+
+Dampak:
+- Setiap POST /webhook dari Fonnte sebelumnya raise NameError.
+- FastAPI kembalikan HTTP 500 (silent log, no detail ke caller).
+- Bot tidak pernah bisa membalas pesan Fonnte.
+
+Setelah fix:
+- Handler jalan normal sampai step send_wa_reply.
+- Reproduksi lokal: TestClient.post('/webhook', json={...}) -> NameError hilang.
