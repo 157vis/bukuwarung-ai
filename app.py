@@ -27,7 +27,13 @@ logger = get_logger(__name__)
 AGENT_LABELS = {"admin": "Admin AI", "logistik": "Logistik AI"}
 
 # Hanya email ini yang boleh menambah & mengedit client baru.
-SUPER_ADMIN_EMAIL = "rafihrr1@gmail.com"
+SUPER_ADMIN_EMAILS = ("rafihrr1@gmail.com",)
+
+def is_super_admin(user_email: str | None) -> bool:
+    """Cek apakah email ini adalah Super Admin."""
+    return (user_email or "").strip().lower() in (
+        e.lower() for e in SUPER_ADMIN_EMAILS
+    )
 
 # Default deploy production (bisa override di secrets.toml)
 DEFAULT_BUKUWARUNG_URL = "https://bukuwarung-ai-larisai.up.railway.app"
@@ -49,7 +55,7 @@ def render_wa_sync_hint(user_id: str, user_email: str | None, df_empty: bool) ->
     """Petunjuk jika data bot WA belum terlihat di dashboard."""
     if not df_empty:
         return
-    is_admin = (user_email or "").strip().lower() == SUPER_ADMIN_EMAIL
+    is_admin = is_super_admin(user_email)
     if is_admin:
         st.warning(
             "Anda login sebagai **Admin**. Transaksi dari WhatsApp masuk ke akun **client** "
@@ -633,7 +639,7 @@ def render_dashboard(core: LarisCore, user) -> None:
     elif menu == "⚙️ Pengaturan Bot":
         render_pengaturan_bot(core, user_id)
 
-        is_admin = (user_email or "").strip().lower() == SUPER_ADMIN_EMAIL
+        is_admin = is_super_admin(user_email)
         if is_admin:
             st.markdown("---")
             section_card(
@@ -839,17 +845,25 @@ def render_dashboard(core: LarisCore, user) -> None:
         else:
             user_id = getattr(user, "id", None)
 
-        with st.expander("➕ Tambah Gudang", expanded=False):
-            with st.form("create_warehouse"):
-                wh_name = st.text_input("Nama Gudang")
-                wh_location = st.text_input("Lokasi (opsional)")
-                wh_notes = st.text_area("Keterangan (opsional)")
-                if st.form_submit_button("Buat Gudang", type="primary"):
-                    if not wh_name:
-                        st.error("Nama gudang wajib.")
-                    else:
-                        res = core.create_warehouse(user_id, wh_name, wh_location or None, wh_notes or None)
-                        st.success("Gudang dibuat.")
+        # === Tambah Gudang: HANYA untuk Super Admin ===
+        if is_super_admin(user_email):
+            with st.expander("➕ Tambah Gudang (Admin Only)", expanded=False):
+                with st.form("create_warehouse"):
+                    wh_name = st.text_input("Nama Gudang")
+                    wh_location = st.text_input("Lokasi (opsional)")
+                    wh_notes = st.text_area("Keterangan (opsional)")
+                    if st.form_submit_button("Buat Gudang", type="primary"):
+                        if not wh_name:
+                            st.error("Nama gudang wajib.")
+                        else:
+                            res = core.create_warehouse(user_id, wh_name, wh_location or None, wh_notes or None)
+                            st.success("Gudang dibuat.")
+        else:
+            st.info(
+                "📦 **Info untuk Client:** Gudang dibuat dan dikelola oleh Admin. "
+                "Produk dari gudang otomatis tersedia di sini untuk dicatat masuk/keluar. "
+                "Hubungi Admin jika butuh gudang baru."
+            )
 
         try:
             warehouses = core.list_warehouses(user_id)
