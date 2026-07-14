@@ -9,8 +9,11 @@ import streamlit as st
 _ASSETS = Path(__file__).resolve().parent.parent / "static" / "assets" / "dasher"
 
 
-@st.cache_data(show_spinner=False)
 def _read_css(name: str) -> str:
+    """Baca CSS fresh (no cache) - cache Streamlit sering stale untuk
+    file static, dan perubahan CSS tidak ter-pickup sampai re-deploy penuh.
+    File CSS kecil jadi tidak masalah untuk di-load tiap request.
+    """
     path = _ASSETS / name
     if not path.is_file():
         return ""

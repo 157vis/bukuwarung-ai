@@ -89,8 +89,22 @@ footer { visibility: hidden; }
 section[data-testid="stSidebar"] {
   width: 264px !important;
   min-width: 264px !important;
+  /* Override Streamlit collapsed state (transform: translateX(-100%))
+     agar sidebar SELALU visible dan tidak bisa di-collapse.
+     User feedback: "navbar tidak bisa di pencet apapun untuk
+     merespon navbar" — sidebar adalah navigation utama, harus
+     selalu tampil dan tidak hilang. */
+  transform: translateX(0) !important;
+  visibility: visible !important;
+  left: 0 !important;
   background-color: var(--ds-navbar-bg, #ffffff) !important;
   border-right: 1px dashed var(--ds-gray-300, #dfe3e8) !important;
+}
+
+/* Sembunyikan tombol collapse sidebar (">" di header) karena
+   kita tidak ingin user collapse sidebar. */
+button[data-testid="baseButton-headerNoSidebar"] {
+  display: none !important;
 }
 
 section[data-testid="stSidebar"] > div {
