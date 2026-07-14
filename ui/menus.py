@@ -20,6 +20,7 @@ __all__ = [
 class LarisMenuItem:
     key: str
     label: str
+    icon: str  # emoji icon untuk sidebar (modern look)
     tabler_icon: str
     dasher_section: str
     description: str
@@ -29,6 +30,7 @@ LARIS_MENUS: tuple[LarisMenuItem, ...] = (
     LarisMenuItem(
         "Ruang Komando",
         "Ruang Komando",
+        "🧠",
         "ti-layout-dashboard",
         "Home",
         "Keputusan AI menunggu persetujuan.",
@@ -36,6 +38,7 @@ LARIS_MENUS: tuple[LarisMenuItem, ...] = (
     LarisMenuItem(
         "Ringkasan",
         "Ringkasan",
+        "📊",
         "ti-chart-bar",
         "Dashboard",
         "Metrik bisnis & Laris Score.",
@@ -43,6 +46,7 @@ LARIS_MENUS: tuple[LarisMenuItem, ...] = (
     LarisMenuItem(
         "Catat Transaksi",
         "Catat Transaksi",
+        "✏️",
         "ti-pencil-plus",
         "Transaksi",
         "Input pemasukan / pengeluaran.",
@@ -50,6 +54,7 @@ LARIS_MENUS: tuple[LarisMenuItem, ...] = (
     LarisMenuItem(
         "Buku Kas",
         "Buku Kas",
+        "💰",
         "ti-cash",
         "Keuangan",
         "Daftar transaksi & saldo.",
@@ -57,6 +62,7 @@ LARIS_MENUS: tuple[LarisMenuItem, ...] = (
     LarisMenuItem(
         "Laporan KUR",
         "Laporan KUR",
+        "📈",
         "ti-report-analytics",
         "Laporan",
         "Ringkasan untuk KUR.",
@@ -64,6 +70,7 @@ LARIS_MENUS: tuple[LarisMenuItem, ...] = (
     LarisMenuItem(
         "Gudang",
         "Gudang",
+        "🏬",
         "ti-building-warehouse",
         "Inventori",
         "Stok & gudang.",
@@ -71,6 +78,7 @@ LARIS_MENUS: tuple[LarisMenuItem, ...] = (
     LarisMenuItem(
         "Daftar Produk",
         "Daftar Produk",
+        "📦",
         "ti-box",
         "Inventori",
         "Daftar produk & harga dari gudang.",
@@ -78,6 +86,7 @@ LARIS_MENUS: tuple[LarisMenuItem, ...] = (
     LarisMenuItem(
         "⚙️ Pengaturan Bot",
         "Pengaturan Bot",
+        "⚙️",
         "ti-settings",
         "Settings",
         "Token Fonnte & webhook WA.",

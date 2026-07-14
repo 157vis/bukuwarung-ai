@@ -189,6 +189,25 @@ section[data-testid="stSidebar"] .stButton > button {
   cursor: pointer !important;
   position: relative !important;
   z-index: 1 !important;
+  transition: background-color .15s ease, transform .12s ease, color .15s ease;
+}
+/* Emoji icon di button - sediakan space antar icon dan label */
+section[data-testid="stSidebar"] .stButton > button > p {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.95rem;
+  line-height: 1.2;
+}
+/* Emoji itu sendiri - sedikit lebih besar dari teks label */
+section[data-testid="stSidebar"] .stButton > button > p > span:first-child {
+  font-size: 1.15rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  flex-shrink: 0;
 }
 
 section[data-testid="stSidebar"] .stButton > button[kind="secondary"] {

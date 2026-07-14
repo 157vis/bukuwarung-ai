@@ -85,10 +85,11 @@ def _render_menu_button(key: str, current: str) -> None:
     if not item:
         return
     is_active = key == current
-    display = f"{item.label}"
+    # Tampilkan emoji icon di depan label untuk look yang lebih modern
+    # (Streamlit button tidak support icon, jadi pakai emoji di label)
+    display = f"{item.icon}  {item.label}"
     # PENTING: gunakan key unik per menu agar Streamlit tidak bingung saat
     # `type` (primary/secondary) berubah antara halaman aktif/non-aktif.
-    # Key ini juga yang dipakai di callback on_click.
     btn_key = f"nav_{key}"
     if st.sidebar.button(
         display,
@@ -97,7 +98,6 @@ def _render_menu_button(key: str, current: str) -> None:
         type="primary" if is_active else "secondary",
         help=f"Buka menu {item.label}",
     ):
-        # Set state DAN rerun supaya halaman baru ter-render
         st.session_state[MENU_SESSION_KEY] = key
         st.toast(f"➡️ Pindah ke {item.label}", icon="✅")
         st.rerun()
