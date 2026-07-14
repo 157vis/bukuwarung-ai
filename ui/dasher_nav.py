@@ -39,73 +39,69 @@ def render_open_sidebar_button() -> None:
     sehingga benar-benar di luar area Streamlit (sidebar + main content).
     """
     sidebar_open = is_sidebar_open()
-    # Render container overlay di luar iframe konten Streamlit via portal.
-    # Kita pakai komponen HTML yang absolute positioned dan di-inject ke body.
     btn_label = "✕" if sidebar_open else "☰"
     btn_title = "Tutup sidebar" if sidebar_open else "Buka sidebar"
     btn_id = "laris-sidebar-toggle-btn"
-    # Gunakan streamlit.components.v1.html dengan height=0 + position:fixed
-    # agar benar-benar overlay di body, bukan di dalam container Streamlit.
+    # Tentukan posisi di Python (bukan di dalam JS string) untuk hindari
+    # syntax error f-string.
+    btn_position_css = "right: 0.85rem;" if sidebar_open else "left: 0.55rem;"
+
     import streamlit.components.v1 as components
 
-    components.html(
-        f"""
-        <script>
-        (function() {{
-            // Hapus tombol lama kalau ada
-            var existing = document.getElementById('{btn_id}');
-            if (existing) existing.remove();
-            // Buat tombol baru
-            var btn = document.createElement('button');
-            btn.id = '{btn_id}';
-            btn.innerHTML = '{btn_label}';
-            btn.title = '{btn_title}';
-            btn.setAttribute('aria-label', btn.title);
-            // CSS: position fixed di atas segalanya (overlay di body)
-            btn.style.cssText = `
-                position: fixed !important;
-                top: 0.65rem !important;
-                {'right: 0.85rem;' if sidebar_open else 'left: 0.55rem;'}
-                z-index: 999999 !important;
-                width: 38px !important;
-                height: 38px !important;
-                background: linear-gradient(135deg, #7c3aed, #6366f1) !important;
-                color: #fff !important;
-                border: none !important;
-                border-radius: 10px !important;
-                font-size: 1.15rem !important;
-                font-weight: 700 !important;
-                cursor: pointer !important;
-                box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4) !important;
-                transition: transform 0.15s ease, box-shadow 0.15s ease !important;
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                line-height: 1 !important;
-                padding: 0 !important;
-                margin: 0 !important;
-            `;
-            // Hover effect
-            btn.onmouseenter = function() {{
-                btn.style.transform = 'translateY(-2px)';
-                btn.style.boxShadow = '0 6px 20px rgba(124, 58, 237, 0.55)';
-            }};
-            btn.onmouseleave = function() {{
-                btn.style.transform = 'translateY(0)';
-                btn.style.boxShadow = '0 4px 14px rgba(124, 58, 237, 0.4)';
-            }};
-            // Click handler: kirim event ke Streamlit
-            btn.onclick = function() {{
-                // Trigger Streamlit button click via custom event
-                var evt = new CustomEvent('laris_toggle_sidebar', {{bubbles: true}});
-                document.dispatchEvent(evt);
-            }};
-            document.body.appendChild(btn);
-        }})();
-        </script>
-        """,
-        height=0,
+    # Bangun HTML/JS sebagai plain string (BUKAN f-string) untuk hindari
+    # konflik antara Python {var} dan JS {{...}}.
+    html_js = (
+        "<script>"
+        "(function() {"
+        "  var existing = document.getElementById('" + btn_id + "');"
+        "  if (existing) existing.remove();"
+        "  var btn = document.createElement('button');"
+        "  btn.id = '" + btn_id + "';"
+        "  btn.innerHTML = '" + btn_label + "';"
+        "  btn.title = '" + btn_title + "';"
+        "  btn.setAttribute('aria-label', btn.title);"
+        "  btn.style.cssText = '"
+        "    position: fixed !important;"
+        "    top: 0.65rem !important;"
+        "    " + btn_position_css + ""
+        "    z-index: 999999 !important;"
+        "    width: 38px !important;"
+        "    height: 38px !important;"
+        "    background: linear-gradient(135deg, #7c3aed, #6366f1) !important;"
+        "    color: #fff !important;"
+        "    border: none !important;"
+        "    border-radius: 10px !important;"
+        "    font-size: 1.15rem !important;"
+        "    font-weight: 700 !important;"
+        "    cursor: pointer !important;"
+        "    box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4) !important;"
+        "    transition: transform 0.15s ease, box-shadow 0.15s ease !important;"
+        "    display: flex !important;"
+        "    align-items: center !important;"
+        "    justify-content: center !important;"
+        "    line-height: 1 !important;"
+        "    padding: 0 !important;"
+        "    margin: 0 !important;"
+        "  ';"
+        "  btn.onmouseenter = function() {"
+        "    btn.style.transform = 'translateY(-2px)';"
+        "    btn.style.boxShadow = '0 6px 20px rgba(124, 58, 237, 0.55)';"
+        "  };"
+        "  btn.onmouseleave = function() {"
+        "    btn.style.transform = 'translateY(0)';"
+        "    btn.style.boxShadow = '0 4px 14px rgba(124, 58, 237, 0.4)';"
+        "  };"
+        "  btn.onclick = function() {"
+        "    var evt = new CustomEvent('laris_toggle_sidebar', {bubbles: true});"
+        "    document.dispatchEvent(evt);"
+        "  };"
+        "  document.body.appendChild(btn);"
+        "})();"
+        "</script>"
     )
+
+    components.html(html_js, height=0)
+
     # Hidden Streamlit button yang dipicu oleh event JS di atas
     if st.button(
         btn_label,
