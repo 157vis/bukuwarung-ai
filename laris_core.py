@@ -663,7 +663,7 @@ class LarisCore:
         try:
             resp = (
                 self.supabase.table("products")
-                .select("id, name, stock, created_at")
+                .select("id, name, price, stock, category, is_active, created_at")
                 .eq("user_id", uid)
                 .order("name", desc=False)
                 .execute()
