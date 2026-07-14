@@ -282,8 +282,13 @@ def render_dashboard(core: LarisCore, user) -> None:
         )
         logger.debug("Sidebar nav rendered. Active menu: %s", menu)
     except Exception as exc:
+        import traceback
+        tb = traceback.format_exc()
         logger.exception("Gagal render sidebar nav: %s", exc)
-        st.error(f"Gagal render menu sidebar: {exc}")
+        # Tampilkan di UI supaya user bisa copy error untuk debugging
+        st.error(f"❌ Gagal render menu sidebar: {exc}")
+        with st.expander("Traceback lengkap", expanded=False):
+            st.code(tb, language="python")
         menu = "Ringkasan"  # fallback ke Ringkasan
 
     try:
