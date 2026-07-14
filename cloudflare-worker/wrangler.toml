@@ -1,0 +1,13 @@
+name = "larisai-proxy"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# Auto-deploy: Cloudflare akan connect ke GitHub repo
+# Setelah deploy pertama, edit project di dashboard untuk connect ke repo:
+# 157vis/bukuwarung-ai
+# Branch: main
+# Build command: (none)
+# Deploy command: (none - pakai wrangler deploy manual)
+#
+# Atau pakai GitHub Actions (lihat .github/workflows/deploy-worker.yml)

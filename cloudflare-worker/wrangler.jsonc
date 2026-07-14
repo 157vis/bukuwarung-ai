@@ -1,0 +1,10 @@
+name = "larisai-proxy"
+type = "javascript"
+account_id = ""
+workers_dev = true
+
+[build]
+command = ""
+
+[observability]
+enabled = true
