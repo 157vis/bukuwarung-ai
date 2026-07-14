@@ -85,16 +85,21 @@ def _render_menu_button(key: str, current: str) -> None:
     if not item:
         return
     is_active = key == current
-    icon = f":material/dashboard:" if False else ""  # placeholder, Streamlit tabler icon tidak built-in
-    display = f"{item.label}"  # langsung label saja, tidak ada icon
+    display = f"{item.label}"
+    # PENTING: gunakan key unik per menu agar Streamlit tidak bingung saat
+    # `type` (primary/secondary) berubah antara halaman aktif/non-aktif.
+    # Key ini juga yang dipakai di callback on_click.
+    btn_key = f"nav_{key}"
     if st.sidebar.button(
         display,
-        key=f"nav_{key}",
+        key=btn_key,
         use_container_width=True,
         type="primary" if is_active else "secondary",
         help=f"Buka menu {item.label}",
     ):
+        # Set state DAN rerun supaya halaman baru ter-render
         st.session_state[MENU_SESSION_KEY] = key
+        st.toast(f"➡️ Pindah ke {item.label}", icon="✅")
         st.rerun()
 
 

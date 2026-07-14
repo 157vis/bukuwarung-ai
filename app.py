@@ -275,10 +275,16 @@ def render_dashboard(core: LarisCore, user) -> None:
     warehouse_enabled = core.table_exists("warehouses")
 
     # Sidebar selalu tampil (tidak ada toggle)
-    menu = render_sidebar_nav(
-        warehouse_enabled=warehouse_enabled,
-        user_email=user_email,
-    )
+    try:
+        menu = render_sidebar_nav(
+            warehouse_enabled=warehouse_enabled,
+            user_email=user_email,
+        )
+        logger.debug("Sidebar nav rendered. Active menu: %s", menu)
+    except Exception as exc:
+        logger.exception("Gagal render sidebar nav: %s", exc)
+        st.error(f"Gagal render menu sidebar: {exc}")
+        menu = "Ringkasan"  # fallback ke Ringkasan
 
     try:
         df = core.get_dashboard_data(user_id)
