@@ -960,6 +960,87 @@ def render_dashboard(core: LarisCore, user) -> None:
                 prod_df = pd.DataFrame(products)
                 st.dataframe(prod_df, use_container_width=True)
 
+    elif menu == "Daftar Produk":
+        render_daftar_produk(core, user_id, user_email)
+
+
+def render_daftar_produk(core, user_id, user_email) -> None:
+    """Halaman khusus Daftar Produk — read-only untuk Client.
+
+    Tabel sederhana: nama, harga, stok, kategori, status aktif.
+    Sumber: tabel `products` di Supabase (filtered by user_id via RLS).
+    """
+    section_card(
+        "Daftar Produk",
+        "Daftar produk & harga yang tersedia di toko Anda. "
+        "Update otomatis dari aktivitas gudang.",
+        icon="ti-box",
+    )
+
+    is_admin = is_super_admin(user_email)
+
+    # Info untuk Client
+    if not is_admin:
+        st.info(
+            "📋 **Info untuk Client:** Ini adalah daftar produk yang terdaftar di toko Anda. "
+            "Stok dan harga dikelola dari aktivitas gudang oleh Admin."
+        )
+
+    try:
+        products = core.list_products(user_id)
+    except Exception as exc:
+        logger.error("list_products di Daftar Produk: %s", exc)
+        products = None
+
+    if products is None:
+        st.error("Gagal memuat data produk. Pastikan tabel 'products' tersedia di Supabase.")
+        return
+
+    if not products:
+        st.info("Belum ada produk terdaftar. Admin perlu menambahkan produk dari menu Gudang.")
+        return
+
+    # Bangun dataframe sederhana
+    rows = []
+    for p in products:
+        rows.append({
+            "Nama": p.get("name", "—"),
+            "Harga": f"Rp {int(p.get('price', 0)):,}".replace(",", "."),
+            "Stok": p.get("stock", 0),
+            "Kategori": p.get("category") or "—",
+            "Status": "✅ Aktif" if p.get("is_active") else "❌ Non-aktif",
+        })
+    df = pd.DataFrame(rows)
+
+    # Highlight stok menipis (kuning) dan habis (merah)
+    def _highlight_stock(row):
+        stock = row["Stok"]
+        if stock == 0:
+            return ["background-color: #f8d7da"] * len(row)  # merah
+        elif stock <= 10:
+            return ["background-color: #fff3cd"] * len(row)  # kuning
+        else:
+            return [""] * len(row)
+
+    st.dataframe(
+        df.style.apply(_highlight_stock, axis=1),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    # Ringkasan
+    total_produk = len(df)
+    stok_habis = len(df[df["Stok"] == 0])
+    stok_menipis = len(df[(df["Stok"] > 0) & (df["Stok"] <= 10)])
+
+    cols = st.columns(3)
+    with cols[0]:
+        st.metric("Total Produk", total_produk)
+    with cols[1]:
+        st.metric("Stok Habis", stok_habis, delta_color="inverse")
+    with cols[2]:
+        st.metric("Stok Menipis (≤10)", stok_menipis, delta_color="inverse")
+
 
 def _redirect_legacy_paths() -> None:
     """Path yang sebenarnya dilayani Cloudflare Pages (www.larisai.my.id)

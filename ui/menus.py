@@ -69,6 +69,13 @@ LARIS_MENUS: tuple[LarisMenuItem, ...] = (
         "Stok & gudang.",
     ),
     LarisMenuItem(
+        "Daftar Produk",
+        "Daftar Produk",
+        "ti-box",
+        "Inventori",
+        "Daftar produk & harga dari gudang.",
+    ),
+    LarisMenuItem(
         "⚙️ Pengaturan Bot",
         "Pengaturan Bot",
         "ti-settings",
