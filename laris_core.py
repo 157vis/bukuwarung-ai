@@ -802,6 +802,26 @@ class LarisCore:
             logger.error("get_clients_for_admin: %s", exc)
             return []
 
+    def get_all_warehouses_for_admin(self) -> list[dict]:
+        """List SEMUA gudang lintas-tenant — hanya untuk admin dengan service_role.
+
+        Berguna untuk admin yang ingin tambah produk ke gudang toko client
+        tertentu. Field: id, user_id, name, location, notes, created_at.
+        Di-group by user_id di UI untuk pilih toko target.
+        """
+        self._assert_service_client("get_all_warehouses_for_admin")
+        try:
+            res = (
+                self.supabase.table("warehouses")
+                .select("id, user_id, name, location, notes, created_at")
+                .order("user_id", desc=False)
+                .execute()
+            )
+            return res.data or []
+        except Exception as exc:
+            logger.error("get_all_warehouses_for_admin: %s", exc)
+            return []
+
     def get_products(self, user_id: str):
         """Alias `list_products`."""
         return self.list_products(user_id)

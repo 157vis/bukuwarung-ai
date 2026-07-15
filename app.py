@@ -1074,7 +1074,7 @@ def _render_tambah_produk_section(core, user_id, user_email: str | None = None) 
     )
 
     # Pilih client target: kalau admin punya service_role, tampilkan dropdown
-    # semua client. Kalau tidak, hanya produk untuk user admin sendiri.
+    # semua client. Kalau tidak, ada input manual UUID + auto-detect dari gudang.
     target_user_id = user_id
     target_label = "toko ini (admin)"
     admin_core = None
@@ -1083,6 +1083,8 @@ def _render_tambah_produk_section(core, user_id, user_email: str | None = None) 
     except Exception:
         admin_core = None
 
+    # === Mode 1: Service role aktif → dropdown toko client ===
+    clients = []
     if admin_core:
         try:
             clients = admin_core.get_clients_for_admin()
@@ -1090,42 +1092,93 @@ def _render_tambah_produk_section(core, user_id, user_email: str | None = None) 
             logger.error("get_clients_for_admin: %s", exc)
             clients = []
 
-        if clients:
-            # Bangun map user_id → dict client, supaya format_func bisa
-            # menampilkan business_name + wa_cs sekilas.
-            client_map: dict[str, dict] = {c.get("user_id"): c for c in clients if c.get("user_id")}
+    if admin_core and clients:
+        # Bangun map user_id → dict client
+        client_map: dict[str, dict] = {c.get("user_id"): c for c in clients if c.get("user_id")}
 
-            def _format_client(uid: str) -> str:
-                if uid == "__self__":
-                    return "— Toko sendiri (admin) —"
-                c = client_map.get(uid, {})
-                name = c.get("business_name") or c.get("name") or uid[:8]
-                wa = c.get("wa_cs") or c.get("wa_catat") or ""
-                if wa:
-                    return f"🏪 {name} (WA {wa})"
-                return f"🏪 {name}"
+        def _format_client(uid: str) -> str:
+            if uid == "__self__":
+                return "— Toko sendiri (admin) —"
+            c = client_map.get(uid, {})
+            name = c.get("business_name") or c.get("name") or uid[:8]
+            wa = c.get("wa_cs") or c.get("wa_catat") or ""
+            if wa:
+                return f"🏪 {name} (WA {wa})"
+            return f"🏪 {name}"
 
-            client_options = list(client_map.keys()) + ["__self__"]
+        client_options = list(client_map.keys()) + ["__self__"]
+        chosen = st.selectbox(
+            "Pilih toko client",
+            options=client_options,
+            format_func=_format_client,
+            key="tambah_produk_target_client",
+        )
+        if chosen != "__self__":
+            target_user_id = chosen
+            cn = client_map.get(chosen, {})
+            target_label = f"toko {cn.get('business_name') or chosen[:8]}"
+        else:
+            target_label = "toko admin sendiri"
+
+    # === Mode 2: Tanpa service_role → input manual UUID + auto-detect gudang ===
+    else:
+        # Coba ambil semua warehouse lintas-tenant via service_role (kalau ada)
+        all_warehouses = []
+        if admin_core:
+            try:
+                all_warehouses = admin_core.get_all_warehouses_for_admin()
+            except Exception as exc:
+                logger.error("get_all_warehouses_for_admin: %s", exc)
+
+        if all_warehouses:
+            # Group by user_id supaya admin tahu UUID mana yang punya gudang
+            wh_by_user: dict[str, list[dict]] = {}
+            for wh in all_warehouses:
+                uid = wh.get("user_id")
+                if uid:
+                    wh_by_user.setdefault(uid, []).append(wh)
+
+            st.caption(
+                f"📦 **{len(all_warehouses)} gudang** terdaftar untuk "
+                f"**{len(wh_by_user)} user**. Pilih UUID di bawah untuk target toko."
+            )
+            # Build selectbox options
+            wh_options = []
+            wh_option_labels = []
+            for uid, whs in wh_by_user.items():
+                wh_names = ", ".join(w.get("name", "?") for w in whs)
+                wh_options.append(uid)
+                wh_option_labels.append(f"🏪 {wh_names} — UUID {uid[:8]}…")
+            wh_options.append("__self__")
+            wh_option_labels.append("— Toko sendiri (admin) —")
+            wh_map = dict(zip(wh_options, wh_option_labels))
             chosen = st.selectbox(
-                "Pilih toko client",
-                options=client_options,
-                format_func=_format_client,
-                key="tambah_produk_target_client",
+                "Pilih toko berdasarkan gudang",
+                options=wh_options,
+                format_func=lambda k: wh_map.get(k, k),
+                key="tambah_produk_target_warehouse",
             )
             if chosen != "__self__":
                 target_user_id = chosen
-                cn = client_map.get(chosen, {})
-                target_label = f"toko {cn.get('business_name') or chosen[:8]}"
+                target_label = f"toko UUID {chosen[:8]}… ({wh_by_user[chosen][0].get('name', '?')})"
             else:
                 target_label = "toko admin sendiri"
         else:
-            st.info("Belum ada client terdaftar. Produk akan ditambahkan ke toko admin sendiri.")
-    else:
-        st.caption(
-            "ℹ️ Mode terbatas — produk hanya bisa ditambahkan ke user_id yang sedang login. "
-            "Tambahkan SUPABASE_SERVICE_KEY di secrets.toml untuk menambah produk "
-            "ke semua client."
-        )
+            # Mode 3: input manual UUID
+            st.caption(
+                "ℹ️ Service role belum aktif. **Input manual UUID toko target** di bawah ini, "
+                "atau tambahkan `SUPABASE_SERVICE_KEY` di secrets.toml untuk dropdown otomatis."
+            )
+            uuid_input = st.text_input(
+                "UUID Toko Target",
+                value=user_id,
+                placeholder="1eaa9645-eb0d-4b85-aab8-3c6b514fa59b",
+                help="UUID toko tempat produk akan ditambahkan. Default = UUID admin sendiri.",
+                key="tambah_produk_target_uuid",
+            ).strip()
+            if uuid_input:
+                target_user_id = uuid_input
+                target_label = f"UUID {uuid_input[:8]}…"
 
     # === Form tambah produk ===
     with st.expander("➕ Tambah Produk Baru", expanded=True):
@@ -1356,7 +1409,7 @@ def _render_pengaturan_user(core, user_id, user_email) -> None:
 
 
 def render_daftar_produk(core, user_id, user_email) -> None:
-    """Halaman khusus Daftar Produk — read-only untuk Client.
+    """Halaman khusus Daftar Produk — read-only + form input untuk SEMUA user.
 
     Tabel sederhana: nama, harga, stok, kategori, status aktif.
     Sumber: tabel `products` di Supabase.
@@ -1365,11 +1418,14 @@ def render_daftar_produk(core, user_id, user_email) -> None:
     1. Aplikasi: laris_core.list_products() filter .eq("user_id", uid)
     2. Session: user_id selalu dari session user yang login
     3. Database: RLS policy p_own_products (user_id = auth.uid())
+
+    SEMUA user (admin & client) bisa tambah produk ke gudang mereka sendiri.
+    Admin dengan service_role bisa juga pilih toko client (lihat _render_tambah_produk_section).
     """
     section_card(
         "Daftar Produk",
         "Daftar produk & harga yang tersedia di toko Anda. "
-        "Update otomatis dari aktivitas gudang.",
+        "Tambah produk baru lewat form di bawah.",
         icon="ti-box",
     )
 
@@ -1379,14 +1435,84 @@ def render_daftar_produk(core, user_id, user_email) -> None:
     if not is_admin:
         st.info(
             "📋 **Info untuk Client:** Ini adalah daftar produk yang terdaftar di toko Anda. "
-            "Stok dan harga dikelola dari aktivitas gudang oleh Admin."
+            "Gunakan form di bawah untuk tambah produk baru ke gudang Anda."
         )
     else:
         st.info(
             "🛡️ **Mode Admin Super** — Tampilan ini di-scope ke toko yang sedang Anda "
-            "buka. Data yang muncul di-filter oleh user_id toko tersebut (bukan admin)."
+            "buka. Produk yang ditambah lewat form di bawah akan masuk ke toko Anda. "
+            "Untuk menambah produk ke toko client, gunakan menu 'Tambah Gudang' di atas."
         )
 
+    # === Form tambah produk (SEMUA user bisa akses — produk masuk ke toko sendiri) ===
+    with st.expander("➕ Tambah Produk ke Gudang Saya", expanded=False):
+        with st.form("tambah_produk_client_form", clear_on_submit=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                cp_name = st.text_input(
+                    "Nama Produk *",
+                    placeholder="cth: Indomie Goreng, Minyak Goreng 1L",
+                    key="cp_name",
+                )
+            with col2:
+                cp_category = st.text_input(
+                    "Kategori (opsional)",
+                    placeholder="cth: Sembako, Minuman, Snack",
+                    key="cp_category",
+                )
+
+            col3, col4 = st.columns(2)
+            with col3:
+                cp_price = st.number_input(
+                    "Harga Jual (Rp) *",
+                    min_value=0,
+                    step=500,
+                    value=0,
+                    key="cp_price",
+                )
+            with col4:
+                cp_stock = st.number_input(
+                    "Stok Awal",
+                    min_value=0,
+                    step=1,
+                    value=0,
+                    key="cp_stock",
+                )
+
+            cp_active = st.checkbox("Aktif", value=True, key="cp_active")
+
+            cp_submitted = st.form_submit_button(
+                "Simpan ke Gudang Saya",
+                type="primary",
+                use_container_width=True,
+            )
+
+            if cp_submitted:
+                if not cp_name or not cp_name.strip():
+                    st.error("❌ Nama produk wajib diisi.")
+                else:
+                    try:
+                        result = core.create_product(
+                            user_id,
+                            cp_name.strip(),
+                            price=cp_price,
+                            stock=cp_stock,
+                            category=cp_category,
+                            is_active=cp_active,
+                        )
+                        if result:
+                            st.success(
+                                f"✅ Produk **{cp_name}** berhasil ditambahkan ke gudang Anda. "
+                                f"Refresh halaman untuk melihat di tabel."
+                            )
+                            st.balloons()
+                        else:
+                            st.error("❌ Gagal menambah produk. Cek log server.")
+                    except Exception as exc:
+                        logger.exception("create_product (client) failed: %s", exc)
+                        st.error(f"❌ Error: {exc}")
+
+    # === Tabel produk existing ===
     try:
         products = core.list_products(user_id)
     except Exception as exc:
@@ -1398,7 +1524,7 @@ def render_daftar_produk(core, user_id, user_email) -> None:
         return
 
     if not products:
-        st.info("Belum ada produk terdaftar. Admin perlu menambahkan produk dari menu Gudang.")
+        st.info("Belum ada produk terdaftar. Tambah produk pertama lewat form di atas.")
         return
 
     # Banner kecil: info scope (supaya user yakin data ini HANYA untuk tokonya)
