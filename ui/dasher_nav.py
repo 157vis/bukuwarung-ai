@@ -95,11 +95,11 @@ def _render_menu_button(key: str, current: str) -> None:
     if not item:
         return
     is_active = key == current
-    # Tampilkan emoji + label, plus badge "(Admin)" untuk menu admin-only
-    admin_badge = ""
-    if item.admin_only:
-        admin_badge = ' <span style="font-size:0.6rem;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:4px;font-weight:600;margin-left:4px;">ADMIN</span>'
-    display = f"{item.icon} {item.label}{admin_badge}"
+    # Emoji icon + label. Tanda 🔒 di suffix untuk menu admin-only
+    # (tidak pakai inline HTML karena st.sidebar.button() tidak render HTML
+    # di label — sebelumnya HTML-nya bocor jadi plain text).
+    suffix = "  🔒" if item.admin_only else ""
+    display = f"{item.icon}  {item.label}{suffix}"
     btn_key = f"nav_{key}"
     if st.sidebar.button(
         display,
