@@ -274,10 +274,9 @@ def render_dashboard(core: LarisCore, user) -> None:
 
     warehouse_enabled = core.table_exists("warehouses")
 
-    # Tampilkan floating button "☰" di kiri atas HANYA saat sidebar tertutup.
-    # Ini adalah fallback supaya user SELALU punya cara untuk membuka kembali
-    # sidebar, tanpa tergantung pada tombol Streamlit header.
-    render_open_sidebar_button()
+    # TIDAK panggil render_open_sidebar_button() di sini - sudah dipanggil
+    # di main() untuk semua halaman. Pemanggilan duplikat akan trigger
+    # StreamlitDuplicateElementKey.
 
     # Sidebar selalu tampil (tidak ada toggle)
     try:
