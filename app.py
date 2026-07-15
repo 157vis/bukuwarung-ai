@@ -878,6 +878,14 @@ def _render_tambah_gudang(core, user_id, user_email: str | None = None) -> None:
         icon="ti-building-warehouse",
     )
 
+    # === Banner info utama — supaya user tahu ada section Tambah Produk di bawah ===
+    st.info(
+        "📋 **Halaman ini punya 3 section utama:**\n"
+        "1. **➕ Tambah Produk ke Gudang Client** (atas — untuk daftarkan produk baru)\n"
+        "2. **➕ Buat Gudang Baru** (tengah — untuk gudang fisik)\n"
+        "3. **Catat Barang (In/Out)** + **Daftar Gudang & Produk** (bawah — operasional harian)"
+    )
+
     # === Form tambah gudang ===
     with st.expander("➕ Buat Gudang Baru", expanded=True):
         with st.form("create_warehouse", clear_on_submit=True):
@@ -932,8 +940,8 @@ def _render_tambah_gudang(core, user_id, user_email: str | None = None) -> None:
         warehouses = None
 
     if warehouses is None:
-        st.error("❌ Terjadi kesalahan saat memuat data gudang.")
-        return
+        st.warning("⚠️ Tabel 'warehouses' belum tersedia atau RLS memblokir akses. Section inventaris di bawah dilewati.")
+        warehouses = []
 
     if not warehouses:
         empty_state(
@@ -1007,6 +1015,7 @@ def _render_tambah_gudang(core, user_id, user_email: str | None = None) -> None:
         "di menu Gudang milik client tersebut.",
         icon="ti-box",
     )
+    # (Bagian ini tetap di sini — lihat implementasi di bawah)
 
     # Pilih client target: kalau admin punya service_role, tampilkan dropdown
     # semua client. Kalau tidak, hanya produk untuk user admin sendiri.
