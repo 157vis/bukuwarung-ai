@@ -886,6 +886,9 @@ def _render_tambah_gudang(core, user_id, user_email: str | None = None) -> None:
         "3. **Catat Barang (In/Out)** + **Daftar Gudang & Produk** (bawah — operasional harian)"
     )
 
+    # === SECTION 1: Tambah Produk ke Gudang Client (PINDAH KE ATAS!) ===
+    _render_tambah_produk_section(core, user_id, user_email)
+
     # === Form tambah gudang ===
     with st.expander("➕ Buat Gudang Baru", expanded=True):
         with st.form("create_warehouse", clear_on_submit=True):
@@ -1007,7 +1010,61 @@ def _render_tambah_gudang(core, user_id, user_email: str | None = None) -> None:
                     logger.exception("add_inventory_entry failed: %s", exc)
                     st.error(f"❌ Error: {exc}")
 
-    # === Tambah Produk ke Gudang Client ===
+    # === SECTION 1 SUDAH DI ATAS (lihat _render_tambah_produk_section) ===
+    # Section ini dipanggil di awal _render_tambah_gudang agar langsung
+    # terlihat di atas, tidak perlu scroll jauh.
+
+    # Daftar produk existing di toko admin (read-only, di paling bawah)
+    st.markdown("---")
+    section_card(
+        "Produk Aktif di Toko Admin",
+        f"Daftar produk untuk user_id `{user_id[:8]}…` (toko admin sendiri).",
+        icon="ti-list",
+    )
+    try:
+        products = core.list_products(user_id)
+    except Exception as exc:
+        logger.error("list_products in tambah_gudang: %s", exc)
+        products = None
+    if products is None:
+        st.error("❌ Gagal memuat data produk.")
+    elif not products:
+        empty_state(
+            "ti-package",
+            "Belum ada produk",
+            "Tambah produk pertama lewat form di bagian ATAS halaman ini.",
+        )
+    else:
+        import pandas as _pd2
+        rows = []
+        for p in products:
+            rows.append({
+                "ID": p.get("id"),
+                "Nama": p.get("name", "—"),
+                "Harga": f"Rp {int(p.get('price', 0)):,}".replace(",", "."),
+                "Stok": p.get("stock", 0),
+                "Kategori": p.get("category") or "—",
+                "Status": "✅ Aktif" if p.get("is_active") else "❌ Non-aktif",
+            })
+        st.caption(f"Total: **{len(products)}** produk")
+        st.dataframe(
+            _pd2.DataFrame(rows),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+
+# ============================================================
+# HANDLER: Tambah Produk ke Gudang Client (helper, admin-only)
+# ============================================================
+
+def _render_tambah_produk_section(core, user_id, user_email: str | None = None) -> None:
+    """Section 'Tambah Produk ke Gudang Client' — dipanggil di ATAS halaman.
+
+    Form lengkap: nama, kategori, harga, stok, status aktif, deskripsi.
+    Untuk admin dengan service_role: ada dropdown pilih toko client.
+    Untuk non-admin / tanpa service_role: tambah ke toko sendiri saja.
+    """
     st.markdown("---")
     section_card(
         "Tambah Produk ke Gudang Client",
@@ -1015,7 +1072,6 @@ def _render_tambah_gudang(core, user_id, user_email: str | None = None) -> None:
         "di menu Gudang milik client tersebut.",
         icon="ti-box",
     )
-    # (Bagian ini tetap di sini — lihat implementasi di bawah)
 
     # Pilih client target: kalau admin punya service_role, tampilkan dropdown
     # semua client. Kalau tidak, hanya produk untuk user admin sendiri.
@@ -1107,7 +1163,6 @@ def _render_tambah_gudang(core, user_id, user_email: str | None = None) -> None:
                     st.error("❌ Nama produk wajib diisi.")
                 else:
                     try:
-                        # Pakai admin_core kalau target beda dari user_id admin
                         runner = admin_core if (admin_core and target_user_id != user_id) else core
                         result = runner.create_product(
                             target_user_id,
@@ -1129,6 +1184,7 @@ def _render_tambah_gudang(core, user_id, user_email: str | None = None) -> None:
                     except Exception as exc:
                         logger.exception("create_product failed: %s", exc)
                         st.error(f"❌ Error: {exc}")
+
 
     # === Daftar produk existing di target toko ===
     st.markdown("---")
