@@ -45,20 +45,21 @@ def _logo_data_uri() -> str:
 
 
 def sidebar_brand() -> None:
+    """Logo + nama aplikasi di header sidebar — compact, mepet ke atas."""
     logo = _logo_data_uri()
     img = (
-        f'<img src="{logo}" alt="" width="30" height="30" style="border-radius:8px;" />'
+        f'<img src="{logo}" alt="" width="24" height="24" style="border-radius:6px;" />'
         if logo
         else ""
     )
     _render(
         f"""
-        <div class="brand-logo">
-            <div class="d-flex align-items-center gap-2">
+        <div class="laris-brand">
+            <div class="laris-brand-row">
                 {img}
-                <span class="fw-bold fs-4 site-logo-text">{html.escape(APP_NAME)}</span>
+                <span class="laris-brand-name">{html.escape(APP_NAME)}</span>
             </div>
-            <small class="text-muted d-block mt-1 site-logo-text">{html.escape(APP_TAGLINE_DASHBOARD)}</small>
+            <small class="laris-brand-tagline">{html.escape(APP_TAGLINE_DASHBOARD)}</small>
         </div>
         """
     )
@@ -120,14 +121,14 @@ def stat_card_row(metrics: list[tuple[str, str, str]]) -> None:
 
 
 def section_card(title: str, subtitle: str = "", icon: str = "") -> None:
-    """Header kartu bergaya Dasher."""
+    """Header kartu bergaya Dasher — compact (rapih, font lebih kecil)."""
     ic = f'<i class="ti {html.escape(icon)} me-2 text-primary"></i>' if icon else ""
     _render(
         f"""
-        <div class="card card-lg mb-3" style="border:1px solid var(--ds-gray-200);border-radius:1rem;">
-          <div class="card-body pb-2">
-            <h4 class="mb-1">{ic}{html.escape(title)}</h4>
-            <p class="text-muted mb-0 small">{html.escape(subtitle)}</p>
+        <div class="laris-section-card mb-3">
+          <div class="laris-section-card-body">
+            <h6 class="laris-section-title">{ic}{html.escape(title)}</h6>
+            {f'<p class="laris-section-subtitle">{html.escape(subtitle)}</p>' if subtitle else ''}
           </div>
         </div>
         """
