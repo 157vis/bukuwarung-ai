@@ -37,7 +37,11 @@ def render_open_sidebar_button() -> None:
 
     Posisi: position: fixed dengan z-index tinggi, di-render via JS overlay
     sehingga benar-benar di luar area Streamlit (sidebar + main content).
+
+    Sidebar SELALU di-force expanded di awal. Klik tombol untuk collapse.
     """
+    # Force sidebar expanded di awal. User klik tombol untuk collapse.
+    st.session_state[SIDEBAR_OPEN_KEY] = True
     sidebar_open = is_sidebar_open()
     btn_label = "✕" if sidebar_open else "☰"
     btn_title = "Tutup sidebar" if sidebar_open else "Buka sidebar"

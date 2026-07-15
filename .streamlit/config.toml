@@ -10,6 +10,8 @@ gatherUsageStats = false
 [client]
 # Hide Streamlit toolbar (incl. "Manage app" button) to prevent overlap with sidebar nav
 toolbarMode = "minimal"
+# Sidebar HARUS expanded by default - collapse manual via tombol toggle "☰"
+initialSidebarState = "expanded"
 
 [theme]
 base = "light"
