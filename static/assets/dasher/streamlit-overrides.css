@@ -146,13 +146,13 @@ section[data-testid="stSidebar"] hr {
 
 /* Brand logo Dasher - compact, mepet ke atas */
 section[data-testid="stSidebar"] .laris-brand {
-  padding: 0.5rem 0.85rem 0.75rem 0.85rem;
+  padding: 0.4rem 0.85rem 0.6rem 0.85rem;
   position: sticky;
   top: 0;
   background-color: var(--ds-navbar-bg, #fff);
   z-index: 2;
   border-bottom: 1px dashed var(--ds-gray-300, #dfe3e8);
-  margin-top: -0.5rem;  /* Naikkan ke atas */
+  margin-top: -0.75rem;  /* Naikkan lebih ke atas */
 }
 section[data-testid="stSidebar"] .laris-brand-row {
   display: flex;
@@ -160,11 +160,13 @@ section[data-testid="stSidebar"] .laris-brand-row {
   gap: 0.5rem;
   line-height: 1.1;
 }
+/* Samakan dengan logo di login page (laris-login-brand h1: 1.85rem) */
 section[data-testid="stSidebar"] .laris-brand-name {
   font-weight: 700;
-  font-size: 1.05rem;
+  font-size: 1.35rem;  /* Lebih besar, samakan gaya login */
   color: #1c252e;
   line-height: 1.1;
+  letter-spacing: -0.01em;
 }
 section[data-testid="stSidebar"] .laris-brand-tagline {
   display: block;
@@ -307,12 +309,44 @@ section[data-testid="stSidebar"] .stButton > button[kind="primary"] {
 
 /* ============================================================
    AREA KONTEN UTAMA
+   - Layout compact: padding top minimal, section rapat
    ============================================================ */
 .main .block-container {
-  padding-top: 0.5rem !important;
-  padding-left: 1.5rem !important;
-  padding-right: 1.5rem !important;
+  padding-top: 0.25rem !important;  /* Naikkan konten ke paling atas */
+  padding-bottom: 1rem !important;
+  padding-left: 1.25rem !important;
+  padding-right: 1.25rem !important;
   max-width: 100% !important;
+}
+
+/* Hapus margin/padding default element pertama di main (biasanya ada gap besar) */
+.main .block-container > div:first-child {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* H1 pertama di main (judul halaman) lebih mepet ke atas */
+.main h1:first-of-type,
+.main h2:first-of-type {
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.5rem !important;
+  padding-top: 0 !important;
+}
+
+/* Section card pertama: mepet ke atas (tanpa margin-top) */
+.main .laris-section-card:first-child {
+  margin-top: 0 !important;
+}
+
+/* Divider horizontal (st.markdown ---): tipis & ringkas */
+.main hr {
+  margin: 0.85rem 0 !important;
+  opacity: 0.6;
+}
+
+/* Empty state box (kalau ada): lebih ringkas */
+.main .laris-empty {
+  padding: 1.5rem !important;
 }
 
 .laris-dasher-topbar {
