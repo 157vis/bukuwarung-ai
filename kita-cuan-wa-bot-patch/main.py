@@ -51,6 +51,9 @@ from orchestrator import orchestrate_transaction_created  # noqa: E402
 
 logger = get_logger(__name__)
 
+# CS Webhook (BukuWarung AI Multi-Agent) — handle customer conversation
+DEFAULT_CSAT_BASE_URL = "https://bukuwarung-ai-larisai.up.railway.app"
+
 app = FastAPI(title=WA_BOT_TITLE)
 
 
@@ -162,18 +165,225 @@ def _orchestrate(user_id: str, raw_text: str, data: list[dict]) -> str:
     )
 
 
-async def send_wa_reply(phone: str, message: str, inboxid: str | None = None) -> None:
+def _csat_base_url() -> str:
+    """URL bukuwarung-ai CS webhook (AI Multi-Agent)."""
+    return (
+        os.environ.get("BUKUWARUNG_BASE_URL", "").strip().rstrip("/")
+        or DEFAULT_CSAT_BASE_URL
+    )
+
+
+async def _resolve_tenant_by_device(device: str) -> str | None:
+    """Resolve tenant (client_id) dari nomor device Fonnte.
+
+    Lookup di tabel `clients` Supabase: cari client yang punya device
+    ini di metadata.device atau di owner_phones[0] (Fonnte device utama).
+
+    Returns:
+        client_id atau None kalau tidak ketemu.
+    """
+    if not device:
+        return None
+
+    digits = "".join(ch for ch in device if ch.isdigit())
+    if digits.startswith("0"):
+        digits = "62" + digits[1:]
+
+    try:
+        fonnte = get_fonnte()
+        if not fonnte or not fonnte._db:
+            return None
+
+        def _lookup():
+            try:
+                return (
+                    fonnte._db.table("clients")
+                    .select("client_id, owner_phones, metadata")
+                    .eq("is_active", True)
+                    .execute()
+                )
+            except Exception:
+                return None
+
+        result = await asyncio.to_thread(_lookup)
+        if not result or not result.data:
+            return None
+        for row in result.data:
+            # Cek metadata.device
+            meta = row.get("metadata") or {}
+            if isinstance(meta, dict):
+                meta_dev = meta.get("device") or meta.get("fonnte_device")
+                if meta_dev and "".join(ch for ch in str(meta_dev) if ch.isdigit()).lstrip("0").lstrip("62").startswith(digits.lstrip("62")):
+                    # Prefer metadata.user_id (UUID) untuk CS agent URL
+                    if meta.get("user_id"):
+                        return meta.get("user_id")
+                    return row.get("client_id")
+            # Fallback: owner_phones[0] cocok dengan device
+            owners = row.get("owner_phones") or []
+            for owner in owners:
+                owner_norm = "".join(ch for ch in str(owner) if ch.isdigit())
+                if owner_norm.startswith("0"):
+                    owner_norm = "62" + owner_norm[1:]
+                if owner_norm == digits:
+                    # Prefer metadata.user_id (UUID) untuk CS agent URL
+                    if isinstance(meta, dict) and meta.get("user_id"):
+                        return meta.get("user_id")
+                    return row.get("client_id")
+    except Exception as exc:
+        logger.warning("resolve_tenant_by_device gagal: %s", exc)
+
+    return None
+
+
+async def _ask_csat_agent(user_id: str, sender: str, text: str, name: str) -> str | None:
+    """Forward customer message ke AI Multi-Agent (CS / Sales agent).
+
+    Returns the agent's reply text, atau None kalau gagal.
+    user_id di sini = `metadata.user_id` (UUID) dari tabel `clients`,
+    BUKAN `client_id` string. CS agent route expects UUID.
+
+    Otak / memory:
+        Sebelum panggil CS webhook, cek otak_memories (tabel di Supabase).
+        Kalau ada jawaban tersimpan untuk pertanyaan ini (normalized match),
+        langsung pakai — hemat LLM call. Setelah dapat jawaban dari agent,
+        simpan ke memory untuk pertanyaan serupa di masa depan.
+    """
+    if not text or not text.strip():
+        return None
+
+    # === Otak: cek memory dulu (incremental learning) ===
+    try:
+        from laris_core import LarisCore
+        _core = LarisCore()
+        cached = await asyncio.to_thread(_core.recall_memory, user_id, "cs", text)
+        if cached:
+            logger.info(
+                "otak HIT: skip CS webhook (user=%s q='%s')",
+                user_id, text[:40],
+            )
+            return cached
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("otak recall_memory skip: %s", exc)
+
+    url = f"{_csat_base_url()}/webhook/csat/{user_id}"
+    payload = {
+        "message": text or "",
+        "sender": sender,
+        "name": name or "",
+        "channel": "wa",
+    }
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            resp = await client.post(url, json=payload)
+        if resp.status_code >= 400:
+            logger.warning("csat webhook HTTP %s: %s", resp.status_code, resp.text[:200])
+            return None
+        data = resp.json()
+        # Beberapa versi return {reply: "..."} atau {intent: ...}
+        reply = (
+            data.get("reply")
+            or data.get("response")
+            or data.get("message")
+            or data.get("text")
+        )
+        if not reply:
+            # Kalau agent hanya detect intent, generate fallback berdasarkan intent
+            intent = (data.get("intent") or "").lower()
+            agent = (data.get("agent") or "").lower()
+            if intent == "greeting":
+                reply = (
+                    "Halo! Selamat datang di Toko Rafih 👋\n"
+                    "Ada yang bisa saya bantu? Silakan tanya produk, "
+                    "harga, atau stok ya~"
+                )
+            elif intent in ("sales", "product_inquiry"):
+                reply = (
+                    "Tertarik dengan produk kami? Boleh tau barang yang "
+                    "Anda cari? Saya bantu cek stok dan harganya ya 😊"
+                )
+            elif intent == "order":
+                # Customer mau order — minta detail
+                reply = (
+                    "Siap! Boleh info detail ordernya ya:\n"
+                    "• Nama barang\n"
+                    "• Jumlah\n"
+                    "• Alamat kirim (kalau perlu)\n\n"
+                    "Nanti saya proses secepatnya 🙏"
+                )
+            elif intent == "cs" or agent in ("cs", "support"):
+                reply = (
+                    "Terima kasih sudah menghubungi kami 🙏\n"
+                    "Boleh ceritakan keluhan atau pertanyaanmu?\n"
+                    "Admin kami akan segera membantu 😊"
+                )
+            elif agent:
+                reply = (
+                    f"Terima kasih sudah menghubungi kami 🙏\n"
+                    f"Silakan tunggu, admin kami akan segera membantu."
+                )
+
+        # === Otak: simpan jawaban ke memory untuk dipelajari agent ===
+        if reply and reply.strip():
+            try:
+                from laris_core import LarisCore as _Core2
+                _core2 = _Core2()
+                await asyncio.to_thread(_core2.remember_answer, user_id, "cs", text, reply)
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("otak remember_answer skip: %s", exc)
+
+        return reply
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("csat forward failed: %s", exc)
+        return None
+
+
+async def send_wa_reply(
+    phone: str,
+    message: str,
+    inboxid: str | None = None,
+    device: str | None = None,
+) -> None:
     """Kirim balasan WA — multi-tenant.
 
     Token Fonnte di-resolve otomatis per-nomor dari tabel `clients` Supabase.
     Fallback ke env `WA_API_KEY` kalau ada (backward compat untuk legacy).
+
+    Untuk CUSTOMER (bukan owner), pass `device` = nomor Fonnte toko
+    yang menerima pesan masuk, supaya balasan dikirim via device toko.
     """
     if not phone or not message:
         logger.warning("send_wa_reply: phone/message kosong")
         return
     try:
         client = get_fonnte()
-        await client.send_message(phone, message, inboxid=inboxid)
+        if device:
+            # Customer (bukan owner) — pakai token device toko, bukan by customer phone
+            token = await client.lookup_token_by_device(device)
+            if not token:
+                logger.error(
+                    "send_wa_reply: tidak ada fonnte_token untuk device=%s", device
+                )
+                return
+            # Kirim langsung via Fonnte API
+            target = client._normalize_phone(phone)
+            payload = {"target": target, "message": message}
+            if inboxid:
+                payload["inboxid"] = inboxid
+            async with httpx.AsyncClient(timeout=30.0) as client_http:
+                resp = await client_http.post(
+                    "https://api.fonnte.com/send",
+                    headers={"Authorization": token},
+                    data=payload,
+                )
+            if resp.status_code >= 400:
+                logger.error(
+                    "send_wa_reply (by device=%s) gagal status=%s: %s",
+                    device, resp.status_code, resp.text[:200],
+                )
+            else:
+                logger.info("send_wa_reply: sent to %s via device=%s", target, device)
+        else:
+            await client.send_message(phone, message, inboxid=inboxid)
     except Exception as exc:  # noqa: BLE001 - tangkap SEMUA error supaya webhook tidak crash
         logger.exception("send_wa_reply failed: %s", exc)
 
@@ -205,6 +415,10 @@ async def webhook(request: Request):
         body, WA_PROVIDER, _normalize_wa_phone
     )
 
+    # Device Fonnte yang menerima pesan (untuk multi-tenant: kirim balasan
+    # via device toko, bukan via device customer)
+    device = body.get("device") or body.get("sender_device")
+
     if not phone:
         logger.error("webhook: nomor tidak ditemukan. body=%s", str(body)[:500])
         return {"status": "error", "detail": "No phone number"}
@@ -229,7 +443,7 @@ async def webhook(request: Request):
             f"Atau tanya: _{BOT_NAME.lower()}, gimana bisnis aku?_"
         )
         await asyncio.sleep(random.uniform(0.5, 1.5))
-        await send_wa_reply(phone, reply, inboxid=inboxid)
+        await send_wa_reply(phone, reply, inboxid=inboxid, device=device)
         logged = _persist_wa_log(phone, text, reply)
         return {"status": "ok", "mode": "ping", "wa_logged": logged}
 
@@ -237,7 +451,44 @@ async def webhook(request: Request):
     user_id = None
 
     try:
-        user_id = resolve_user_id(phone)
+        try:
+            user_id = resolve_user_id(phone)
+        except ValueError:
+            # Nomor tidak ada di wa_users → customer (bukan owner)
+            user_id = None
+
+        # === CUSTOMER (bukan owner) → forward ke CS AI Multi-Agent ===
+        if not user_id and text:
+            logger.info("customer message from %s (device=%s) — forwarding to CSAT", phone, device)
+            # Resolve client_id dari device Fonnte (nomor toko yang menerima pesan)
+            csat_tenant = None
+            if device:
+                try:
+                    client_obj = get_fonnte()
+                    # Lookup client yang punya device di metadata atau owner_phones
+                    csat_tenant = await _resolve_tenant_by_device(device)
+                except Exception as exc:
+                    logger.warning("resolve_tenant_by_device gagal: %s", exc)
+            if not csat_tenant:
+                csat_tenant = "toko_rafih"  # fallback default tenant
+            csat_reply = await _ask_csat_agent(
+                user_id=csat_tenant,
+                sender=phone,
+                text=text,
+                name=body.get("name", ""),
+            )
+            if csat_reply:
+                reply = f"{bot_header()}\n\n{csat_reply}"
+            else:
+                reply = (
+                    f"{bot_header()}\n\n"
+                    f"Halo! 👋 Selamat datang di toko kami.\n"
+                    f"Silakan tanya produk, harga, atau stok ya~\n"
+                    f"Admin kami akan segera membantu 😊"
+                )
+            await asyncio.sleep(random_typing_delay())
+            await send_wa_reply(phone, reply, inboxid=inboxid, device=device)
+            return {"status": "ok", "mode": "cs_customer", "wa_logged": True}
 
         if media_type in ("image", "photo") and media_url:
             async with httpx.AsyncClient() as client:
@@ -343,7 +594,7 @@ async def webhook(request: Request):
         reply = f"{bot_header()}\n\n😅 Waduh, ada error tak terduga.\nCoba kirim lagi ya~"
 
     await asyncio.sleep(random_typing_delay())
-    await send_wa_reply(phone, reply, inboxid=inboxid)
+    await send_wa_reply(phone, reply, inboxid=inboxid, device=device)
     _persist_wa_log(phone, text, reply, user_id=user_id)
     return {"status": "ok"}
 
