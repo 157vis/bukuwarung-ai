@@ -279,6 +279,10 @@ def render_dashboard(core: LarisCore, user) -> None:
 
     warehouse_enabled = core.table_exists("warehouses")
 
+    # Tentukan role user SEBELUM render sidebar — supaya menu admin
+    # (Tambah Gudang, Pengaturan Bot) muncul untuk super admin saja.
+    is_admin = is_super_admin(user_email)
+
     # Sidebar: selalu di-render, tapi visibility-nya diatur oleh CSS via
     # `aria-expanded` attribute (Streamlit built-in toggle button).
     # Konfigurasi: [client] initialSidebarState = "collapsed" di config.toml.
@@ -286,8 +290,13 @@ def render_dashboard(core: LarisCore, user) -> None:
         menu = render_sidebar_nav(
             warehouse_enabled=warehouse_enabled,
             user_email=user_email,
+            is_admin=is_admin,
         )
-        logger.debug("Sidebar nav rendered. Active menu: %s", menu)
+        logger.debug(
+            "Sidebar nav rendered. Active menu: %s, is_admin=%s",
+            menu,
+            is_admin,
+        )
     except Exception as exc:
         import traceback
         tb = traceback.format_exc()
@@ -643,7 +652,6 @@ def render_dashboard(core: LarisCore, user) -> None:
             return
         render_pengaturan_bot(core, user_id)
 
-        is_admin = is_super_admin(user_email)
         if is_admin:
             st.markdown("---")
             section_card(
