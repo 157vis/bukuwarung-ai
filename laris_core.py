@@ -673,6 +673,129 @@ class LarisCore:
             logger.error("list_products user=%s: %s", uid, exc)
             return None
 
+    def create_product(
+        self,
+        user_id: str,
+        name: str,
+        price: int | float = 0,
+        stock: int = 0,
+        category: str | None = None,
+        description: str | None = None,
+        is_active: bool = True,
+    ) -> dict | None:
+        """Tambah produk baru untuk tenant.
+
+        Field yang disimpan: name, price, stock, category, description, is_active.
+        Stok awal = nilai `stock` (default 0). Produk otomatis terikat ke
+        user_id tenant — terisolasi per-toko via RLS p_own_products.
+        """
+        uid = self._require_user_id(user_id)
+        clean_name = (name or "").strip()
+        if not clean_name:
+            logger.warning("create_product: nama kosong, skip")
+            return None
+        try:
+            data = {
+                "user_id": uid,
+                "name": clean_name,
+                "price": int(price or 0),
+                "stock": int(stock or 0),
+                "category": (category or "").strip() or None,
+                "description": (description or "").strip() or None,
+                "is_active": bool(is_active),
+                "created_at": datetime.now().isoformat(),
+            }
+            res = self.supabase.table("products").insert(data).execute()
+            if res.data:
+                logger.info(
+                    "create_product: '%s' (stock=%s) untuk user_id=%s",
+                    clean_name,
+                    data["stock"],
+                    uid,
+                )
+                return res.data[0] if isinstance(res.data, list) else res.data
+            return None
+        except Exception as exc:
+            logger.exception("create_product user=%s: %s", uid, exc)
+            return None
+
+    def update_product(
+        self,
+        user_id: str,
+        product_id: int,
+        *,
+        name: str | None = None,
+        price: int | float | None = None,
+        stock: int | None = None,
+        category: str | None = None,
+        is_active: bool | None = None,
+    ) -> dict | None:
+        """Update produk milik tenant (by id, scoped by user_id).
+
+        Hanya field yang dikirim (tidak None) yang di-update.
+        Stok diubah absolut (replace), bukan delta — gunakan
+        `adjust_product_stock` untuk perubahan inkremental.
+        """
+        uid = self._require_user_id(user_id)
+        fields: dict = {}
+        if name is not None:
+            fields["name"] = name.strip()
+        if price is not None:
+            fields["price"] = int(price)
+        if stock is not None:
+            fields["stock"] = max(0, int(stock))
+        if category is not None:
+            fields["category"] = (category or "").strip() or None
+        if is_active is not None:
+            fields["is_active"] = bool(is_active)
+        if not fields:
+            return None
+        try:
+            res = (
+                self.supabase.table("products")
+                .update(fields)
+                .eq("id", product_id)
+                .eq("user_id", uid)
+                .execute()
+            )
+            if res.data:
+                return res.data[0] if isinstance(res.data, list) else res.data
+            return None
+        except Exception as exc:
+            logger.exception("update_product user=%s id=%s: %s", uid, product_id, exc)
+            return None
+
+    def delete_product(self, user_id: str, product_id: int) -> bool:
+        """Hapus produk milik tenant (by id, scoped by user_id)."""
+        uid = self._require_user_id(user_id)
+        try:
+            self.supabase.table("products").delete().eq("id", product_id).eq(
+                "user_id", uid
+            ).execute()
+            return True
+        except Exception as exc:
+            logger.exception("delete_product user=%s id=%s: %s", uid, product_id, exc)
+            return False
+
+    def get_clients_for_admin(self) -> list[dict]:
+        """List client (auth.users) untuk dipilih admin saat tambah produk.
+
+        Hanya bekerja jika client adalah admin DAN `_service_client` aktif.
+        Untuk non-admin, return [] (mereka tidak boleh pilih tenant lain).
+        """
+        self._assert_service_client("get_clients_for_admin")
+        try:
+            res = (
+                self.supabase.table("clients")
+                .select("client_id, name, owner_phones, metadata, is_active")
+                .order("client_id")
+                .execute()
+            )
+            return res.data or []
+        except Exception as exc:
+            logger.error("get_clients_for_admin: %s", exc)
+            return []
+
     def get_products(self, user_id: str):
         """Alias `list_products`."""
         return self.list_products(user_id)

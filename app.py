@@ -852,7 +852,7 @@ def render_dashboard(core: LarisCore, user) -> None:
                 "Silakan hubungi Admin jika butuh gudang baru."
             )
             return
-        _render_tambah_gudang(core, user_id)
+        _render_tambah_gudang(core, user_id, user_email)
 
     elif menu == "Gudang":
         # === SEMUA USER: daftar produk per client (read-only) ===
@@ -863,17 +863,18 @@ def render_dashboard(core: LarisCore, user) -> None:
 # HANDLER: Tambah Gudang (admin-only)
 # ============================================================
 
-def _render_tambah_gudang(core, user_id) -> None:
+def _render_tambah_gudang(core, user_id, user_email: str | None = None) -> None:
     """Halaman Tambah Gudang — khusus Super Admin.
 
     Berisi:
     - Form buat gudang baru
     - Daftar gudang yang sudah ada
     - Quick actions: lihat inventaris, tambah produk
+    - Tambah produk ke gudang client (dengan pemilihan client untuk multi-tenant)
     """
     section_card(
         "Tambah Gudang",
-        "Buat gudang baru untuk inventaris toko. Hanya Admin yang bisa menambah.",
+        "Buat gudang baru & kelola inventaris toko client. Hanya Admin.",
         icon="ti-building-warehouse",
     )
 
@@ -997,6 +998,172 @@ def _render_tambah_gudang(core, user_id) -> None:
                 except Exception as exc:
                     logger.exception("add_inventory_entry failed: %s", exc)
                     st.error(f"❌ Error: {exc}")
+
+    # === Tambah Produk ke Gudang Client ===
+    st.markdown("---")
+    section_card(
+        "Tambah Produk ke Gudang Client",
+        "Daftarkan produk baru ke inventaris toko. Produk akan otomatis muncul "
+        "di menu Gudang milik client tersebut.",
+        icon="ti-box",
+    )
+
+    # Pilih client target: kalau admin punya service_role, tampilkan dropdown
+    # semua client. Kalau tidak, hanya produk untuk user admin sendiri.
+    target_user_id = user_id
+    target_label = "toko ini (admin)"
+    admin_core = None
+    try:
+        admin_core = get_admin_core()
+    except Exception:
+        admin_core = None
+
+    if admin_core:
+        try:
+            clients = admin_core.get_clients_for_admin()
+        except Exception as exc:
+            logger.error("get_clients_for_admin: %s", exc)
+            clients = []
+
+        if clients:
+            client_options = {c.get("client_id"): c.get("name") or c.get("client_id") for c in clients}
+            client_options["__self__"] = "— Toko sendiri (admin) —"
+            chosen = st.selectbox(
+                "Pilih toko client",
+                options=list(client_options.keys()),
+                format_func=lambda k: client_options.get(k, k),
+                key="tambah_produk_target_client",
+            )
+            if chosen != "__self__":
+                target_user_id = chosen
+                target_label = f"toko {client_options.get(chosen, chosen)}"
+            else:
+                target_label = "toko admin sendiri"
+        else:
+            st.info("Belum ada client terdaftar. Produk akan ditambahkan ke toko admin sendiri.")
+    else:
+        st.caption(
+            "ℹ️ Mode terbatas — produk hanya bisa ditambahkan ke user_id yang sedang login. "
+            "Tambahkan SUPABASE_SERVICE_KEY di secrets.toml untuk menambah produk "
+            "ke semua client."
+        )
+
+    # === Form tambah produk ===
+    with st.expander("➕ Tambah Produk Baru", expanded=True):
+        with st.form("tambah_produk_form", clear_on_submit=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                prod_name = st.text_input(
+                    "Nama Produk *",
+                    placeholder="cth: Indomie Goreng, Minyak Goreng 1L",
+                )
+            with col2:
+                prod_category = st.text_input(
+                    "Kategori (opsional)",
+                    placeholder="cth: Sembako, Minuman, Snack",
+                )
+
+            col3, col4, col5 = st.columns(3)
+            with col3:
+                prod_price = st.number_input(
+                    "Harga Jual (Rp) *",
+                    min_value=0,
+                    step=500,
+                    value=0,
+                )
+            with col4:
+                prod_stock = st.number_input(
+                    "Stok Awal",
+                    min_value=0,
+                    step=1,
+                    value=0,
+                )
+            with col5:
+                prod_active = st.checkbox("Aktif", value=True)
+
+            prod_description = st.text_area(
+                "Deskripsi (opsional)",
+                placeholder="Catatan produk: variant, supplier, dll.",
+                height=70,
+            )
+
+            submitted = st.form_submit_button(
+                "Simpan Produk",
+                type="primary",
+                use_container_width=True,
+            )
+
+            if submitted:
+                if not prod_name or not prod_name.strip():
+                    st.error("❌ Nama produk wajib diisi.")
+                else:
+                    try:
+                        # Pakai admin_core kalau target beda dari user_id admin
+                        runner = admin_core if (admin_core and target_user_id != user_id) else core
+                        result = runner.create_product(
+                            target_user_id,
+                            prod_name.strip(),
+                            price=prod_price,
+                            stock=prod_stock,
+                            category=prod_category,
+                            description=prod_description,
+                            is_active=prod_active,
+                        )
+                        if result:
+                            st.success(
+                                f"✅ Produk **{prod_name}** berhasil ditambahkan ke "
+                                f"{target_label} (user_id `{target_user_id[:8]}…`)."
+                            )
+                            st.balloons()
+                        else:
+                            st.error("❌ Gagal menambah produk. Cek log server.")
+                    except Exception as exc:
+                        logger.exception("create_product failed: %s", exc)
+                        st.error(f"❌ Error: {exc}")
+
+    # === Daftar produk existing di target toko ===
+    st.markdown("---")
+    section_card(
+        f"Produk Aktif di {target_label}",
+        f"Daftar produk yang sudah terdaftar untuk user_id `{target_user_id[:8]}…`. "
+        f"Gunakan untuk verifikasi setelah menambah produk baru.",
+        icon="ti-list",
+    )
+
+    try:
+        runner = admin_core if (admin_core and target_user_id != user_id) else core
+        products = runner.list_products(target_user_id)
+    except Exception as exc:
+        logger.error("list_products in tambah_gudang: %s", exc)
+        products = None
+
+    if products is None:
+        st.error("❌ Gagal memuat data produk. Pastikan tabel 'products' ada di Supabase.")
+    elif not products:
+        empty_state(
+            "ti-package",
+            "Belum ada produk",
+            "Tambah produk pertama lewat form di atas.",
+        )
+    else:
+        import pandas as _pd2
+        rows = []
+        for p in products:
+            rows.append({
+                "ID": p.get("id"),
+                "Nama": p.get("name", "—"),
+                "Harga": f"Rp {int(p.get('price', 0)):,}".replace(",", "."),
+                "Stok": p.get("stock", 0),
+                "Kategori": p.get("category") or "—",
+                "Status": "✅ Aktif" if p.get("is_active") else "❌ Non-aktif",
+            })
+        _prod_df = _pd2.DataFrame(rows)
+        st.caption(f"Total: **{len(products)}** produk")
+        st.dataframe(
+            _prod_df,
+            use_container_width=True,
+            hide_index=True,
+        )
 
 
 # ============================================================
