@@ -1091,17 +1091,31 @@ def _render_tambah_produk_section(core, user_id, user_email: str | None = None) 
             clients = []
 
         if clients:
-            client_options = {c.get("client_id"): c.get("name") or c.get("client_id") for c in clients}
-            client_options["__self__"] = "— Toko sendiri (admin) —"
+            # Bangun map user_id → dict client, supaya format_func bisa
+            # menampilkan business_name + wa_cs sekilas.
+            client_map: dict[str, dict] = {c.get("user_id"): c for c in clients if c.get("user_id")}
+
+            def _format_client(uid: str) -> str:
+                if uid == "__self__":
+                    return "— Toko sendiri (admin) —"
+                c = client_map.get(uid, {})
+                name = c.get("business_name") or c.get("name") or uid[:8]
+                wa = c.get("wa_cs") or c.get("wa_catat") or ""
+                if wa:
+                    return f"🏪 {name} (WA {wa})"
+                return f"🏪 {name}"
+
+            client_options = list(client_map.keys()) + ["__self__"]
             chosen = st.selectbox(
                 "Pilih toko client",
-                options=list(client_options.keys()),
-                format_func=lambda k: client_options.get(k, k),
+                options=client_options,
+                format_func=_format_client,
                 key="tambah_produk_target_client",
             )
             if chosen != "__self__":
                 target_user_id = chosen
-                target_label = f"toko {client_options.get(chosen, chosen)}"
+                cn = client_map.get(chosen, {})
+                target_label = f"toko {cn.get('business_name') or chosen[:8]}"
             else:
                 target_label = "toko admin sendiri"
         else:

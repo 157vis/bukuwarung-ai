@@ -778,20 +778,26 @@ class LarisCore:
             return False
 
     def get_clients_for_admin(self) -> list[dict]:
-        """List client (auth.users) untuk dipilih admin saat tambah produk.
+        """List client untuk dipilih admin saat tambah produk.
 
-        Hanya bekerja jika client adalah admin DAN `_service_client` aktif.
-        Untuk non-admin, return [] (mereka tidak boleh pilih tenant lain).
+        Hanya bekerja jika admin punya `_service_client` aktif.
+        Schema tabel `clients`:
+          user_id (UUID), business_name, wa_cs, wa_catat,
+          fonnte_token_cs, fonnte_token_catat, authorized_owners, is_active
         """
         self._assert_service_client("get_clients_for_admin")
         try:
             res = (
                 self.supabase.table("clients")
-                .select("client_id, name, owner_phones, metadata, is_active")
-                .order("client_id")
+                .select("user_id, business_name, wa_cs, wa_catat, is_active")
+                .order("business_name", desc=False)
                 .execute()
             )
-            return res.data or []
+            rows = res.data or []
+            # Normalize: buat field 'name' = business_name (supaya UI seragam)
+            for row in rows:
+                row.setdefault("name", row.get("business_name") or row.get("user_id"))
+            return rows
         except Exception as exc:
             logger.error("get_clients_for_admin: %s", exc)
             return []
