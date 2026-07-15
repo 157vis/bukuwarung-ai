@@ -1113,7 +1113,12 @@ def render_daftar_produk(core, user_id, user_email) -> None:
     """Halaman khusus Daftar Produk — read-only untuk Client.
 
     Tabel sederhana: nama, harga, stok, kategori, status aktif.
-    Sumber: tabel `products` di Supabase (filtered by user_id via RLS).
+    Sumber: tabel `products` di Supabase.
+
+    Isolasi tenant dijamin oleh 3 lapis:
+    1. Aplikasi: laris_core.list_products() filter .eq("user_id", uid)
+    2. Session: user_id selalu dari session user yang login
+    3. Database: RLS policy p_own_products (user_id = auth.uid())
     """
     section_card(
         "Daftar Produk",
@@ -1130,6 +1135,11 @@ def render_daftar_produk(core, user_id, user_email) -> None:
             "📋 **Info untuk Client:** Ini adalah daftar produk yang terdaftar di toko Anda. "
             "Stok dan harga dikelola dari aktivitas gudang oleh Admin."
         )
+    else:
+        st.info(
+            "🛡️ **Mode Admin Super** — Tampilan ini di-scope ke toko yang sedang Anda "
+            "buka. Data yang muncul di-filter oleh user_id toko tersebut (bukan admin)."
+        )
 
     try:
         products = core.list_products(user_id)
@@ -1144,6 +1154,13 @@ def render_daftar_produk(core, user_id, user_email) -> None:
     if not products:
         st.info("Belum ada produk terdaftar. Admin perlu menambahkan produk dari menu Gudang.")
         return
+
+    # Banner kecil: info scope (supaya user yakin data ini HANYA untuk tokonya)
+    st.caption(
+        f"🔒 Menampilkan **{len(products)}** produk untuk toko ini "
+        f"(user_id `{user_id[:8]}…`). Data terisolasi per-toko, tidak akan bocor "
+        f"ke produk toko lain."
+    )
 
     # Bangun dataframe sederhana
     rows = []
