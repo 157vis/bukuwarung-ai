@@ -1466,22 +1466,40 @@ class LarisCore:
         return {"score": total, "insight": random.choice(ins), "level": lv}
 
     def classify_wa_intent(self, text: str) -> str:
-        """Klasifikasi intent pesan WA via Groq (AI utama)."""
+        """Klasifikasi intent pesan WA via Groq (AI utama).
+
+        Intent yang dikenali:
+            CATAT    — catat transaksi baru (jual/beli/bayar dengan nominal)
+            SKOR     — cek skor/kesehatan bisnis
+            SARAN    — minta saran/tips/evaluasi
+            PIUTANG  — tanya siapa yang belum bayar / daftar piutang
+            HAPUS    — hapus transaksi terakhir
+            STOK     — cek stok produk tertentu
+            PRODUK   — list semua produk
+            LAPORAN  — minta laporan mingguan/bulanan
+            LAINNYA  — di luar kategori
+        """
         t = (text or "").strip()
         if not t:
             return "LAINNYA"
         system = (
             "Anda router intent untuk asisten WhatsApp UMKM Indonesia. "
             'Balas HANYA JSON: {"intent":"..."} dengan intent salah satu dari: '
-            "CATAT, SKOR, SARAN, PIUTANG, HAPUS, LAINNYA.\n\n"
+            "CATAT, SKOR, SARAN, PIUTANG, HAPUS, STOK, PRODUK, LAPORAN, LAINNYA.\n\n"
             "CATAT = mencatat transaksi baru (jual/beli/bayar dengan nominal, atau catat piutang DENGAN nominal).\n"
             "SKOR = tanya skor/kesehatan bisnis.\n"
             "SARAN = minta saran/tips/evaluasi bisnis.\n"
             "PIUTANG = BERTANYA siapa yang belum bayar, daftar utang/piutang, cek outstanding — BUKAN mencatat.\n"
             "HAPUS = hapus transaksi terakhir.\n"
+            "STOK = cek stok produk TERTENTU (mis. 'stok indomie', 'berapa stok kopi').\n"
+            "PRODUK = list semua produk (mis. 'list produk', 'apa saja yang dijual', 'semua produk').\n"
+            "LAPORAN = minta laporan/rangkuman periode (mingguan/bulanan, mis. 'laporan minggu ini').\n"
             "LAINNYA = di luar kategori.\n\n"
             'Contoh PIUTANG: "siapa belum bayar utang", "siapa yang ngutang", "daftar piutang".\n'
             'Contoh CATAT: "jual kopi 5", "piutang pak budi 50000".\n'
+            'Contoh STOK: "stok indomie", "berapa stok gula".\n'
+            'Contoh PRODUK: "list produk", "apa saja yang dijual".\n'
+            'Contoh LAPORAN: "laporan minggu ini", "rangkuman bulan ini".\n'
             "Pertanyaan utang/piutang TANPA nominal = PIUTANG, bukan CATAT."
         )
         try:
@@ -1497,7 +1515,7 @@ class LarisCore:
             )
             data = json.loads(res.choices[0].message.content or "{}")
             intent = str(data.get("intent", "LAINNYA")).strip().upper()
-            valid = {"CATAT", "SKOR", "SARAN", "PIUTANG", "HAPUS", "LAINNYA"}
+            valid = {"CATAT", "SKOR", "SARAN", "PIUTANG", "HAPUS", "STOK", "PRODUK", "LAPORAN", "LAINNYA"}
             return intent if intent in valid else "LAINNYA"
         except Exception as exc:
             logger.error("classify_wa_intent: %s", exc)

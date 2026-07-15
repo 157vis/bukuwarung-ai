@@ -577,11 +577,109 @@ async def webhook(request: Request):
                 else:
                     reply = f"{bot_header()}\n\nHmm, nggak ada transaksi yg bisa dihapus nih 🤔"
 
+            elif intent == "STOK":
+                # Cek stok produk tertentu (cari berdasarkan nama di query)
+                query = text or ""
+                # Bersihkan prefix 'stok'/'berapa stok'/'cek'
+                for prefix in ["stok", "berapa stok", "cek stok", "lihat stok"]:
+                    if query.lower().startswith(prefix):
+                        query = query[len(prefix):].strip(" ?!.,")
+                products = core.list_products(user_id) or []
+                if not products:
+                    reply = f"{bot_header()}\n\nBelum ada produk terdaftar di toko ini ya~"
+                else:
+                    q_lower = query.lower()
+                    matches = [p for p in products if q_lower in (p.get("name") or "").lower()]
+                    if not query:
+                        # Tanpa nama spesifik → tampilkan semua yang stok menipis
+                        low_stock = [p for p in products if int(p.get("stock") or 0) <= 10]
+                        if not low_stock:
+                            reply = f"{bot_header()}\n\n✅ Semua stok aman (>10)."
+                        else:
+                            lines = [f"{bot_header()}\n\n⚠️ Stok menipis:"]
+                            for p in low_stock[:10]:
+                                lines.append(
+                                    f"• {p.get('name', '?')} — {int(p.get('stock', 0))} pcs"
+                                )
+                            reply = "\n".join(lines)
+                    elif not matches:
+                        reply = f"{bot_header()}\n\n😕 Produk _{query}_ tidak ditemukan."
+                    else:
+                        lines = [f"{bot_header()}\n\n📦 *Stok {query}*"]
+                        for p in matches[:5]:
+                            stock = int(p.get("stock") or 0)
+                            price = int(p.get("price") or 0)
+                            warn = " ⚠️" if stock <= 10 else ""
+                            lines.append(
+                                f"• {p.get('name', '?')} — {stock} pcs · Rp {price:,.0f}{warn}"
+                            )
+                        reply = "\n".join(lines)
+
+            elif intent == "PRODUK":
+                # List semua produk
+                products = core.list_products(user_id) or []
+                if not products:
+                    reply = f"{bot_header()}\n\nBelum ada produk terdaftar di toko ini."
+                else:
+                    lines = [f"{bot_header()}\n\n📋 *Daftar Produk* ({len(products)} item)"]
+                    for p in products[:15]:
+                        stock = int(p.get("stock") or 0)
+                        price = int(p.get("price") or 0)
+                        cat = p.get("category") or ""
+                        cat_str = f" _({cat})_" if cat else ""
+                        warn = " ⚠️" if stock <= 10 else ""
+                        lines.append(
+                            f"• {p.get('name', '?')}{cat_str} — {stock} pcs · Rp {price:,.0f}{warn}"
+                        )
+                    if len(products) > 15:
+                        lines.append(f"_…dan {len(products) - 15} produk lain_")
+                    reply = "\n".join(lines)
+
+            elif intent == "LAPORAN":
+                # Laporan 7 hari terakhir
+                from datetime import datetime, timedelta
+                end = datetime.now()
+                start = end - timedelta(days=7)
+                df = get_dashboard_data(user_id)
+                if df is None or df.empty:
+                    reply = f"{bot_header()}\n\nBelum ada transaksi dalam 7 hari terakhir."
+                else:
+                    # Filter by date string
+                    df["date_parsed"] = pd.to_datetime(df["date"], errors="coerce")
+                    recent = df[(df["date_parsed"] >= start) & (df["date_parsed"] <= end)]
+                    if recent.empty:
+                        reply = f"{bot_header()}\n\nBelum ada transaksi 7 hari terakhir."
+                    else:
+                        total_in = int(recent[recent["type"] == "Pemasukan"]["amount"].sum())
+                        total_out = int(recent[recent["type"] == "Pengeluaran"]["amount"].sum())
+                        saldo = total_in - total_out
+                        n_txn = len(recent)
+                        top_items = (
+                            recent.groupby("note")["amount"]
+                            .sum()
+                            .sort_values(ascending=False)
+                            .head(3)
+                        )
+                        lines = [
+                            f"{bot_header()}\n\n📊 *Laporan 7 Hari Terakhir*",
+                            f"📅 {start.strftime('%d %b')} – {end.strftime('%d %b %Y')}",
+                            f"💰 Pemasukan: Rp {total_in:,.0f}",
+                            f"💸 Pengeluaran: Rp {total_out:,.0f}",
+                            f"📈 Saldo: Rp {saldo:,.0f}",
+                            f"📝 {n_txn} transaksi",
+                            "",
+                            "🏆 *Top 3 Item:*",
+                        ]
+                        for name, amt in top_items.items():
+                            lines.append(f"• {name} — Rp {amt:,.0f}")
+                        reply = "\n".join(lines)
+
             else:
                 reply = (
                     f"{bot_header()}\n\n"
                     f"Hmm, {BOT_NAME} belum paham maksudmu 🤔\n\n"
-                    f"Coba:\n• _jual kopi 50rb_\n• _berapa skor_\n• _saran bisnis_\n• _hapus_"
+                    f"Coba:\n• _jual kopi 50rb_\n• _berapa skor_\n• _saran bisnis_\n"
+                    f"• _stok indomie_\n• _list produk_\n• _laporan minggu ini_\n• _hapus_"
                 )
         else:
             reply = f"{bot_header()}\n\nKirim teks, foto struk, atau voice note ya~ 😊"
