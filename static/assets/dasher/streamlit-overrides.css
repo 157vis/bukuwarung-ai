@@ -84,23 +84,47 @@ hr { border: 0; border-top: 1px dashed var(--ds-gray-300, #dfe3e8); opacity: 1; 
 footer { visibility: hidden; }
 
 /* ============================================================
-   SIDEBAR — SELALU EXPANDED, tidak bisa collapse
-   User feedback: "hilangkan saja tidak berguna dia tampil di semuanya"
-   Sidebar adalah navigasi utama, harus selalu terlihat.
+   SIDEBAR — OVERLAY MODE (tidak mengambil ruang konten)
+   User feedback: "supaya tidak tertimpah begini"
+   Sidebar overlay di atas konten utama, tidak push konten.
    ============================================================ */
 section[data-testid="stSidebar"] {
   width: 264px !important;
   min-width: 264px !important;
   background-color: var(--ds-navbar-bg, #ffffff) !important;
-  border-right: 1px dashed var(--ds-gray-300, #dfe3e8) !important;
+  border-right: 1px solid rgba(28, 37, 46, 0.08) !important;
+  /* Overlay mode: absolute, di atas konten */
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  height: 100vh !important;
+  z-index: 999990 !important;
+  /* Shadow di kanan untuk pemisahan visual */
+  box-shadow: 4px 0 24px rgba(28, 37, 46, 0.12) !important;
   transform: translateX(0) !important;
   visibility: visible !important;
-  left: 0 !important;
-  transition: transform 0.3s ease, width 0.3s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* Sembunyikan tombol collapse/expand sidebar di header.
-   Karena sidebar tidak bisa di-toggle, tombol ini tidak diperlukan. */
+/* Konten utama geser ke kanan untuk accommodate sidebar overlay */
+.main .block-container,
+.main > div {
+  padding-left: 264px !important;
+  transition: padding-left 0.3s ease;
+}
+
+/* Di layar kecil (< 768px), sidebar full width dan konten normal */
+@media (max-width: 768px) {
+  section[data-testid="stSidebar"] {
+    width: 100% !important;
+  }
+  .main .block-container,
+  .main > div {
+    padding-left: 0 !important;
+  }
+}
+
+/* Sembunyikan tombol collapse/expand sidebar di header */
 button[data-testid="baseButton-headerNoSidebar"] {
   display: none !important;
 }
