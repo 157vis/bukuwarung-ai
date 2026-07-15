@@ -85,58 +85,46 @@ footer { visibility: hidden; }
 
 /* ============================================================
    SIDEBAR — Seperti Cursor IDE
-   - Default: TERSEMBUNYI (hidden, body.laris-sidebar-closed)
-   - Klik icon strip / tombol: body.laris-sidebar-open -> slide in
-   - Overlay di atas konten
-   - Icon strip di kiri selalu visible (handled by render_sidebar_toggle_strip)
+   - Pakai Streamlit built-in `aria-expanded` attribute untuk toggle
+   - Default collapsed (di-set di config.toml `initialSidebarState = "collapsed"`)
+   - Klik button ">" di header Streamlit untuk buka sidebar
    ============================================================ */
 
-/* DEFAULT: sidebar hidden (slide out ke kiri) */
 section[data-testid="stSidebar"] {
-  width: 264px !important;
-  min-width: 264px !important;
   background-color: var(--ds-navbar-bg, #ffffff) !important;
   border-right: 1px solid rgba(28, 37, 46, 0.08) !important;
-  position: fixed !important;
-  top: 0 !important;
-  left: 48px !important;  /* offset dari icon strip 48px */
-  height: 100vh !important;
-  z-index: 999990 !important;
   box-shadow: 4px 0 24px rgba(28, 37, 46, 0.12) !important;
-  transform: translateX(-110%) !important;
-  visibility: hidden !important;
-  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-              visibility 0.35s ease,
-              box-shadow 0.35s ease;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s ease;
 }
 
-/* SAAT BODY PUNYA CLASS laris-sidebar-open: sidebar slide in (visible) */
-body.laris-sidebar-open section[data-testid="stSidebar"] {
+/* Collapsed state: hide sidebar (slide ke kiri) */
+section[data-testid="stSidebar"][aria-expanded="false"] {
+  transform: translateX(-100%) !important;
+  visibility: hidden !important;
+  left: 0 !important;
+}
+
+/* Expanded state: show sidebar normal */
+section[data-testid="stSidebar"][aria-expanded="true"] {
   transform: translateX(0) !important;
   visibility: visible !important;
 }
 
-/* Konten utama: geser ke kanan untuk accommodate icon strip 48px */
-.main .block-container,
-.main > div {
-  padding-left: 64px !important;  /* 48px icon strip + 16px gap */
-  transition: padding-left 0.3s ease;
-}
-
-/* Di layar kecil (< 768px) */
-@media (max-width: 768px) {
-  section[data-testid="stSidebar"] {
-    left: 0 !important;
-  }
-  .main .block-container,
-  .main > div {
-    padding-left: 56px !important;
-  }
-}
-
-/* Sembunyikan tombol collapse/expand sidebar di header */
+/* Tampilkan tombol expand sidebar (yang Streamlit sembunyikan dengan toolbarMode minimal) */
 button[data-testid="baseButton-headerNoSidebar"] {
-  display: none !important;
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+/* Tombol collapse sidebar (X) tetap visible di sidebar */
+button[data-testid="baseButton-headerSidebar"] {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
 }
 
 section[data-testid="stSidebar"] > div {
