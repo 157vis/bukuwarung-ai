@@ -84,42 +84,25 @@ hr { border: 0; border-top: 1px dashed var(--ds-gray-300, #dfe3e8); opacity: 1; 
 footer { visibility: hidden; }
 
 /* ============================================================
-   SIDEBAR — Dasher #miniSidebar expanded
-   Sidebar bisa di-collapse/expand via tombol toggle.
-   State disimpan di st.session_state (laris_sidebar_open).
-   User feedback: "saya ingin dia berfungsi disaat di tutup
-   dan di buka bisa di gunakan" — jadi ada tombol "☰" floating
-   di kiri atas saat sidebar tertutup, agar user bisa buka lagi.
+   SIDEBAR — SELALU EXPANDED, tidak bisa collapse
+   User feedback: "hilangkan saja tidak berguna dia tampil di semuanya"
+   Sidebar adalah navigasi utama, harus selalu terlihat.
    ============================================================ */
 section[data-testid="stSidebar"] {
   width: 264px !important;
   min-width: 264px !important;
   background-color: var(--ds-navbar-bg, #ffffff) !important;
   border-right: 1px dashed var(--ds-gray-300, #dfe3e8) !important;
-  transition: transform 0.3s ease, width 0.3s ease, left 0.3s ease;
-  visibility: visible !important;
-}
-/* Saat collapsed (Streamlit default), sidebar geser keluar layar.
-   Kita pakai aria-expanded="false" yang Streamlit set otomatis saat user
-   klik toggle button di header. */
-section[data-testid="stSidebar"][aria-expanded="false"] {
-  transform: translateX(-100%) !important;
-  left: -264px !important;
-}
-/* Saat expanded, sidebar visible dengan lebar penuh */
-section[data-testid="stSidebar"][aria-expanded="true"] {
   transform: translateX(0) !important;
+  visibility: visible !important;
   left: 0 !important;
+  transition: transform 0.3s ease, width 0.3s ease;
 }
 
-/* Tombol "X Tutup" lama di dalam sidebar sudah dihapus.
-   Sekarang tombol "✕" ada di LUAR kotak sidebar (floating, top-right)
-   via JS overlay di body. Lihat render_open_sidebar_button() di
-   ui/dasher_nav.py. */
-
-/* Tampilkan tombol toggle collapse/expand sidebar di header */
+/* Sembunyikan tombol collapse/expand sidebar di header.
+   Karena sidebar tidak bisa di-toggle, tombol ini tidak diperlukan. */
 button[data-testid="baseButton-headerNoSidebar"] {
-  display: flex !important;
+  display: none !important;
 }
 
 section[data-testid="stSidebar"] > div {

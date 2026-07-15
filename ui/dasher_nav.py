@@ -8,112 +8,13 @@ import streamlit as st
 
 from brand import APP_NAME
 from ui.components import sidebar_brand
-from ui.constants import MENU_SESSION_KEY, SIDEBAR_OPEN_KEY
+from ui.constants import MENU_SESSION_KEY
 from ui.menus import build_menu_keys, get_menu_item
 
 
 def init_menu(default_key: str) -> None:
     if MENU_SESSION_KEY not in st.session_state:
         st.session_state[MENU_SESSION_KEY] = default_key
-
-
-def is_sidebar_open() -> bool:
-    """Apakah sidebar sedang terbuka? Default True (visible)."""
-    return st.session_state.get(SIDEBAR_OPEN_KEY, True)
-
-
-def toggle_sidebar() -> None:
-    """Toggle state sidebar (open <-> closed)."""
-    st.session_state[SIDEBAR_OPEN_KEY] = not is_sidebar_open()
-
-
-def render_open_sidebar_button() -> None:
-    """Render 2 floating button yang SELALU di luar kotak sidebar/konten:
-
-    1. Tombol '☰' (di luar, kiri atas) - untuk BUKA sidebar saat tertutup
-    2. Tombol '✕' (di luar, kanan atas) - untuk TUTUP sidebar saat terbuka
-
-    User feedback: "tombol nya ada di luar kotak jangan di dalam kotak"
-
-    Posisi: position: fixed dengan z-index tinggi, di-render via JS overlay
-    sehingga benar-benar di luar area Streamlit (sidebar + main content).
-
-    Sidebar SELALU di-force expanded di awal. Klik tombol untuk collapse.
-    """
-    # Force sidebar expanded di awal. User klik tombol untuk collapse.
-    st.session_state[SIDEBAR_OPEN_KEY] = True
-    sidebar_open = is_sidebar_open()
-    btn_label = "✕" if sidebar_open else "☰"
-    btn_title = "Tutup sidebar" if sidebar_open else "Buka sidebar"
-    btn_id = "laris-sidebar-toggle-btn"
-    # Tentukan posisi di Python (bukan di dalam JS string) untuk hindari
-    # syntax error f-string.
-    btn_position_css = "right: 0.85rem;" if sidebar_open else "left: 0.55rem;"
-
-    import streamlit.components.v1 as components
-
-    # Bangun HTML/JS sebagai plain string (BUKAN f-string) untuk hindari
-    # konflik antara Python {var} dan JS {{...}}.
-    html_js = (
-        "<script>"
-        "(function() {"
-        "  var existing = document.getElementById('" + btn_id + "');"
-        "  if (existing) existing.remove();"
-        "  var btn = document.createElement('button');"
-        "  btn.id = '" + btn_id + "';"
-        "  btn.innerHTML = '" + btn_label + "';"
-        "  btn.title = '" + btn_title + "';"
-        "  btn.setAttribute('aria-label', btn.title);"
-        "  btn.style.cssText = '"
-        "    position: fixed !important;"
-        "    top: 0.65rem !important;"
-        "    " + btn_position_css + ""
-        "    z-index: 999999 !important;"
-        "    width: 38px !important;"
-        "    height: 38px !important;"
-        "    background: linear-gradient(135deg, #7c3aed, #6366f1) !important;"
-        "    color: #fff !important;"
-        "    border: none !important;"
-        "    border-radius: 10px !important;"
-        "    font-size: 1.15rem !important;"
-        "    font-weight: 700 !important;"
-        "    cursor: pointer !important;"
-        "    box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4) !important;"
-        "    transition: transform 0.15s ease, box-shadow 0.15s ease !important;"
-        "    display: flex !important;"
-        "    align-items: center !important;"
-        "    justify-content: center !important;"
-        "    line-height: 1 !important;"
-        "    padding: 0 !important;"
-        "    margin: 0 !important;"
-        "  ';"
-        "  btn.onmouseenter = function() {"
-        "    btn.style.transform = 'translateY(-2px)';"
-        "    btn.style.boxShadow = '0 6px 20px rgba(124, 58, 237, 0.55)';"
-        "  };"
-        "  btn.onmouseleave = function() {"
-        "    btn.style.transform = 'translateY(0)';"
-        "    btn.style.boxShadow = '0 4px 14px rgba(124, 58, 237, 0.4)';"
-        "  };"
-        "  btn.onclick = function() {"
-        "    var evt = new CustomEvent('laris_toggle_sidebar', {bubbles: true});"
-        "    document.dispatchEvent(evt);"
-        "  };"
-        "  document.body.appendChild(btn);"
-        "})();"
-        "</script>"
-    )
-
-    components.html(html_js, height=0)
-
-    # Hidden Streamlit button yang dipicu oleh event JS di atas
-    if st.button(
-        btn_label,
-        key=f"_hidden_toggle_{'close' if sidebar_open else 'open'}",
-        help=btn_title,
-    ):
-        toggle_sidebar()
-        st.rerun()
 
 
 def get_active_menu(*, warehouse_enabled: bool) -> str:
