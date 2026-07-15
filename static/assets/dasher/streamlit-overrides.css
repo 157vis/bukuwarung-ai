@@ -182,25 +182,25 @@ section[data-testid="stSidebar"] .laris-brand-tagline {
   box-shadow: 0 1px 2px rgba(28,37,46,0.04);
 }
 .laris-section-card-body {
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 0.75rem;
 }
 .laris-section-title {
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   font-weight: 700;
   margin: 0;
   color: #1c252e;
-  line-height: 1.3;
+  line-height: 1.25;
   display: flex;
   align-items: center;
 }
 .laris-section-title i {
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 .laris-section-subtitle {
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   color: var(--ds-gray-600, #637381);
-  margin: 2px 0 0 0;
-  line-height: 1.35;
+  margin: 1px 0 0 0;
+  line-height: 1.3;
 }
 
 /* Backwards-compat: legacy class names (jika ada element yang masih render) */
@@ -835,7 +835,7 @@ div[data-testid="stDataFrame"] {
 .laris-footer-col a:hover { color: #00a76f; }
 .laris-footer .text-muted { color: rgba(255,255,255,0.55) !important; }
 
-/* --- Responsive --- */
+/* --- Responsive (landing page) --- */
 @media (max-width: 992px) {
   .laris-hero-inner { grid-template-columns: 1fr; text-align: center; }
   .laris-lead { margin-left: auto; margin-right: auto; }
@@ -852,4 +852,160 @@ div[data-testid="stDataFrame"] {
   .laris-features-grid, .laris-flow-grid { grid-template-columns: 1fr; }
   .laris-stats-inner { grid-template-columns: 1fr 1fr; }
   .laris-cta-card { padding: 1.5rem; }
+}
+
+/* ============================================================
+   MOBILE RESPONSIVE — Dashboard, sidebar, section cards
+   Tujuan: tulisan tidak terpotong, tombol tidak overflow
+   ============================================================ */
+
+/* Tablet & kecil (max-width: 768px) */
+@media (max-width: 768px) {
+  /* Sidebar: jadi overlay full-width di mobile */
+  section[data-testid="stSidebar"] {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+  }
+  section[data-testid="stSidebar"][aria-expanded="true"] {
+    z-index: 999999 !important;
+  }
+
+  /* Brand di sidebar: lebih kecil di mobile */
+  section[data-testid="stSidebar"] .laris-brand {
+    padding: 0.4rem 0.75rem 0.5rem 0.75rem;
+  }
+  section[data-testid="stSidebar"] .laris-brand-name {
+    font-size: 0.95rem;
+  }
+  section[data-testid="stSidebar"] .laris-brand-tagline {
+    font-size: 0.65rem;
+  }
+
+  /* Tombol menu di sidebar: padding lebih kecil, font lebih kecil */
+  section[data-testid="stSidebar"] .stButton > button {
+    padding: 0.45rem 0.6rem !important;
+    font-size: 0.82rem !important;
+    margin: 0.1rem 0.4rem !important;
+    width: calc(100% - 0.8rem) !important;
+  }
+  section[data-testid="stSidebar"] .stButton > button > p {
+    font-size: 0.85rem !important;
+    gap: 0.4rem !important;
+  }
+  section[data-testid="stSidebar"] .stButton > button > p > span:first-child {
+    font-size: 1rem !important;
+    width: 1.1rem !important;
+  }
+
+  /* Section nav label "Operasional" dll: lebih kecil */
+  section[data-testid="stSidebar"] .nav-heading small {
+    font-size: 0.62rem !important;
+  }
+
+  /* Section cards di konten utama: lebih kecil */
+  .laris-section-card-body {
+    padding: 0.5rem 0.6rem !important;
+  }
+  .laris-section-title {
+    font-size: 0.78rem !important;
+  }
+  .laris-section-title i {
+    font-size: 0.85rem !important;
+  }
+  .laris-section-subtitle {
+    font-size: 0.65rem !important;
+  }
+
+  /* Main content: padding lebih kecil di mobile */
+  .main .block-container {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+    padding-top: 0.5rem !important;
+  }
+
+  /* Header Streamlit: perkecil tinggi header di mobile */
+  header[data-testid="stHeader"] {
+    height: 2.5rem !important;
+  }
+
+  /* Stat cards (Total Pemasukan dll): grid 2 kolom di tablet */
+  .row.row-cols-1.row-cols-md-2 > * {
+    flex: 0 0 50% !important;
+    max-width: 50% !important;
+  }
+
+  /* Form input: font lebih kecil */
+  .stTextInput input,
+  .stNumberInput input,
+  .stTextArea textarea {
+    font-size: 0.85rem !important;
+  }
+
+  /* Tabel data: font lebih kecil, padding lebih kecil */
+  div[data-testid="stDataFrame"] {
+    font-size: 0.78rem !important;
+  }
+  div[data-testid="stDataFrame"] table {
+    font-size: 0.78rem !important;
+  }
+  div[data-testid="stDataFrame"] th,
+  div[data-testid="stDataFrame"] td {
+    padding: 0.35rem 0.4rem !important;
+  }
+
+  /* Chat messages: lebih ringkas */
+  div[data-testid="stChatMessage"] {
+    padding: 0.6rem !important;
+    font-size: 0.85rem !important;
+  }
+
+  /* Tombol Setujui/Tolak di approval: stack vertical */
+  .row > .stButton,
+  [data-testid="column"] .stButton > button {
+    width: 100% !important;
+  }
+}
+
+/* HP kecil (max-width: 480px) */
+@media (max-width: 480px) {
+  /* Section card title: lebih kecil lagi */
+  .laris-section-title {
+    font-size: 0.7rem !important;
+  }
+  .laris-section-subtitle {
+    font-size: 0.6rem !important;
+  }
+  .laris-section-card-body {
+    padding: 0.4rem 0.5rem !important;
+  }
+
+  /* Stat cards: stack 1 kolom */
+  .row.row-cols-1 > * {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Brand: lebih kecil lagi */
+  section[data-testid="stSidebar"] .laris-brand-name {
+    font-size: 0.85rem;
+  }
+
+  /* Main content: padding minimal */
+  .main .block-container {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+
+  /* Approval card: tombol stack */
+  [data-testid="stHorizontalBlock"] {
+    flex-wrap: wrap !important;
+  }
+  [data-testid="stHorizontalBlock"] > [data-testid="column"] {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    margin-bottom: 0.4rem !important;
+  }
+}
 }
