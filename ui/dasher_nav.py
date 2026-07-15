@@ -100,6 +100,9 @@ def render_sidebar_toggle_button() -> None:
     btn_label = "✕" if sidebar_open else "☰"
     btn_title = "Tutup sidebar" if sidebar_open else "Buka sidebar"
 
+    # Set body class supaya CSS bisa detect state
+    body_class = "laris-sidebar-open" if sidebar_open else "laris-sidebar-closed"
+
     # Inject tombol via JS agar benar-benar overlay di body
     import streamlit.components.v1 as components
 
@@ -107,8 +110,13 @@ def render_sidebar_toggle_button() -> None:
     html_js = (
         "<script>"
         "(function() {"
+        # Set body class untuk CSS state detection
+        "  document.body.classList.remove('laris-sidebar-open', 'laris-sidebar-closed');"
+        "  document.body.classList.add('" + body_class + "');"
+        # Hapus tombol lama kalau ada
         "  var existing = document.getElementById('laris-sidebar-toggle-btn');"
         "  if (existing) existing.remove();"
+        # Buat tombol baru
         "  var btn = document.createElement('button');"
         "  btn.id = 'laris-sidebar-toggle-btn';"
         "  btn.innerHTML = '" + btn_label + "';"
