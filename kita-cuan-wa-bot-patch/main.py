@@ -389,6 +389,18 @@ async def send_wa_reply(
 
 
 async def detect_intent(text: str) -> str:
+    # === Rule-based fast path untuk intent sederhana ===
+    # (hemat LLM call kalau sudah jelas dari keyword)
+    norm = (text or "").strip().lower()
+    if norm in ("stok", "cek stok", "lihat stok", "stock"):
+        return "STOK"
+    if norm in ("produk", "list produk", "daftar produk", "semua produk", "apa saja yang dijual", "barang apa saja"):
+        return "PRODUK"
+    if norm in ("laporan", "laporan minggu ini", "laporan minggu", "rangkuman", "rekap"):
+        return "LAPORAN"
+    if norm.startswith("stok ") or norm.startswith("cek stok "):
+        return "STOK"
+
     ruled = detect_intent_rules(text)
     if ruled:
         return ruled
