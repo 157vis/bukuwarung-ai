@@ -967,6 +967,77 @@ def _render_tambah_gudang(core, user_id, user_email: str | None = None) -> None:
     else:
         st.dataframe(wh_df, use_container_width=True, hide_index=True)
 
+    # === ADMIN VIEW: Semua Gudang Lintas-Tenant ===
+    # Karena "Daftar Gudang Tersimpan" di atas hanya menampilkan gudang
+    # milik user_id admin sendiri (kosong untuk admin), kita tambah section
+    # khusus yang menampilkan SEMUA gudang dari semua toko client.
+    st.markdown("---")
+    section_card(
+        "Semua Gudang (Admin View)",
+        "Daftar gudang dari semua toko client. Hanya Super Admin yang melihat ini.",
+        icon="ti-server-2",
+    )
+
+    all_warehouses = []
+    if admin_core:
+        try:
+            all_warehouses = admin_core.get_all_warehouses_for_admin()
+        except Exception as exc:
+            logger.error("get_all_warehouses_for_admin in admin view: %s", exc)
+            all_warehouses = []
+
+    if not admin_core:
+        st.caption(
+            "🔒 **Mode Terbatas** — Set `SUPABASE_SERVICE_KEY` di secrets.toml untuk "
+            "melihat semua gudang lintas-tenant. Tanpa itu, hanya gudang admin sendiri yang tampil."
+        )
+    elif not all_warehouses:
+        st.info("Belum ada gudang yang dibuat oleh client manapun.")
+    else:
+        # Group by user_id supaya admin tahu gudang mana milik toko mana
+        wh_by_user: dict[str, list[dict]] = {}
+        for wh in all_warehouses:
+            uid = wh.get("user_id", "—")
+            wh_by_user.setdefault(uid, []).append(wh)
+
+        st.caption(
+            f"📦 Total **{len(all_warehouses)} gudang** untuk **{len(wh_by_user)} toko** client. "
+            f"Klik UUID untuk copy ke clipboard."
+        )
+
+        import pandas as _pd3
+        rows = []
+        for uid, whs in wh_by_user.items():
+            for wh in whs:
+                rows.append({
+                    "ID": wh.get("id"),
+                    "UUID Toko": uid,
+                    "Nama Gudang": wh.get("name", "—"),
+                    "Lokasi": wh.get("location") or "—",
+                    "Catatan": wh.get("notes") or "—",
+                    "Created": wh.get("created_at", "—"),
+                })
+        st.dataframe(
+            _pd3.DataFrame(rows),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+        # Expander untuk lihat per-toko
+        with st.expander("🔍 Lihat detail gudang per toko", expanded=False):
+            for uid, whs in wh_by_user.items():
+                st.markdown(
+                    f"**Toko UUID:** `{uid}` &nbsp;&nbsp; "
+                    f"({len(whs)} gudang)"
+                )
+                for wh in whs:
+                    st.markdown(
+                        f"- **{wh.get('name', '?')}** "
+                        f"_(lokasi: {wh.get('location') or '—'}, "
+                        f"catatan: {wh.get('notes') or '—'})_"
+                    )
+                st.markdown("---")
+
     # === Quick action: tambah inventaris ke gudang tertentu ===
     st.markdown("---")
     section_card(
