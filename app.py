@@ -131,7 +131,7 @@ def render_header() -> None:
     st.markdown(
         """
         <style>
-            header[data-testid="stHeader"] { display: none !important; }
+            /* Hide Streamlit footer only - JANGAN hide header (ada tombol toggle sidebar) */
             footer { visibility: hidden; }
             .css-18e3th9 { padding-top: 1rem; }
             .app-link-button {
