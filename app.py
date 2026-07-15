@@ -878,6 +878,13 @@ def _render_tambah_gudang(core, user_id, user_email: str | None = None) -> None:
         icon="ti-building-warehouse",
     )
 
+    # Inisialisasi admin_core di awal (dipakai oleh section "Semua Gudang" di bawah)
+    admin_core = None
+    try:
+        admin_core = get_admin_core()
+    except Exception:
+        admin_core = None
+
     # === Banner info utama — supaya user tahu ada section Tambah Produk di bawah ===
     st.info(
         "📋 **Halaman ini punya 3 section utama:**\n"
@@ -971,12 +978,16 @@ def _render_tambah_gudang(core, user_id, user_email: str | None = None) -> None:
     # Karena "Daftar Gudang Tersimpan" di atas hanya menampilkan gudang
     # milik user_id admin sendiri (kosong untuk admin), kita tambah section
     # khusus yang menampilkan SEMUA gudang dari semua toko client.
-    st.markdown("---")
-    section_card(
-        "Semua Gudang (Admin View)",
-        "Daftar gudang dari semua toko client. Hanya Super Admin yang melihat ini.",
-        icon="ti-server-2",
-    )
+    try:
+        st.markdown("---")
+        section_card(
+            "Semua Gudang (Admin View)",
+            "Daftar gudang dari semua toko client. Hanya Super Admin yang melihat ini.",
+            icon="ti-server-2",
+        )
+    except Exception as exc:
+        logger.error("admin view header: %s", exc)
+        st.warning(f"⚠️ Tidak bisa render admin view header: {exc}")
 
     all_warehouses = []
     if admin_core:
