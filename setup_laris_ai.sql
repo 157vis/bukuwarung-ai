@@ -175,6 +175,11 @@ create policy p_admin_wa_users on wa_users
   using ((auth.jwt() ->> 'email') = 'rafihrr1@gmail.com')
   with check ((auth.jwt() ->> 'email') = 'rafihrr1@gmail.com');
 
+-- NOTE: tabel 'otak_memories' sudah ada di Supabase. Method laris_core
+-- akan pakai tabel ini dengan field: id, user_id, agent_type, question,
+-- answer, hit_count, created_at, last_used_at. Jangan duplikat tabel
+-- dengan nama berbeda.
+
 -- =====================================================================
 -- 3) Paksa PostgREST memuat ulang schema cache (hilangkan error PGRST205).
 -- =====================================================================
