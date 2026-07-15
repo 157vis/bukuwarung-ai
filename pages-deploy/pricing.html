@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Harga laris.AI — AI Multi-Agent untuk UMKM Indonesia</title>
+  <meta name="description" content="Pilih paket laris.AI yang cocok untuk UMKM Anda. Gratis untuk warung kecil, Pro Rp 149rb/bulan untuk AI Catat + CS Agent 24/7, Bisnis Rp 399rb untuk multi-toko." />
+  <meta name="keywords" content="harga laris.AI, paket UMKM, AI kasir Indonesia, chatbot WhatsApp UMKM" />
+  <meta property="og:title" content="Harga laris.AI — AI Multi-Agent untuk UMKM" />
+  <meta property="og:description" content="Mulai gratis. Upgrade ke Pro Rp 149rb/bulan. AI Catat transaksi + CS Agent 24/7." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://larisai.my.id/pricing.html" />
+  <link rel="canonical" href="https://larisai.my.id/pricing.html" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0b1220;
+      --bg-2: #0f1729;
+      --card: #131b30;
+      --card-2: #1a2238;
+      --border: rgba(255, 255, 255, 0.08);
+      --text: #e7ecf3;
+      --muted: #93a0b8;
+      --primary: #6ee7b7;
+      --primary-2: #34d399;
+      --accent: #fbbf24;
+      --pro: linear-gradient(135deg, #6ee7b7 0%, #34d399 100%);
+      --biz: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+      --free: linear-gradient(135deg, #64748b 0%, #475569 100%);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+    /* Nav */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(11, 18, 32, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 1.5rem;
+    }
+    .nav-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--text);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--pro);
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      font-size: 1.2rem;
+    }
+    .nav-links {
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+    }
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.95rem;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--primary); }
+    .nav-cta {
+      background: var(--pro);
+      color: #0b1220 !important;
+      padding: 0.5rem 1.1rem;
+      border-radius: 8px;
+      font-weight: 600 !important;
+    }
+    /* Hero */
+    .hero {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 4rem 1.5rem 2rem;
+      text-align: center;
+    }
+    .hero-badge {
+      display: inline-block;
+      padding: 0.4rem 1rem;
+      background: rgba(110, 231, 183, 0.1);
+      border: 1px solid rgba(110, 231, 183, 0.3);
+      color: var(--primary);
+      border-radius: 100px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+    }
+    .hero h1 {
+      font-size: clamp(2.2rem, 5vw, 3.5rem);
+      font-weight: 800;
+      line-height: 1.15;
+      margin-bottom: 1rem;
+      letter-spacing: -0.02em;
+    }
+    .hero h1 .grad {
+      background: var(--pro);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--muted);
+      max-width: 640px;
+      margin: 0 auto 2.5rem;
+    }
+    /* Billing toggle */
+    .billing-toggle {
+      display: inline-flex;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 0.3rem;
+      margin-bottom: 3rem;
+    }
+    .billing-toggle button {
+      background: transparent;
+      border: 0;
+      color: var(--muted);
+      padding: 0.6rem 1.4rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 100px;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .billing-toggle button.active {
+      background: var(--pro);
+      color: #0b1220;
+    }
+    .save-badge {
+      display: inline-block;
+      margin-left: 0.4rem;
+      padding: 0.15rem 0.5rem;
+      background: rgba(251, 191, 36, 0.2);
+      color: var(--accent);
+      border-radius: 100px;
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+    /* Pricing grid */
+    .pricing-grid {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1.5rem 4rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+    .plan {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 2rem 1.6rem;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .plan:hover {
+      transform: translateY(-4px);
+      border-color: rgba(110, 231, 183, 0.3);
+    }
+    .plan.featured {
+      background: var(--card-2);
+      border: 2px solid var(--primary);
+      box-shadow: 0 0 40px rgba(110, 231, 183, 0.15);
+    }
+    .plan-badge {
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--pro);
+      color: #0b1220;
+      padding: 0.3rem 1rem;
+      border-radius: 100px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .plan-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .plan-icon.free { background: var(--free); }
+    .plan-icon.pro { background: var(--pro); }
+    .plan-icon.biz { background: var(--biz); }
+    .plan-icon.partner { background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); }
+
+    .plan-name {
+      font-size: 0.9rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+    .plan-tagline {
+      font-size: 0.95rem;
+      color: var(--muted);
+      margin-bottom: 1.5rem;
+      min-height: 2.8em;
+    }
+    .plan-price {
+      margin-bottom: 0.5rem;
+    }
+    .plan-price .amount {
+      font-size: 2.6rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .plan-price .currency {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--muted);
+      vertical-align: super;
+      margin-right: 0.15rem;
+    }
+    .plan-price .period {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-left: 0.3rem;
+    }
+    .plan-price-note {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 1.5rem;
+    }
+    .plan-features {
+      list-style: none;
+      margin: 1.5rem 0;
+      flex-grow: 1;
+    }
+    .plan-features li {
+      padding: 0.5rem 0;
+      font-size: 0.92rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.6rem;
+      color: var(--text);
+    }
+    .check {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 0.75rem;
+      font-weight: 800;
+    }
+    .check.on { background: rgba(110, 231, 183, 0.15); color: var(--primary); }
+    .check.off { background: rgba(148, 163, 184, 0.1); color: var(--muted); }
+    .plan-cta {
+      display: block;
+      width: 100%;
+      padding: 0.85rem;
+      border-radius: 10px;
+      text-align: center;
+      font-weight: 700;
+      font-size: 0.95rem;
+      text-decoration: none;
+      transition: all 0.2s;
+      border: 0;
+      cursor: pointer;
+      font-family: inherit;
+      margin-top: auto;
+    }
+    .plan-cta.primary {
+      background: var(--pro);
+      color: #0b1220;
+    }
+    .plan-cta.primary:hover { transform: scale(1.02); }
+    .plan-cta.secondary {
+      background: var(--card-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .plan-cta.secondary:hover { border-color: var(--primary); }
+    .plan-cta.dark {
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      color: #0b1220;
+    }
+    /* FAQ */
+    .faq {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 4rem 1.5rem;
+    }
+    .faq h2 {
+      text-align: center;
+      font-size: 2rem;
+      font-weight: 800;
+      margin-bottom: 2.5rem;
+    }
+    .faq-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem 1.4rem;
+      margin-bottom: 0.8rem;
+    }
+    .faq-q {
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: var(--text);
+    }
+    .faq-a {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    /* Trust */
+    .trust {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem;
+      text-align: center;
+    }
+    .trust h2 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 1.5rem;
+    }
+    .trust-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1.5rem;
+    }
+    .trust-stat {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+    .trust-stat .num {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--primary);
+    }
+    .trust-stat .label {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 0.3rem;
+    }
+    /* Footer */
+    footer {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    footer a { color: var(--primary); text-decoration: none; }
+    @media (max-width: 600px) {
+      .nav-links a:not(.nav-cta) { display: none; }
+      .hero { padding: 2.5rem 1rem 1rem; }
+      .plan { padding: 1.5rem 1.2rem; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-inner">
+      <a href="/" class="logo">
+        <div class="logo-icon">🤖</div>
+        laris<span style="color: var(--primary);">.AI</span>
+      </a>
+      <div class="nav-links">
+        <a href="/">Beranda</a>
+        <a href="/#fitur">Fitur</a>
+        <a href="/pricing.html" style="color: var(--primary);">Harga</a>
+        <a href="https://laris-ai.streamlit.app/?login=1" class="nav-cta">Masuk</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="hero-badge">💎 Harga Sederhana, Tanpa Biaya Tersembunyi</div>
+    <h1>Pilih paket yang <span class="grad">cocok untuk tokomu</span></h1>
+    <p>Mulai gratis, upgrade kapan saja. AI Catat + CS Agent 24/7 siap bantu UMKM Indonesia tumbuh lebih cepat.</p>
+
+    <div class="billing-toggle" id="billingToggle">
+      <button data-period="monthly" class="active">Bulanan</button>
+      <button data-period="yearly">Tahunan <span class="save-badge">HEMAT 17%</span></button>
+    </div>
+  </header>
+
+  <section class="pricing-grid">
+    <!-- FREE -->
+    <div class="plan">
+      <div class="plan-icon free">🌱</div>
+      <div class="plan-name">Gratis</div>
+      <div class="plan-tagline">Untuk warung kecil yang baru mulai go digital.</div>
+      <div class="plan-price">
+        <span class="amount">Rp 0</span>
+        <span class="period">/selamanya</span>
+      </div>
+      <div class="plan-price-note">Tanpa kartu kredit. Tanpa batas waktu.</div>
+      <ul class="plan-features">
+        <li><span class="check on">✓</span> 1 toko, 50 transaksi/bulan</li>
+        <li><span class="check on">✓</span> AI Catat (text only)</li>
+        <li><span class="check on">✓</span> Skor Bisnis mingguan</li>
+        <li><span class="check on">✓</span> Command <code>/stok</code> <code>/produk</code> <code>/laporan</code></li>
+        <li><span class="check on">✓</span> 20 chat customer/bulan</li>
+        <li><span class="check off">×</span> CS Agent 24/7 otomatis</li>
+        <li><span class="check off">×</span> AI Vision (scan struk)</li>
+        <li><span class="check off">×</span> AI Voice (voice note)</li>
+        <li><span class="check off">×</span> Custom branding</li>
+      </ul>
+      <a href="https://laris-ai.streamlit.app/?login=1" class="plan-cta secondary">Mulai Gratis →</a>
+    </div>
+
+    <!-- PRO -->
+    <div class="plan featured">
+      <div class="plan-badge">⭐ PALING POPULER</div>
+      <div class="plan-icon pro">🚀</div>
+      <div class="plan-name">Pro</div>
+      <div class="plan-tagline">Untuk UMKM serius yang ingin otomatisasi penuh via WhatsApp.</div>
+      <div class="plan-price">
+        <span class="currency">Rp</span>
+        <span class="amount" data-monthly="149.000" data-yearly="1.490.000">149.000</span>
+        <span class="period" data-monthly="/bulan" data-yearly="/tahun">/bulan</span>
+      </div>
+      <div class="plan-price-note" data-monthly="Bisa berhenti kapan saja" data-yearly="Hemat Rp 298.000/tahun">Bisa berhenti kapan saja</div>
+      <ul class="plan-features">
+        <li><span class="check on">✓</span> <strong>Unlimited</strong> transaksi & chat customer</li>
+        <li><span class="check on">✓</span> AI Catat (text + foto struk + voice note)</li>
+        <li><span class="check on">✓</span> <strong>CS Agent 24/7</strong> dengan Otak (AI belajar)</li>
+        <li><span class="check on">✓</span> Skor Bisnis + Saran AI mingguan</li>
+        <li><span class="check on">✓</span> Laporan otomatis ke WA owner</li>
+        <li><span class="check on">✓</span> Alert stok tipis otomatis</li>
+        <li><span class="check on">✓</span> Multi-device Fonnte</li>
+        <li><span class="check on">✓</span> Support WA response &lt; 24 jam</li>
+        <li><span class="check off">×</span> Multi-toko / cabang</li>
+        <li><span class="check off">×</span> Custom domain</li>
+      </ul>
+      <a href="https://wa.me/6285789974981?text=Halo%2C%20saya%20ingin%20upgrade%20ke%20Pro%20laris.AI" class="plan-cta primary">Upgrade Pro via WhatsApp →</a>
+    </div>
+
+    <!-- BISNIS -->
+    <div class="plan">
+      <div class="plan-icon biz">🏢</div>
+      <div class="plan-name">Bisnis</div>
+      <div class="plan-tagline">Untuk UMKM berkembang dengan beberapa cabang dan tim.</div>
+      <div class="plan-price">
+        <span class="currency">Rp</span>
+        <span class="amount" data-monthly="399.000" data-yearly="3.990.000">399.000</span>
+        <span class="period" data-monthly="/bulan" data-yearly="/tahun">/bulan</span>
+      </div>
+      <div class="plan-price-note" data-monthly="Untuk 3 cabang + 5 staf" data-yearly="Hemat Rp 798.000/tahun">Untuk 3 cabang + 5 staf</div>
+      <ul class="plan-features">
+        <li><span class="check on">✓</span> <strong>Semua fitur Pro</strong></li>
+        <li><span class="check on">✓</span> <strong>3 cabang</strong> dalam 1 akun</li>
+        <li><span class="check on">✓</span> 5 user staf (role-based access)</li>
+        <li><span class="check on">✓</span> AI Vision advanced (multi-item struk)</li>
+        <li><span class="check on">✓</span> AI Voice bahasa daerah</li>
+        <li><span class="check on">✓</span> <strong>Custom domain</strong> (tokoAnda.larisai.my.id)</li>
+        <li><span class="check on">✓</span> Custom branding (logo + warna)</li>
+        <li><span class="check on">✓</span> Priority support &lt; 4 jam</li>
+        <li><span class="check on">✓</span> API access (integrasi sistem lain)</li>
+      </ul>
+      <a href="https://wa.me/6285789974981?text=Halo%2C%20saya%20ingin%20konsultasi%20paket%20Bisnis%20laris.AI" class="plan-cta secondary">Konsultasi Bisnis →</a>
+    </div>
+
+    <!-- KEMITRAAN -->
+    <div class="plan">
+      <div class="plan-icon partner">🤝</div>
+      <div class="plan-name">Kemitraan</div>
+      <div class="plan-tagline">Untuk distributor, asosiasi, atau kemitraan 50+ toko.</div>
+      <div class="plan-price">
+        <span class="amount">Custom</span>
+      </div>
+      <div class="plan-price-note">Hubungi tim sales kami</div>
+      <ul class="plan-features">
+        <li><span class="check on">✓</span> White-label (brand Anda, teknologi kami)</li>
+        <li><span class="check on">✓</span> Dedicated AI agent training</li>
+        <li><span class="check on">✓</span> Dashboard admin pusat (monitor semua toko)</li>
+        <li><span class="check on">✓</span> Onboarding onsite/online untuk tim Anda</li>
+        <li><span class="check on">✓</span> SLA agreement</li>
+        <li><span class="check on">✓</span> Akses API unlimited</li>
+        <li><span class="check on">✓</span> Co-branding marketing material</li>
+        <li><span class="check on">✓</span> Account manager dedicated</li>
+      </ul>
+      <a href="https://wa.me/6285789974981?text=Halo%2C%20saya%20tertarik%20paket%20Kemitraan%20laris.AI" class="plan-cta dark">Hubungi Sales →</a>
+    </div>
+  </section>
+
+  <section class="trust">
+    <h2>Dipercaya UMKM di Indonesia</h2>
+    <div class="trust-grid">
+      <div class="trust-stat">
+        <div class="num">24/7</div>
+        <div class="label">CS Agent aktif</div>
+      </div>
+      <div class="trust-stat">
+        <div class="num">&lt;3s</div>
+        <div class="label">Response time</div>
+      </div>
+      <div class="trust-stat">
+        <div class="num">90%</div>
+        <div class="label">Akurasi AI Catat</div>
+      </div>
+      <div class="trust-stat">
+        <div class="num">0%</div>
+        <div class="label">Data bocor (multi-tenant aman)</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="faq">
+    <h2>Pertanyaan yang Sering Diajukan</h2>
+    <div class="faq-item">
+      <div class="faq-q">Apakah ada masa coba gratis?</div>
+      <div class="faq-a">Ya! Paket Gratis selamanya unlimited waktu. Anda bisa pakai AI Catat, Skor Bisnis, dan 3 command owner tanpa bayar.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Bagaimana cara upgrade dari Gratis ke Pro?</div>
+      <div class="faq-a">Klik tombol "Upgrade Pro via WhatsApp" di atas, kirim pesan ke tim kami, transfer biaya, dan akun Anda di-upgrade dalam 1×24 jam (manual verification).</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Apakah data toko saya aman?</div>
+      <div class="faq-a">Sangat aman. Setiap toko punya database terisolasi (multi-tenant dengan RLS di Supabase), AI Agent terpisah, dan token WhatsApp sendiri. Data tidak pernah bocor antar toko.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Apa itu "Otak" AI?</div>
+      <div class="faq-a">Otak adalah sistem memory yang membuat AI laris.AI belajar dari pertanyaan customer yang sering ditanyakan. Makin lama dipakai, makin hemat biaya LLM dan makin cepat respon.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Bisakah saya batalkan langganan kapan saja?</div>
+      <div class="faq-a">Tentu. Berhenti kapan saja, tidak ada penalti. Akun Anda otomatis kembali ke paket Gratis di akhir periode billing.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Bagaimana kalau saya butuh fitur custom?</div>
+      <div class="faq-a">Hubungi tim kami via WhatsApp untuk paket Kemitraan. Kami bisa white-label, custom training AI per industri, atau integrasi ke sistem Anda.</div>
+    </div>
+  </section>
+
+  <footer>
+    <p>© 2026 laris.AI — AI Multi-Agent untuk UMKM Indonesia · <a href="/">Beranda</a> · <a href="https://wa.me/6285789974981">WhatsApp</a></p>
+  </footer>
+
+  <script>
+    // Billing toggle (bulanan / tahunan)
+    const toggle = document.getElementById('billingToggle');
+    const buttons = toggle.querySelectorAll('button');
+    const amounts = document.querySelectorAll('[data-monthly][data-yearly]');
+    const periods = document.querySelectorAll('.plan-price .period');
+    const notes = document.querySelectorAll('.plan-price-note[data-monthly]');
+
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        buttons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const period = btn.dataset.period;
+        // Update amounts
+        document.querySelectorAll('.plan-price .amount[data-monthly]').forEach(el => {
+          el.textContent = el.dataset[period];
+        });
+        // Update periods
+        document.querySelectorAll('.plan-price .period[data-monthly]').forEach(el => {
+          el.textContent = el.dataset[period];
+        });
+        // Update notes
+        document.querySelectorAll('.plan-price-note[data-monthly]').forEach(el => {
+          el.textContent = el.dataset[period];
+        });
+      });
+    });
+  </script>
+</body>
+</html>
