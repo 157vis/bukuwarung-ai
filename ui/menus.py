@@ -1,4 +1,22 @@
-"""Definisi menu dashboard — tanpa impor silang ke modul UI lain."""
+"""Definisi menu dashboard — tanpa impor silang ke modul UI lain.
+
+Struktur menu (9 item):
+
+  OPERASIONAL (semua user):
+    1. Ruang Komando     - Approval AI
+    2. Ringkasan         - Dashboard metrics
+    3. Catat Transaksi   - Form input
+    4. Buku Kas          - Tabel transaksi
+    5. Laporan KUR       - Laporan bank
+
+  INVENTORI (semua user, Tambah Gudang khusus admin):
+    6. Tambah Gudang     - Form input gudang (ADMIN ONLY)
+    7. Gudang            - Daftar produk per client (semua user, read-only)
+
+  SISTEM:
+    8. Pengaturan Bot    - Konfigurasi Fonnte (ADMIN ONLY)
+    9. Pengaturan        - Keluar + Chat Admin (semua user)
+"""
 
 from __future__ import annotations
 
@@ -13,6 +31,7 @@ __all__ = [
     "get_menu_item",
     "build_menu_keys",
     "display_label",
+    "is_admin_only",
 ]
 
 
@@ -20,19 +39,21 @@ __all__ = [
 class LarisMenuItem:
     key: str
     label: str
-    icon: str  # emoji icon untuk sidebar (modern look)
-    tabler_icon: str
-    dasher_section: str
+    icon: str           # emoji icon untuk sidebar (modern look)
+    tabler_icon: str    # Tabler icon class
+    dasher_section: str # "Operasional" | "Inventori" | "Sistem"
     description: str
+    admin_only: bool = False
 
 
 LARIS_MENUS: tuple[LarisMenuItem, ...] = (
+    # === OPERASIONAL (semua user) ===
     LarisMenuItem(
         "Ruang Komando",
         "Ruang Komando",
         "🧠",
         "ti-layout-dashboard",
-        "Home",
+        "Operasional",
         "Keputusan AI menunggu persetujuan.",
     ),
     LarisMenuItem(
@@ -40,7 +61,7 @@ LARIS_MENUS: tuple[LarisMenuItem, ...] = (
         "Ringkasan",
         "📊",
         "ti-chart-bar",
-        "Dashboard",
+        "Operasional",
         "Metrik bisnis & Laris Score.",
     ),
     LarisMenuItem(
@@ -48,7 +69,7 @@ LARIS_MENUS: tuple[LarisMenuItem, ...] = (
         "Catat Transaksi",
         "✏️",
         "ti-pencil-plus",
-        "Transaksi",
+        "Operasional",
         "Input pemasukan / pengeluaran.",
     ),
     LarisMenuItem(
@@ -56,7 +77,7 @@ LARIS_MENUS: tuple[LarisMenuItem, ...] = (
         "Buku Kas",
         "💰",
         "ti-cash",
-        "Keuangan",
+        "Operasional",
         "Daftar transaksi & saldo.",
     ),
     LarisMenuItem(
@@ -64,32 +85,46 @@ LARIS_MENUS: tuple[LarisMenuItem, ...] = (
         "Laporan KUR",
         "📈",
         "ti-report-analytics",
-        "Laporan",
-        "Ringkasan untuk KUR.",
+        "Operasional",
+        "Ringkasan untuk pengajuan KUR.",
     ),
+
+    # === INVENTORI ===
     LarisMenuItem(
-        "Gudang",
-        "Gudang",
+        "Tambah Gudang",
+        "Tambah Gudang",
         "🏬",
         "ti-building-warehouse",
         "Inventori",
-        "Stok & gudang.",
+        "Tambah gudang baru (admin only).",
+        admin_only=True,
     ),
     LarisMenuItem(
-        "Daftar Produk",
-        "Daftar Produk",
+        "Gudang",
+        "Gudang",
         "📦",
         "ti-box",
         "Inventori",
-        "Daftar produk & harga dari gudang.",
+        "Daftar produk per client.",
+    ),
+
+    # === SISTEM ===
+    LarisMenuItem(
+        "Pengaturan Bot",
+        "Pengaturan Bot",
+        "🤖",
+        "ti-robot",
+        "Sistem",
+        "Konfigurasi Fonnte & webhook WA (admin only).",
+        admin_only=True,
     ),
     LarisMenuItem(
-        "⚙️ Pengaturan Bot",
-        "Pengaturan Bot",
+        "Pengaturan",
+        "Pengaturan",
         "⚙️",
         "ti-settings",
-        "Settings",
-        "Token Fonnte & webhook WA.",
+        "Sistem",
+        "Keluar & hubungi admin.",
     ),
 )
 
@@ -101,9 +136,27 @@ def get_menu_item(menu_key: str) -> LarisMenuItem | None:
     return None
 
 
-def build_menu_keys(*, warehouse_enabled: bool) -> list[str]:
+def is_admin_only(menu_key: str) -> bool:
+    """Cek apakah menu ini hanya untuk admin."""
+    item = get_menu_item(menu_key)
+    return bool(item and item.admin_only)
+
+
+def build_menu_keys(
+    *, warehouse_enabled: bool, is_admin: bool = False
+) -> list[str]:
+    """Bangun daftar menu keys yang visible untuk user.
+
+    Args:
+        warehouse_enabled: apakah fitur warehouse aktif
+        is_admin: apakah user adalah super admin
+    """
     keys: list[str] = []
     for item in LARIS_MENUS:
+        # Admin-only menu: skip kalau bukan admin
+        if item.admin_only and not is_admin:
+            continue
+        # Gudang (read-only): butuh warehouse enabled
         if item.key == "Gudang" and not warehouse_enabled:
             continue
         keys.append(item.key)

@@ -1,3 +1,6 @@
+import html
+import urllib.parse
+
 import streamlit as st
 import pandas as pd
 
@@ -629,7 +632,15 @@ def render_dashboard(core: LarisCore, user) -> None:
                 unsafe_allow_html=True,
             )
 
-    elif menu == "⚙️ Pengaturan Bot":
+    elif menu == "Pengaturan":
+        # === SEMUA USER: Keluar + Chat Admin (WhatsApp) ===
+        _render_pengaturan_user(core, user_id, user_email)
+
+    elif menu == "Pengaturan Bot":
+        # === KHUSUS ADMIN ===
+        if not is_super_admin(user_email):
+            st.error("⛔ Akses ditolak. Menu ini khusus untuk Super Admin.")
+            return
         render_pengaturan_bot(core, user_id)
 
         is_admin = is_super_admin(user_email)
@@ -824,137 +835,270 @@ def render_dashboard(core: LarisCore, user) -> None:
                             core.unlink_wa_number(n["user_id"], n["phone"])
                             st.rerun()
 
-    elif menu == "Gudang":
-        section_card(
-            "Manajemen Gudang & Inventaris",
-            "Pantau stok per gudang dan produk terkoneksi otomatis.",
-            icon="ti-building-warehouse",
-        )
-        core = get_core()
-        user = user
-        user_id = None
-        if isinstance(user, dict):
-            user_id = user.get("id")
-        else:
-            user_id = getattr(user, "id", None)
-
-        # === Tambah Gudang: HANYA untuk Super Admin ===
-        if is_super_admin(user_email):
-            with st.expander("➕ Tambah Gudang (Admin Only)", expanded=False):
-                with st.form("create_warehouse"):
-                    wh_name = st.text_input("Nama Gudang")
-                    wh_location = st.text_input("Lokasi (opsional)")
-                    wh_notes = st.text_area("Keterangan (opsional)")
-                    if st.form_submit_button("Buat Gudang", type="primary"):
-                        if not wh_name:
-                            st.error("Nama gudang wajib.")
-                        else:
-                            res = core.create_warehouse(user_id, wh_name, wh_location or None, wh_notes or None)
-                            st.success("Gudang dibuat.")
-        else:
+    elif menu == "Tambah Gudang":
+        # === KHUSUS ADMIN: form input gudang baru ===
+        if not is_super_admin(user_email):
+            st.error("⛔ Akses ditolak. Menu ini khusus untuk Super Admin.")
             st.info(
-                "📦 **Info untuk Client:** Gudang dibuat dan dikelola oleh Admin. "
-                "Produk dari gudang otomatis tersedia di sini untuk dicatat masuk/keluar. "
-                "Hubungi Admin jika butuh gudang baru."
+                "Gudang dibuat dan dikelola oleh Admin. "
+                "Silakan hubungi Admin jika butuh gudang baru."
             )
+            return
+        _render_tambah_gudang(core, user_id)
 
-        try:
-            warehouses = core.list_warehouses(user_id)
-        except (OSError, ValueError, KeyError, AttributeError) as exc:
-            logger.error("list_warehouses: %s", exc)
-            warehouses = None
-
-        section_card(
-            "Daftar Gudang",
-            "Pilih gudang untuk melihat kartu stok.",
-            icon="ti-archive",
-        )
-        if warehouses is None:
-            st.error("Terjadi kesalahan saat memuat data gudang. Pastikan tabel 'warehouses' tersedia di Supabase.")
-            st.stop()
-
-        if not warehouses:
-            empty_state(
-                "ti-building",
-                "Belum ada gudang",
-                "Tambah gudang baru lewat tombol di atas untuk mulai mencatat inventaris.",
-            )
-        else:
-            options = {str(w.get('id')): w for w in warehouses}
-            cols = st.columns([3, 1])
-            with cols[0]:
-                sel = st.selectbox("Pilih Gudang", [f"{w.get('name')} (id:{w.get('id')})" for w in warehouses])
-                selected_id = None
-                if sel:
-                    try:
-                        selected_id = int(sel.split("id:")[-1].strip(')'))
-                    except Exception:
-                        selected_id = warehouses[0].get('id')
-            with cols[1]:
-                if st.button("Segarkan Gudang", type="secondary"):
-                    st.rerun()
-
-            st.markdown("---")
-            section_card(
-                "Catat Barang (In/Out)",
-                "Entri otomatis tersinkron ke tabel produk.",
-                icon="ti-package-import",
-            )
-            with st.form("inventory_form"):
-                if warehouses:
-                    wh_choices = {w.get('id'): w.get('name') for w in warehouses}
-                    wh_selected = st.selectbox("Gudang", options=list(wh_choices.keys()), format_func=lambda x: wh_choices.get(x))
-                else:
-                    st.warning("Buat minimal satu gudang terlebih dahulu.")
-                    wh_selected = None
-
-                barang = st.text_input("Nama Barang")
-                qty_in = st.number_input("Masuk (qty)", min_value=0, step=1, value=0)
-                qty_out = st.number_input("Keluar (qty)", min_value=0, step=1, value=0)
-                keterangan = st.text_input("Keterangan")
-                if st.form_submit_button("Simpan Inventaris", type="primary"):
-                    if not wh_selected:
-                        st.error("Pilih gudang terlebih dahulu.")
-                    elif not barang:
-                        st.error("Isi nama barang.")
-                    else:
-                        res = core.add_inventory_entry(user_id, wh_selected, barang, qty_in, qty_out, keterangan or None)
-                        st.success("Entri inventaris tersimpan.")
-
-            st.markdown("---")
-            section_card(
-                "Aktivitas Inventaris Terakhir",
-                "30 entri inventaris paling baru.",
-                icon="ti-history",
-            )
-            inv = core.list_inventory(user_id, warehouse_id=selected_id if 'selected_id' in locals() else None)
-            if not inv:
-                empty_state("ti-tray", "Belum ada aktivitas inventaris", "")
-            else:
-                import pandas as _pd
-
-                inv_df = _pd.DataFrame(inv)
-                if not inv_df.empty and 'date' in inv_df.columns:
-                    inv_df['date'] = pd.to_datetime(inv_df['date'])
-                st.dataframe(inv_df.head(30))
-
-            st.markdown("---")
-            section_card(
-                "Produk Terkoneksi dari Gudang",
-                "Setiap entri gudang otomatis sinkron ke tabel products.",
-                icon="ti-box",
-            )
-            products = core.list_products(user_id)
-            if products is None:
-                info_pill("Gagal memuat tabel produk.", "warning")
-            elif not products:
-                info_pill("Belum ada produk tersinkron. Tambah entri gudang terlebih dahulu.", "info")
-            else:
-                prod_df = pd.DataFrame(products)
-                st.dataframe(prod_df, use_container_width=True)
-
-    elif menu == "Daftar Produk":
+    elif menu == "Gudang":
+        # === SEMUA USER: daftar produk per client (read-only) ===
         render_daftar_produk(core, user_id, user_email)
+
+
+# ============================================================
+# HANDLER: Tambah Gudang (admin-only)
+# ============================================================
+
+def _render_tambah_gudang(core, user_id) -> None:
+    """Halaman Tambah Gudang — khusus Super Admin.
+
+    Berisi:
+    - Form buat gudang baru
+    - Daftar gudang yang sudah ada
+    - Quick actions: lihat inventaris, tambah produk
+    """
+    section_card(
+        "Tambah Gudang",
+        "Buat gudang baru untuk inventaris toko. Hanya Admin yang bisa menambah.",
+        icon="ti-building-warehouse",
+    )
+
+    # === Form tambah gudang ===
+    with st.expander("➕ Buat Gudang Baru", expanded=True):
+        with st.form("create_warehouse", clear_on_submit=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                wh_name = st.text_input("Nama Gudang *", placeholder="cth: Gudang Utama, Toko Depan, dll")
+            with col2:
+                wh_location = st.text_input("Lokasi (opsional)", placeholder="cth: Jakarta Selatan")
+
+            wh_notes = st.text_area("Keterangan (opsional)", placeholder="Catatan tambahan tentang gudang ini")
+
+            col_btn1, col_btn2, _ = st.columns([1, 1, 4])
+            with col_btn1:
+                submitted = st.form_submit_button("Buat Gudang", type="primary", use_container_width=True)
+            with col_btn2:
+                cancel = st.form_submit_button("Reset", use_container_width=True)
+
+            if submitted:
+                if not wh_name or not wh_name.strip():
+                    st.error("❌ Nama gudang wajib diisi.")
+                else:
+                    try:
+                        res = core.create_warehouse(
+                            user_id,
+                            wh_name.strip(),
+                            wh_location.strip() or None,
+                            wh_notes.strip() or None,
+                        )
+                        if res:
+                            st.success(f"✅ Gudang '{wh_name}' berhasil dibuat!")
+                            st.balloons()
+                            st.rerun()
+                        else:
+                            st.error("❌ Gagal membuat gudang. Coba lagi.")
+                    except Exception as exc:
+                        logger.exception("create_warehouse failed: %s", exc)
+                        st.error(f"❌ Error: {exc}")
+
+    st.markdown("---")
+
+    # === Daftar gudang yang sudah ada ===
+    section_card(
+        "Daftar Gudang Tersimpan",
+        "Semua gudang yang sudah dibuat.",
+        icon="ti-archive",
+    )
+
+    try:
+        warehouses = core.list_warehouses(user_id)
+    except Exception as exc:
+        logger.error("list_warehouses: %s", exc)
+        warehouses = None
+
+    if warehouses is None:
+        st.error("❌ Terjadi kesalahan saat memuat data gudang.")
+        return
+
+    if not warehouses:
+        empty_state(
+            "ti-building",
+            "Belum ada gudang",
+            "Buat gudang pertama Anda lewat form di atas.",
+        )
+        return
+
+    # Tabel ringkas
+    import pandas as _pd
+    wh_df = _pd.DataFrame(warehouses)
+    display_cols = [c for c in ["id", "name", "location", "created_at", "notes"] if c in wh_df.columns]
+    if display_cols:
+        st.dataframe(
+            wh_df[display_cols],
+            use_container_width=True,
+            hide_index=True,
+        )
+    else:
+        st.dataframe(wh_df, use_container_width=True, hide_index=True)
+
+    # === Quick action: tambah inventaris ke gudang tertentu ===
+    st.markdown("---")
+    section_card(
+        "Catat Barang (In/Out)",
+        "Entri inventaris otomatis tersinkron ke tabel produk.",
+        icon="ti-package-import",
+    )
+
+    wh_choices = {w.get("id"): w.get("name") for w in warehouses}
+    with st.form("inventory_form"):
+        col1, col2 = st.columns(2)
+        with col1:
+            wh_selected = st.selectbox(
+                "Gudang",
+                options=list(wh_choices.keys()),
+                format_func=lambda x: wh_choices.get(x, "—"),
+            )
+        with col2:
+            barang = st.text_input("Nama Barang", placeholder="cth: Indomie Goreng")
+
+        col3, col4 = st.columns(2)
+        with col3:
+            qty_in = st.number_input("Masuk (qty)", min_value=0, step=1, value=0)
+        with col4:
+            qty_out = st.number_input("Keluar (qty)", min_value=0, step=1, value=0)
+
+        keterangan = st.text_input("Keterangan (opsional)")
+
+        if st.form_submit_button("Simpan Inventaris", type="primary"):
+            if not wh_selected:
+                st.error("Pilih gudang terlebih dahulu.")
+            elif not barang or not barang.strip():
+                st.error("Isi nama barang.")
+            else:
+                try:
+                    res = core.add_inventory_entry(
+                        user_id, wh_selected, barang.strip(), qty_in, qty_out, keterangan or None
+                    )
+                    st.success(f"✅ Entri inventaris '{barang}' tersimpan.")
+                except Exception as exc:
+                    logger.exception("add_inventory_entry failed: %s", exc)
+                    st.error(f"❌ Error: {exc}")
+
+
+# ============================================================
+# HANDLER: Pengaturan (semua user)
+# ============================================================
+
+# Nomor WhatsApp Admin laris.AI
+ADMIN_WA_NUMBER = "6282112826851"  # Format intl tanpa +
+ADMIN_WA_DISPLAY = "+62 821-1282-6851"
+ADMIN_WA_MESSAGE = (
+    "Halo Admin laris.AI, saya pengguna dashboard dan butuh bantuan."
+)
+
+
+def _render_pengaturan_user(core, user_id, user_email) -> None:
+    """Halaman Pengaturan untuk semua user.
+
+    Berisi:
+    - Info akun (email, user_id)
+    - Tombol Chat Admin (buka WhatsApp Web)
+    - Tombol Keluar (logout)
+    """
+    section_card(
+        "Pengaturan Akun",
+        "Kelola akun dan hubungi admin jika butuh bantuan.",
+        icon="ti-user-circle",
+    )
+
+    # === Info Akun ===
+    st.markdown(
+        f"""
+        <div class="laris-card" style="padding: 1rem 1.25rem; margin-bottom: 1rem;">
+            <div style="font-size: 0.78rem; color: #637381; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">
+                Email
+            </div>
+            <div style="font-size: 0.95rem; font-weight: 600; color: #1c252e; margin-bottom: 0.75rem;">
+                {html.escape(user_email or "—")}
+            </div>
+            <div style="font-size: 0.78rem; color: #637381; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">
+                User ID
+            </div>
+            <div style="font-size: 0.85rem; color: #1c252e; font-family: monospace; word-break: break-all;">
+                {html.escape(str(user_id) if user_id else "—")}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("---")
+
+    # === Chat Admin (WhatsApp) ===
+    section_card(
+        "Butuh Bantuan?",
+        "Hubungi Admin via WhatsApp untuk pertanyaan, masalah teknis, atau permintaan.",
+        icon="ti-brand-whatsapp",
+    )
+
+    wa_url = f"https://wa.me/{ADMIN_WA_NUMBER}?text={urllib.parse.quote(ADMIN_WA_MESSAGE)}"
+
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        st.markdown(
+            f"""
+            <div class="laris-card" style="padding: 1rem; display: flex; align-items: center; gap: 0.75rem; background: linear-gradient(135deg, #d4f1d4 0%, #c8fad6 100%); border: 1px solid rgba(0,167,111,0.2);">
+                <div style="width: 44px; height: 44px; background: #00a76f; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.4rem; flex-shrink: 0;">
+                    📱
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 700; color: #1c252e; font-size: 0.95rem;">Admin laris.AI</div>
+                    <div style="font-size: 0.8rem; color: #454f5b;">{ADMIN_WA_DISPLAY}</div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with col2:
+        st.link_button(
+            "💬 Chat via WhatsApp",
+            wa_url,
+            type="primary",
+            use_container_width=True,
+        )
+
+    st.caption(
+        "Klik tombol di atas untuk membuka WhatsApp Web dengan pesan "
+        "yang sudah disiapkan. Admin akan balas secepatnya."
+    )
+
+    st.markdown("---")
+
+    # === Tombol Keluar ===
+    section_card(
+        "Keluar",
+        "Keluar dari akun dan kembali ke halaman login.",
+        icon="ti-logout",
+    )
+
+    col1, col2, _ = st.columns([1, 1, 4])
+    with col1:
+        if st.button(
+            "🚪 Keluar",
+            type="secondary",
+            use_container_width=True,
+            key="pengaturan_logout",
+        ):
+            from login import logout
+            logout()
+            st.success("Berhasil keluar. Mengalihkan ke halaman login...")
+            st.rerun()
 
 
 def render_daftar_produk(core, user_id, user_email) -> None:
