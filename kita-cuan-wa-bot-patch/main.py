@@ -253,8 +253,7 @@ async def _ask_csat_agent(user_id: str, sender: str, text: str, name: str) -> st
 
     # === Otak: cek memory dulu (incremental learning) ===
     try:
-        from laris_core import LarisCore
-        _core = LarisCore()
+        _core = get_core()
         cached = await asyncio.to_thread(_core.recall_memory, user_id, "cs", text)
         if cached:
             logger.info(
@@ -325,8 +324,7 @@ async def _ask_csat_agent(user_id: str, sender: str, text: str, name: str) -> st
         # === Otak: simpan jawaban ke memory untuk dipelajari agent ===
         if reply and reply.strip():
             try:
-                from laris_core import LarisCore as _Core2
-                _core2 = _Core2()
+                _core2 = get_core()
                 await asyncio.to_thread(_core2.remember_answer, user_id, "cs", text, reply)
             except Exception as exc:  # noqa: BLE001
                 logger.debug("otak remember_answer skip: %s", exc)
