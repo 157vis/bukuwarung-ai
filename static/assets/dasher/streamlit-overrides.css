@@ -84,43 +84,56 @@ hr { border: 0; border-top: 1px dashed var(--ds-gray-300, #dfe3e8); opacity: 1; 
 footer { visibility: hidden; }
 
 /* ============================================================
-   SIDEBAR — OVERLAY MODE (tidak mengambil ruang konten)
-   User feedback: "supaya tidak tertimpah begini"
-   Sidebar overlay di atas konten utama, tidak push konten.
+   SIDEBAR — Seperti Cursor IDE
+   - Default: TERSEMBUNYI (hidden)
+   - Klik icon strip di kiri / tombol ☰: slide in
+   - Klik ✕ atau di luar: slide out
+   - Overlay di atas konten (konten tidak bergeser)
+   - Icon strip di kiri selalu visible
    ============================================================ */
+
+/* Sidebar: hidden by default */
 section[data-testid="stSidebar"] {
   width: 264px !important;
   min-width: 264px !important;
   background-color: var(--ds-navbar-bg, #ffffff) !important;
   border-right: 1px solid rgba(28, 37, 46, 0.08) !important;
-  /* Overlay mode: absolute, di atas konten */
-  position: absolute !important;
+  position: fixed !important;
   top: 0 !important;
-  left: 0 !important;
+  left: 48px !important;  /* offset dari icon strip 48px */
   height: 100vh !important;
   z-index: 999990 !important;
-  /* Shadow di kanan untuk pemisahan visual */
   box-shadow: 4px 0 24px rgba(28, 37, 46, 0.12) !important;
-  transform: translateX(0) !important;
-  visibility: visible !important;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  /* Default: hidden (slide out ke kiri) */
+  transform: translateX(-100%) !important;
+  visibility: hidden !important;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              visibility 0.3s ease,
+              box-shadow 0.3s ease;
 }
 
-/* Konten utama geser ke kanan untuk accommodate sidebar overlay */
+/* Override Streamlit aria-expanded attribute. Streamlit set true saat
+   sidebar visible, false saat collapsed. Kita pakai logic custom. */
+section[data-testid="stSidebar"][aria-expanded="true"] {
+  transform: translateX(0) !important;
+  visibility: visible !important;
+}
+
+/* Konten utama: geser ke kanan untuk accommodate icon strip 48px */
 .main .block-container,
 .main > div {
-  padding-left: 264px !important;
+  padding-left: 64px !important;  /* 48px icon strip + 16px gap */
   transition: padding-left 0.3s ease;
 }
 
-/* Di layar kecil (< 768px), sidebar full width dan konten normal */
+/* Di layar kecil (< 768px), full width */
 @media (max-width: 768px) {
   section[data-testid="stSidebar"] {
-    width: 100% !important;
+    left: 0 !important;
   }
   .main .block-container,
   .main > div {
-    padding-left: 0 !important;
+    padding-left: 56px !important;
   }
 }
 

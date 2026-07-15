@@ -16,7 +16,12 @@ from ui.components import (
     section_card,
     stat_card_row,
 )
-from ui.dasher_nav import render_sidebar_nav
+from ui.dasher_nav import (
+    render_sidebar_nav,
+    render_sidebar_toggle_button,
+    render_sidebar_toggle_strip,
+    is_sidebar_open,
+)
 from ui.laris_theme import inject_dashboard_theme
 from ui.constants import MENU_SESSION_KEY
 from ui.menus import build_menu_keys, display_label
@@ -274,22 +279,32 @@ def render_dashboard(core: LarisCore, user) -> None:
 
     warehouse_enabled = core.table_exists("warehouses")
 
-    # Sidebar selalu tampil (tidak ada toggle)
-    try:
-        menu = render_sidebar_nav(
-            warehouse_enabled=warehouse_enabled,
-            user_email=user_email,
-        )
-        logger.debug("Sidebar nav rendered. Active menu: %s", menu)
-    except Exception as exc:
-        import traceback
-        tb = traceback.format_exc()
-        logger.exception("Gagal render sidebar nav: %s", exc)
-        # Tampilkan di UI supaya user bisa copy error untuk debugging
-        st.error(f"❌ Gagal render menu sidebar: {exc}")
-        with st.expander("Traceback lengkap", expanded=False):
-            st.code(tb, language="python")
-        menu = "Ringkasan"  # fallback ke Ringkasan
+    # Sidebar: render hanya jika state open=True (seperti Cursor IDE).
+    # Default hidden. User klik icon strip / tombol ☰ untuk membuka.
+    if is_sidebar_open():
+        try:
+            menu = render_sidebar_nav(
+                warehouse_enabled=warehouse_enabled,
+                user_email=user_email,
+            )
+            logger.debug("Sidebar nav rendered. Active menu: %s", menu)
+        except Exception as exc:
+            import traceback
+            tb = traceback.format_exc()
+            logger.exception("Gagal render sidebar nav: %s", exc)
+            st.error(f"❌ Gagal render menu sidebar: {exc}")
+            with st.expander("Traceback lengkap", expanded=False):
+                st.code(tb, language="python")
+            menu = "Ringkasan"
+    else:
+        # Sidebar hidden - ambil default menu
+        from ui.menus import build_menu_keys as _bkeys
+
+        _keys = _bkeys(warehouse_enabled=warehouse_enabled)
+        menu = st.session_state.get(MENU_SESSION_KEY, _keys[0] if _keys else "Ringkasan")
+        if menu not in _keys:
+            menu = _keys[0] if _keys else "Ringkasan"
+            st.session_state[MENU_SESSION_KEY] = menu
 
     try:
         df = core.get_dashboard_data(user_id)
@@ -1088,6 +1103,11 @@ def main() -> None:
     page_config()
     _redirect_legacy_paths()
     render_header()
+
+    # Icon strip di kiri (seperti Cursor IDE) - selalu visible
+    render_sidebar_toggle_strip()
+    # Tombol toggle ☰/✕ di kanan icon strip
+    render_sidebar_toggle_button()
 
     if get_query_flag("demo"):
         st.session_state["demo_mode"] = True
