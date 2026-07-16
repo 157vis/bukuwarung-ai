@@ -1291,6 +1291,38 @@ def _render_form_tambah_client(core, bw_url: str, catat_url: str, admin_email: s
             help="WAJIB. Min 10 karakter. Ambil dari https://fonnte.com → device CS → Token.",
         )
 
+        st.markdown("---")
+        st.markdown("**📍 Info Toko untuk CS Agent**")
+        st.caption("Data ini dipakai CS Agent untuk jawab pertanyaan customer "
+                   "(jam buka, lokasi, metode bayar). Bisa diubah nanti via menu 'Update Toko'.")
+        ci_cols = st.columns(2)
+        with ci_cols[0]:
+            c_business_name = st.text_input(
+                "Business Name (untuk CS)",
+                placeholder="Toko Sumber Rezeki",
+                value=c_label.strip(),
+                help="Nama yang dipakai CS Agent untuk sapa. Default = Nama Usaha.",
+            )
+            c_jam_buka = st.text_input("Jam Buka", value="07:00", placeholder="07:00")
+            c_jam_tutup = st.text_input("Jam Tutup", value="21:00", placeholder="21:00")
+            c_hari_operasional = st.text_input("Hari Operasional", value="Setiap hari")
+        with ci_cols[1]:
+            c_alamat = st.text_input("Alamat", placeholder="Jl. Pasar Baru No. 12")
+            c_kota = st.text_input("Kota", placeholder="Jakarta")
+            c_no_telp = st.text_input("No. Telp (display)", placeholder="0857xxxxxxxx")
+            c_tagline = st.text_input("Tagline (opsional)", placeholder="Sembako murah lengkap!")
+
+        c_metode_bayar = st.multiselect(
+            "Metode Pembayaran",
+            options=["Cash", "Transfer BCA", "Transfer BRI", "QRIS", "GoPay", "OVO", "DANA", "ShopeePay"],
+            default=["Cash", "Transfer BCA", "QRIS"],
+            help="Centang semua metode yang toko terima.",
+        )
+        c_ongkir_info = st.text_input(
+            "Info Ongkir (opsional)",
+            placeholder="Free ongkir area Jakarta, luar kota +Rp 10.000",
+        )
+
         # === Preview schema sebelum submit ===
         with st.expander("🔍 Preview schema yang akan di-insert", expanded=False):
             from core.client_registration import (
@@ -1375,6 +1407,16 @@ def _render_form_tambah_client(core, bw_url: str, catat_url: str, admin_email: s
                 bukuwarung_base_url=bw_url,
                 catat_bot_base_url=catat_url,
                 fonnte_token=c_fonnte_token.strip(),
+                business_name=c_business_name.strip() or c_label.strip(),
+                jam_buka=c_jam_buka.strip(),
+                jam_tutup=c_jam_tutup.strip(),
+                hari_operasional=c_hari_operasional.strip(),
+                alamat=c_alamat.strip(),
+                kota=c_kota.strip(),
+                no_telp=c_no_telp.strip(),
+                tagline=c_tagline.strip(),
+                metode_bayar=c_metode_bayar,
+                ongkir_info=c_ongkir_info.strip(),
             )
 
             st.success(f"✅ Toko berhasil didaftarkan!")

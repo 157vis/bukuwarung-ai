@@ -354,6 +354,17 @@ class LarisCore:
         catat_bot_base_url: str,
         fonnte_token: str = "",
         plan_tier: str = "free",
+        # === Info toko untuk CS Agent (kolom baru) ===
+        business_name: str = "",
+        jam_buka: str = "07:00",
+        jam_tutup: str = "21:00",
+        hari_operasional: str = "Setiap hari",
+        alamat: str = "",
+        kota: str = "",
+        no_telp: str = "",
+        tagline: str = "",
+        metode_bayar: list[str] | None = None,
+        ongkir_info: str = "",
     ) -> tuple[bool, str | None]:
         """Daftarkan / update client di tabel clients (multi-tenant registry).
 
@@ -400,7 +411,17 @@ class LarisCore:
             "webhook_path": webhook_path,
             "pattern": "multitenant_v1",
             "migrated_at": datetime.now(datetime.timezone.utc).isoformat(),
+            # Simpan juga di metadata sebagai fallback (untuk backward compat)
+            "jam_buka": jam_buka,
+            "jam_tutup": jam_tutup,
+            "hari_operasional": hari_operasional,
+            "alamat": alamat,
+            "kota": kota,
+            "no_telp": no_telp,
         }
+        # Default metode_bayar
+        if not metode_bayar:
+            metode_bayar = ["Cash", "Transfer", "QRIS"]
         row = {
             "client_id": client_id,
             "name": name or client_id,
@@ -409,11 +430,36 @@ class LarisCore:
             "profile_key": client_id,
             # JSONB real schema butuh object, bukan array kosong
             "products": {"items": []},
-            "payment_methods": {"cash": True, "transfer": True},
+            "payment_methods": {"cash": True, "transfer": True, "qris": True},
             "is_active": True,
             "metadata": metadata,
             "plan_tier": plan_tier,
         }
+
+        # === Tambahkan kolom info toko (kalau kolom sudah ada di tabel) ===
+        # Pakai try/except agar backward compat: kalau kolom belum ada, skip
+        try:
+            extra_cols = {
+                "business_name": business_name.strip() or (name or "").strip(),
+                "jam_buka": jam_buka.strip() or "07:00",
+                "jam_tutup": jam_tutup.strip() or "21:00",
+                "hari_operasional": hari_operasional.strip() or "Setiap hari",
+                "alamat": alamat.strip(),
+                "kota": kota.strip(),
+                "no_telp": no_telp.strip(),
+                "ongkir_info": ongkir_info.strip(),
+                "metode_bayar": metode_bayar,
+                "tagline": tagline.strip(),
+            }
+            # Filter nilai kosong untuk string agar tidak menimpa data existing dengan ""
+            for k in ("business_name", "jam_buka", "jam_tutup", "hari_operasional",
+                       "alamat", "kota", "no_telp", "ongkir_info", "tagline"):
+                if not extra_cols[k]:
+                    extra_cols.pop(k)
+            if extra_cols:
+                row.update(extra_cols)
+        except Exception:
+            pass
         try:
             self.supabase.table("clients").upsert(row, on_conflict="client_id").execute()
             if self.table_exists("brand_voices"):
@@ -444,6 +490,17 @@ class LarisCore:
         email: str = "",
         bukuwarung_base_url: str = "",
         catat_bot_base_url: str = "",
+        # === Info toko untuk CS Agent ===
+        business_name: str = "",
+        jam_buka: str = "07:00",
+        jam_tutup: str = "21:00",
+        hari_operasional: str = "Setiap hari",
+        alamat: str = "",
+        kota: str = "",
+        no_telp: str = "",
+        tagline: str = "",
+        metode_bayar: list[str] | None = None,
+        ongkir_info: str = "",
     ) -> dict:
         """Pola 3: nomor CS (pelanggan) + nomor Catat (owner) dalam satu langkah."""
         cid = (client_id or "").strip() or self.slugify_client_id(label, email)
@@ -458,6 +515,16 @@ class LarisCore:
             user_id=user_id,
             bukuwarung_base_url=bukuwarung_base_url,
             catat_bot_base_url=catat_bot_base_url,
+            business_name=business_name,
+            jam_buka=jam_buka,
+            jam_tutup=jam_tutup,
+            hari_operasional=hari_operasional,
+            alamat=alamat,
+            kota=kota,
+            no_telp=no_telp,
+            tagline=tagline,
+            metode_bayar=metode_bayar,
+            ongkir_info=ongkir_info,
         )
         bw_base = (bukuwarung_base_url or "").rstrip("/")
         catat_base = (catat_bot_base_url or "").rstrip("/")
