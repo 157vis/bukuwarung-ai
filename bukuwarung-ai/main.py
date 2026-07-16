@@ -24,7 +24,7 @@ _ROOT = Path(__file__).resolve().parent
 # dari container Railway (Root Directory = bukuwarung-ai).
 _REPO_ROOT = _ROOT.parent
 
-# FIX Railway: pastikan sys.path[0] = folder bukuwarung-ai (bukan /app)
+# FIX Railway (c6f7261): pastikan sys.path[0] = folder bukuwarung-ai (bukan /app)
 # Hapus semua path duplikat dan turunannya agar import 'core' resolve ke /app/bukuwarung-ai/core
 # BUKAN /app/core (yang tidak ada). Lalu tambahkan _ROOT di urutan pertama.
 _cleaned = []
@@ -40,6 +40,12 @@ for p in sys.path:
         continue
     _cleaned.append(p)
 sys.path[:] = [str(_ROOT), str(_REPO_ROOT)] + _cleaned
+
+# Force-clear any stale core modules from __pycache__ that may exist from prior deploy
+import importlib
+for _mod_name in list(sys.modules):
+    if _mod_name == "core" or _mod_name.startswith("core."):
+        sys.modules.pop(_mod_name, None)
 
 # Diagnostik: list isi core/ untuk debug
 _core_dir = _ROOT / "core"
