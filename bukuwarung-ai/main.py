@@ -20,13 +20,27 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 _ROOT = Path(__file__).resolve().parent
-if str(_ROOT) not in sys.path:
-    sys.path.insert(0, str(_ROOT))
 # Repo root — agar 'laris_core', 'paths', dll di root bisa di-import
 # dari container Railway (Root Directory = bukuwarung-ai).
 _REPO_ROOT = _ROOT.parent
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
+
+# FIX Railway: pastikan sys.path[0] = folder bukuwarung-ai (bukan /app)
+# Hapus semua path duplikat dan turunannya agar import 'core' resolve ke /app/bukuwarung-ai/core
+# BUKAN /app/core (yang tidak ada). Lalu tambahkan _ROOT di urutan pertama.
+_cleaned = []
+for p in sys.path:
+    if not p:
+        continue
+    try:
+        pres = Path(p).resolve()
+    except (OSError, ValueError):
+        continue
+    # Skip semua path di luar _ROOT agar tidak ada module resolution bentrok
+    if str(pres) in {str(_ROOT), str(_REPO_ROOT)}:
+        continue
+    _cleaned.append(p)
+sys.path[:] = [str(_ROOT), str(_REPO_ROOT)] + _cleaned
+
 # Diagnostik: list isi core/ untuk debug
 _core_dir = _ROOT / "core"
 if _core_dir.is_dir():
