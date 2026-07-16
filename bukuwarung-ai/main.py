@@ -74,7 +74,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-APP_VERSION = "1.0.1"
+APP_VERSION = "1.0.3"  # Phase 3: CS info toko + tenant_data fix
 _orchestrator: Orchestrator | None = None
 _client_registry = None
 _rate_limiter = RateLimiter(max_requests=60, window_seconds=60.0)
