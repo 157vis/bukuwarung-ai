@@ -663,6 +663,9 @@ def render_dashboard(core: LarisCore, user) -> None:
                 icon="ti-shield-lock",
             )
 
+            # Ambil base URL bot SEBELUM tabs (dipakai oleh semua form)
+            bw_url, catat_url = _bot_base_urls()
+
             # === Tab separation supaya tidak bingung ===
             tab_daftar, tab_update, tab_list = st.tabs([
                 "➕ Tambah Toko Baru",
