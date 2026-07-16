@@ -218,14 +218,21 @@ class LarisCore:
 
     # ============================================================
     # Plan / Tier — Free / Pro / Bisnis / Kemitraan
+    # Strategi: Free = catat saja (tx only), Pro+ = unlock CS Agent
     # Pakai client_id (PK asli) bukan user_id (tidak ada di real schema)
     # ============================================================
     PLAN_TIERS = ("free", "pro", "bisnis", "kemitraan")
+    # customer_chat = -1 artinya CS Agent DINONAKTIFKAN untuk tier ini
+    # customer_chat = 0+ artinya CS Agent AKTIF dengan quota tsb
     PLAN_LIMITS = {
-        "free":      {"tx": 100,  "customer_chat": 50,   "warehouses": 1},
-        "pro":       {"tx": 1000, "customer_chat": 500,  "warehouses": 5},
-        "bisnis":    {"tx": 10000,"customer_chat": 5000, "warehouses": 20},
-        "kemitraan": {"tx": 999999, "customer_chat": 999999, "warehouses": 999},
+        # FREE: bisa catat transaksi (AI Catat) + lihat dashboard, TAPI tanpa CS Agent
+        "free":      {"tx": 100,  "customer_chat": -1,   "warehouses": 1,   "cs_agent": False},
+        # PRO: full fitur termasuk CS Agent (AI handle customer chat masuk)
+        "pro":       {"tx": 1000, "customer_chat": 500,  "warehouses": 5,   "cs_agent": True},
+        # BISNIS: lebih banyak quota CS Agent
+        "bisnis":    {"tx": 10000,"customer_chat": 5000, "warehouses": 20,  "cs_agent": True},
+        # KEMITRAAN: unlimited
+        "kemitraan": {"tx": 999999, "customer_chat": 999999, "warehouses": 999, "cs_agent": True},
     }
 
     def get_plan_tier(self, client_id: str) -> str:
@@ -268,6 +275,29 @@ class LarisCore:
     def get_plan_limits(self, client_id: str) -> dict:
         tier = self.get_plan_tier(client_id)
         return {"tier": tier, **self.PLAN_LIMITS.get(tier, self.PLAN_LIMITS["free"])}
+
+    def has_cs_agent(self, client_id: str) -> bool:
+        """Apakah tenant ini punya akses ke CS Agent (AI handle customer chat masuk)?
+
+        Return:
+            True  - tier pro/bisnis/kemitraan (CS Agent aktif)
+            False - tier free (CS Agent NONAKTIF, hanya bisa catat transaksi)
+        """
+        limits = self.get_plan_limits(client_id)
+        return bool(limits.get("cs_agent", False))
+
+    def get_feature_summary(self, client_id: str) -> dict:
+        """Ringkasan fitur per tier untuk ditampilkan di UI."""
+        limits = self.get_plan_limits(client_id)
+        tier = limits["tier"]
+        return {
+            "tier": tier,
+            "tx_limit": limits["tx"],
+            "cs_quota": limits["customer_chat"] if limits["customer_chat"] >= 0 else 0,
+            "warehouses": limits["warehouses"],
+            "cs_agent_active": limits["cs_agent"],
+            "ai_catat_active": True,  # Semua tier bisa catat
+        }
 
     def upgrade_plan(
         self, client_id: str, new_tier: str, duration_days: int = 30,

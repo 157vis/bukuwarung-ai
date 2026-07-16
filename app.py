@@ -1788,22 +1788,28 @@ def _resolve_client_id_for_user(core, user_id: str, user_email: str | None = Non
 def _render_plan_banner(core, user_id, user_email) -> None:
     """Tampilkan banner Free Tier + tombol Upgrade Pro.
 
+    Strategi 2026-07-16: Free = catat transaksi saja (AI Catat aktif).
+                          Pro+  = unlock CS Agent (AI handle customer chat).
+
     Ditampilkan di Ruang Komando untuk SEMUA user (admin & client).
-    - Free: banner kuning + counter "X / 100 transaksi bulan ini" + tombol "⬆️ Upgrade ke Pro"
-    - Pro/Bisnis: badge tier + "Sisa X hari lagi"
+    - Free: banner kuning + counter "X / 100 transaksi" + info "CS Agent belum aktif"
+            + tombol "⬆️ Upgrade ke Pro untuk unlock CS Agent"
+    - Pro/Bisnis: badge tier + "Sisa X hari lagi" + info "CS Agent AKTIF"
     - Kemitraan: badge special (no banner)
     """
     # FIX: user_id (UUID dari auth.users) BUKAN client_id (string PK di tabel clients).
     # Resolve user_id → client_id lewat tabel clients dengan metadata->>user_id.
     client_id = _resolve_client_id_for_user(core, user_id, user_email)
     try:
-        plan_limits = core.get_plan_limits(client_id) if client_id else {"tier": "free"}
+        plan_limits = core.get_plan_limits(client_id) if client_id else {"tier": "free", "cs_agent": False}
         quota = core.check_tx_quota(client_id) if client_id else {"current": 0, "limit": 100}
+        features = core.get_feature_summary(client_id) if client_id else {"tier": "free", "cs_agent_active": False}
     except Exception as exc:
         logger.debug("render_plan_banner error: %s", exc)
         return
 
     tier = plan_limits["tier"]
+    cs_active = features.get("cs_agent_active", False)
     tier_label = {
         "free":      "🆓 Free",
         "pro":       "⭐ Pro",
@@ -1823,7 +1829,7 @@ def _render_plan_banner(core, user_id, user_email) -> None:
         )
         return
 
-    # === FREE TIER BANNER ===
+    # === FREE TIER BANNER — STRATEGI MARKETING: CS Agent belum aktif ===
     if tier == "free":
         cols = st.columns([3, 1])
         with cols[0]:
@@ -1831,6 +1837,8 @@ def _render_plan_banner(core, user_id, user_email) -> None:
             tx_limit = quota.get("limit", 100)
             pct = min(100, int(tx_count / tx_limit * 100)) if tx_limit else 0
             warn_color = "#ef4444" if pct >= 80 else "#f59e0b"
+            # 2 baris: baris 1 = tag FREE + tagline utama (lebih menarik)
+            # baris 2 = progress + counter + info CS Agent disabled
             st.markdown(
                 f"<div class='laris-plan-banner' style='background:rgba(245,158,11,.08);"
                 f"border:1px solid {warn_color};border-radius:.75rem;padding:1rem 1.25rem;"
@@ -1838,12 +1846,16 @@ def _render_plan_banner(core, user_id, user_email) -> None:
                 f"<div style='display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;'>"
                 f"<span style='background:#f59e0b;color:#fff;padding:.2rem .6rem;"
                 f"border-radius:1rem;font-size:.75rem;font-weight:700;'>🆓 FREE</span>"
-                f"<strong>Upgrade ke Pro</strong> — transaksi tanpa batas & AI CS 24/7"
+                f"<strong>Upgrade ke Pro</strong> — buka AI CS 24/7 untuk customer Anda"
                 f"</div>"
                 f"<div style='background:rgba(0,0,0,.06);border-radius:.5rem;height:.5rem;"
                 f"overflow:hidden;margin-bottom:.25rem;'>"
                 f"<div style='background:{warn_color};height:100%;width:{pct}%;'></div></div>"
-                f"<small style='color:#6b7280;'>📊 {tx_count} / {tx_limit} transaksi bulan ini</small>"
+                f"<small style='color:#6b7280;'>"
+                f"📊 <b>{tx_count} / {tx_limit}</b> transaksi bulan ini &nbsp;·&nbsp; "
+                f"🤖 <b>AI Catat</b> aktif &nbsp;·&nbsp; "
+                f"💬 <b>AI CS Agent</b> <span style='color:#ef4444;'>🔒 belum aktif</span>"
+                f"</small>"
                 f"</div>",
                 unsafe_allow_html=True,
             )
@@ -1851,7 +1863,7 @@ def _render_plan_banner(core, user_id, user_email) -> None:
             if st.button("⬆️ Upgrade Pro", key="upgrade_pro_top", type="primary", use_container_width=True):
                 _show_upgrade_dialog()
 
-    # === PRO / BISNIS: badge kecil ===
+    # === PRO / BISNIS: badge kecil + info CS Agent aktif ===
     else:
         try:
             resp = (
@@ -1890,18 +1902,44 @@ def _render_plan_banner(core, user_id, user_email) -> None:
 
 
 def _show_upgrade_dialog() -> None:
-    """Dialog instruksi upgrade Pro (manual transfer)."""
+    """Dialog upgrade Pro dengan tabel pembanding fitur per tier."""
+    st.markdown("### 💎 Pilih Paket yang Tepat untuk Toko Anda")
+
+    # === Tabel pembanding tier ===
+    st.markdown(
+        """
+        | Fitur | 🆓 Free | ⭐ Pro | 🏢 Bisnis | 🤝 Kemitraan |
+        |-------|---------|--------|-----------|--------------|
+        | **AI Catat** (catat via WA) | ✅ 100/bulan | ✅ 1.000/bulan | ✅ 10.000/bulan | ✅ Unlimited |
+        | **Dashboard Streamlit** | ✅ | ✅ | ✅ | ✅ |
+        | **Manajemen Produk** | ✅ 1 gudang | ✅ 5 gudang | ✅ 20 gudang | ✅ Unlimited |
+        | **AI CS Agent** (handle chat customer) | ❌ Tidak aktif | ✅ 500 chat/bulan | ✅ 5.000 chat/bulan | ✅ Unlimited |
+        | **AI Memory** (bot belajar terus) | ❌ | ✅ | ✅ | ✅ |
+        | **Multi-bahasa** (ID/JV/Sunda) | ❌ | ✅ | ✅ | ✅ |
+        | **Priority Support** | ❌ | ❌ | ✅ | ✅ |
+        | **Harga** | **GRATIS** | **Rp 149.000/bln** | **Rp 299.000/bln** | **Custom** |
+        """
+    )
+
+    st.divider()
+
+    st.markdown("### 📲 Cara Upgrade")
     st.info(
-        "**Cara Upgrade ke Pro (Rp 149.000/bulan):**\n\n"
-        "1. Transfer **Rp 149.000** ke salah satu rekening:\n"
+        "**Cara Upgrade (semua paket):**\n\n"
+        "1. Transfer sesuai paket ke salah satu rekening:\n"
         "   • BCA: 123-456-7890 a/n Rafih R\n"
         "   • GoPay/OVO/DANA: 0812-3456-7890\n\n"
         "2. Kirim bukti transfer via WhatsApp ke **0857-8997-4981**\n\n"
-        "3. Admin akan aktifkan Pro dalam 1x24 jam\n\n"
-        "✅ **Pro** (Rp 149k/bln): 1.000 transaksi/bulan + AI CS 24/7 + 5 gudang\n"
-        "✅ **Bisnis** (Rp 299k/bln): 10.000 transaksi/bulan + unlimited AI CS + 20 gudang\n"
-        "✅ **Kemitraan**: Custom — hubungi admin untuk penawaran",
+        "3. Admin akan aktifkan dalam 1x24 jam\n\n"
+        "💡 **Tips**: Mulai dari **Free** untuk coba-coba. Kalau customer mulai banyak chat "
+        "dan Anda kewalahan jawabin satu-satu → upgrade ke **Pro** untuk aktifkan AI CS 24/7.",
         icon="💎",
+    )
+
+    st.caption(
+        "🎯 **Strategi Kami**: Anda bisa jual dan catat transaksi sepuasnya di Free. "
+        "Begitu bisnis mulai berkembang dan customer minta dilayani cepat → "
+        "AI CS Agent (Pro) jadi tangan kanan Anda yang jawabin chat customer 24/7."
     )
 
 
