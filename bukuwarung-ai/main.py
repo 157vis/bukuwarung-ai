@@ -27,6 +27,13 @@ if str(_ROOT) not in sys.path:
 _REPO_ROOT = _ROOT.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
+# Diagnostik: list isi core/ untuk debug
+_core_dir = _ROOT / "core"
+if _core_dir.is_dir():
+    _core_files = sorted([f.name for f in _core_dir.iterdir()])
+    print(f"[bukuwarung-ai] sys.path[0]={sys.path[0]!r} | core files: {_core_files}", file=sys.stderr)
+else:
+    print(f"[bukuwarung-ai] WARNING: core/ not found at {_core_dir}", file=sys.stderr)
 
 from agents import build_agents
 from config import PROJECT_ROOT, ensure_data_dir, get_settings
