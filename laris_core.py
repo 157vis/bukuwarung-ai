@@ -265,59 +265,6 @@ class LarisCore:
             logger.error("get_plan_tier client_id=%s: %s", client_id, exc)
             return "free"
 
-    def get_client_id_for_user(self, user_id: str) -> str | None:
-        """Map Supabase auth user_id (UUID) -> clients.client_id (slug mis. 'toko_rafih').
-
-        Penting: `clients.client_id` adalah slug tekstual, bukan UUID auth.users.
-        Dua lookup bertingkat (fallback aman bila salah satu tidak ada):
-
-        1. `clients.metadata->>user_id == user_id` (paling umum, diisi saat
-           onboarding via `upsert_bukuwarung_client`).
-        2. `clients.client_id == user_id` (kasus langka: slug sama dengan UUID).
-
-        Return client_id (string) atau None kalau tidak ketemu.
-        Caller harus fallback ke `user_id` mentah supaya get_plan_tier() tetap
-        aman (mengembalikan 'free' alih-alih error).
-        """
-        uid = self.normalize_user_id(user_id)
-        if not uid:
-            return None
-        if not self.table_exists("clients"):
-            return None
-        try:
-            resp = (
-                self.supabase.table("clients")
-                .select("client_id, owner_phones, metadata")
-                .eq("metadata->>user_id", uid)
-                .limit(1)
-                .execute()
-            )
-            rows = resp.data or []
-            if rows:
-                cid = str(rows[0].get("client_id") or "").strip()
-                if cid:
-                    return cid
-        except Exception as exc:
-            logger.debug("get_client_id_for_user metadata lookup gagal: %s", exc)
-
-        try:
-            resp = (
-                self.supabase.table("clients")
-                .select("client_id")
-                .eq("client_id", uid)
-                .limit(1)
-                .execute()
-            )
-            rows = resp.data or []
-            if rows:
-                cid = str(rows[0].get("client_id") or "").strip()
-                if cid:
-                    return cid
-        except Exception as exc:
-            logger.debug("get_client_id_for_user direct lookup gagal: %s", exc)
-
-        return None
-
     def get_plan_limits(self, client_id: str) -> dict:
         tier = self.get_plan_tier(client_id)
         return {"tier": tier, **self.PLAN_LIMITS.get(tier, self.PLAN_LIMITS["free"])}
@@ -405,34 +352,67 @@ class LarisCore:
         user_id: str,
         bukuwarung_base_url: str,
         catat_bot_base_url: str,
+        fonnte_token: str = "",
+        plan_tier: str = "free",
     ) -> tuple[bool, str | None]:
-        """Daftarkan / update client di tabel BukuWarung-AI (clients)."""
+        """Daftarkan / update client di tabel clients (multi-tenant registry).
+
+        Schema real `clients` (per audit Juli 2026):
+        - client_id (PK text)
+        - name (text)
+        - fonnte_token (text) — token Fonnte untuk device CS
+        - owner_phones (ARRAY text) — list nomor owner
+        - profile_key (text)
+        - products (jsonb) — {"items": [...]}
+        - payment_methods (jsonb) — {"cash": true, ...}
+        - is_active (bool)
+        - metadata (jsonb) — {user_id, wa_cs, wa_catat, webhook_*, ...}
+        - plan_tier, plan_started_at, plan_expires_at, *_count_* (added Phase 2)
+        """
         if not self.table_exists("clients"):
-            return False, "Tabel clients belum ada. Jalankan bukuwarung-ai/sql/create_clients.sql"
-        cs = self.normalize_phone(wa_cs)
-        catat = self.normalize_phone(wa_catat)
+            return False, "Tabel clients belum ada. Jalankan sql/add_free_tier_minimal.sql"
+        cs_e164 = self.normalize_phone(wa_cs)
+        catat_e164 = self.normalize_phone(wa_catat)
+        if not cs_e164 or not catat_e164:
+            return False, f"Nomor tidak valid: cs={cs_e164} catat={catat_e164}"
+
         bw_base = (bukuwarung_base_url or "").rstrip("/")
         catat_base = (catat_bot_base_url or "").rstrip("/")
+
+        # === Display format 08xxx untuk UI ===
+        def _display(e164: str) -> str:
+            return "0" + e164[2:] if e164.startswith("62") else e164
+
+        # === Webhook URLs (auto-generated kalau UUID tersedia) ===
+        webhook_cs_url = f"{bw_base}/webhook/csat/{user_id}" if bw_base and user_id else ""
+        webhook_catat_url = f"{bw_base}/webhook/catat/{user_id}" if bw_base and user_id else ""
+        webhook_path = f"/webhook-whatsapp/{client_id}"
+
         metadata = {
-            "user_id": str(user_id),
-            "wa_cs": cs,
-            "wa_catat": catat,
-            "whatsapp_cs_display": wa_cs.strip(),
-            "whatsapp_catat_display": wa_catat.strip(),
-            "webhook_cs": f"{bw_base}/webhook-whatsapp/{client_id}" if bw_base else "",
-            "webhook_catat": f"{catat_base}/webhook" if catat_base else "",
-            "pattern": "dual_number_3",
+            "user_id": str(user_id or ""),
+            "wa_cs": cs_e164,
+            "wa_catat": catat_e164,
+            "whatsapp_display": _display(cs_e164),
+            "whatsapp_cs_display": _display(cs_e164),
+            "whatsapp_catat_display": _display(catat_e164),
+            "webhook_cs": webhook_cs_url,
+            "webhook_catat": webhook_catat_url,
+            "webhook_path": webhook_path,
+            "pattern": "multitenant_v1",
+            "migrated_at": datetime.now(datetime.timezone.utc).isoformat(),
         }
         row = {
             "client_id": client_id,
             "name": name or client_id,
-            "fonnte_token": "",
-            "owner_phones": [catat],
-            "profile_key": "ramah_warm",
-            "products": [],
-            "payment_methods": [],
+            "fonnte_token": (fonnte_token or "").strip(),
+            "owner_phones": [catat_e164],
+            "profile_key": client_id,
+            # JSONB real schema butuh object, bukan array kosong
+            "products": {"items": []},
+            "payment_methods": {"cash": True, "transfer": True},
             "is_active": True,
             "metadata": metadata,
+            "plan_tier": plan_tier,
         }
         try:
             self.supabase.table("clients").upsert(row, on_conflict="client_id").execute()

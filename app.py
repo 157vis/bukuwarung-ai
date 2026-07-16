@@ -671,6 +671,9 @@ def render_dashboard(core: LarisCore, user) -> None:
                 info_pill(f"Mode Admin Super aktif: {user_email}", "success")
                 bw_url, catat_url = _bot_base_urls()
 
+                # === Cek tabel yang berfungsi ===
+                _render_schema_health_check(core)
+
                 section_card(
                     "Tambah Client Baru (2 Nomor WA)",
                     "Buat akun + hubungkan 2 nomor sekaligus (CS & Catat).",
@@ -694,11 +697,55 @@ def render_dashboard(core: LarisCore, user) -> None:
                         placeholder="0812xxxxxxxx — HP owner kirim jual/beli",
                         help="Owner kirim 'jual kopi 50rb' dari HP ini → tercatat di Buku Kas.",
                     )
+                    c_fonnte_token = st.text_input(
+                        "③ Fonnte Token (device CS)",
+                        type="password",
+                        placeholder="Token dari dashboard Fonnte device CS",
+                        help="WAJIB. Bisa di-update nanti via menu Update Nomor WA.",
+                    )
+
+                    # === Preview schema sebelum submit ===
+                    with st.expander("📋 Preview schema yang akan di-insert", expanded=False):
+                        from core.client_registration import (
+                            normalize_phone_to_e164,
+                            normalize_phone_to_display,
+                            slugify_client_id,
+                        )
+                        preview_cid = c_client_id.strip() or slugify_client_id(
+                            c_label.strip() or c_email.split("@")[0]
+                        )
+                        preview_cs = normalize_phone_to_e164(c_phone_cs.strip())
+                        preview_catat = normalize_phone_to_e164(c_phone_catat.strip())
+                        st.code(
+                            f"Tabel: clients\n"
+                            f"  client_id       = '{preview_cid}'\n"
+                            f"  name            = '{c_label.strip() or preview_cid}'\n"
+                            f"  fonnte_token    = '***hidden***' (len={len(c_fonnte_token.strip())})\n"
+                            f"  owner_phones    = ['{preview_catat}']\n"
+                            f"  profile_key     = '{preview_cid}'\n"
+                            f"  products        = {{'items': []}}\n"
+                            f"  payment_methods = {{'cash': true, 'transfer': true}}\n"
+                            f"  is_active       = true\n"
+                            f"  metadata        = {{\n"
+                            f"    'user_id': '<UUID dari auth.users>',\n"
+                            f"    'wa_cs': '{preview_cs}',\n"
+                            f"    'wa_catat': '{preview_catat}',\n"
+                            f"    'whatsapp_display': '{normalize_phone_to_display(preview_cs)}',\n"
+                            f"    'pattern': 'multitenant_v1',\n"
+                            f"    'webhook_cs': '<auto>',\n"
+                            f"    'webhook_catat': '<auto>',\n"
+                            f"  }}\n"
+                            f"  plan_tier       = 'free'\n",
+                            language="yaml",
+                        )
+
                     if st.form_submit_button("Buat Client + Hubungkan 2 Nomor", type="primary"):
                         if not c_email.strip() or len(c_pass) < 6:
                             st.error("Email wajib & password minimal 6 karakter.")
                         elif not c_phone_cs.strip() or not c_phone_catat.strip():
                             st.error("Nomor WA CS dan nomor AI Catat wajib diisi.")
+                        elif not c_fonnte_token.strip() or len(c_fonnte_token.strip()) < 10:
+                            st.error("Fonnte Token wajib diisi (min 10 karakter).")
                         else:
                             new_id, err = core.create_client_account(c_email.strip(), c_pass)
                             if err:
@@ -714,25 +761,41 @@ def render_dashboard(core: LarisCore, user) -> None:
                                         email=c_email.strip(),
                                         bukuwarung_base_url=bw_url,
                                         catat_bot_base_url=catat_url,
+                                        fonnte_token=c_fonnte_token.strip(),
                                     )
                                     st.success(
                                         f"Client dibuat! `user_id`: `{new_id}` · "
                                         f"`client_id`: `{setup['client_id']}`"
                                     )
                                     if setup["bukuwarung_ok"]:
+                                        st.markdown("### ✅ Setup Berhasil!")
                                         st.markdown(
-                                            f"**Webhook Fonnte CS:** `{setup['webhook_cs']}`  \n"
-                                            f"**Webhook Fonnte AI Catat:** `{setup['webhook_catat']}`"
+                                            "**📋 Yang Terdaftar:**\n"
+                                            f"- ✅ Tabel `auth.users` — akun owner dibuat\n"
+                                            f"- ✅ Tabel `clients` — toko + nomor + token terdaftar\n"
+                                            f"- ✅ Tabel `wa_users` — nomor owner linked ke UUID\n\n"
+                                            "**🔗 Webhook untuk Fonnte Dashboard:**\n"
+                                            f"- **Webhook CS (Customer chat):**\n"
+                                            f"  `{setup['webhook_cs']}`\n"
+                                            f"- **Webhook AI Catat (Owner):**\n"
+                                            f"  `{setup['webhook_catat']}`\n\n"
+                                            "**📝 Langkah Selanjutnya:**\n"
+                                            "1. Buka dashboard Fonnte device CS → set webhook URL di atas\n"
+                                            "2. Test customer chat dari HP lain ke nomor CS\n"
+                                            "3. Cek log Railway untuk konfirmasi"
                                         )
                                     else:
                                         st.warning(
                                             f"Akun & nomor Catat OK, tapi tabel clients gagal: "
                                             f"{setup.get('bukuwarung_error')}. "
-                                            f"Jalankan `bukuwarung-ai/sql/fix_rls_bukuwarung.sql` di Supabase."
+                                            f"Jalankan `sql/add_free_tier_minimal.sql` di Supabase."
                                         )
                                     st.rerun()
                                 except Exception as e:
                                     st.warning(f"Akun dibuat, setup WA gagal: {str(e)[:150]}")
+
+                # === List semua client (admin view) ===
+                _render_clients_admin_list(core)
 
                 st.markdown("---")
                 section_card(
@@ -1395,6 +1458,86 @@ ADMIN_WA_MESSAGE = (
 )
 
 
+def _render_schema_health_check(core) -> None:
+    """Tampilkan status tabel Supabase yang relevan untuk pendaftaran client.
+
+    Ditampilkan di menu Pengaturan Bot → Panel Super Admin agar admin
+    tahu tabel mana yang aktif dan mana yang perlu dibuat dulu.
+    """
+    section_card(
+        "Schema Health Check",
+        "Status tabel Supabase yang berpengaruh saat pendaftaran client baru.",
+        icon="ti-database",
+    )
+
+    from core.client_registration import detect_required_tables
+    tables = detect_required_tables(core)
+
+    rows = []
+    rows.append(("`clients`", "WAJIB — multi-tenant registry", tables.get("clients", False)))
+    rows.append(("`auth.users`", "WAJIB — login owner", True))  # selalu ada di Supabase
+    rows.append(("`wa_users`", "Owner → UUID mapping (legacy)", tables.get("wa_users", False)))
+    rows.append(("`warehouses`", "Auto-create Gudang Utama", tables.get("warehouses", False)))
+    rows.append(("`products`", "Daftar produk per toko", tables.get("products", False)))
+    rows.append(("`client_settings`", "Settings per tenant", tables.get("client_settings", False)))
+
+    cols = st.columns([1, 3, 1])
+    cols[0].markdown("**Tabel**")
+    cols[1].markdown("**Fungsi**")
+    cols[2].markdown("**Status**")
+    for t, desc, ok in rows:
+        c1, c2, c3 = st.columns([1, 3, 1])
+        c1.code(t)
+        c2.markdown(desc)
+        if ok:
+            c3.success("✅ Aktif")
+        else:
+            c3.error("❌ Belum ada")
+
+
+def _render_clients_admin_list(core) -> None:
+    """Tampilkan daftar semua client (admin view lintas-tenant)."""
+    from core.client_registration import list_all_clients
+    section_card(
+        "Daftar Semua Client",
+        "Monitoring toko yang sudah terdaftar. Hanya Super Admin.",
+        icon="ti-list",
+    )
+
+    try:
+        clients = list_all_clients(core)
+    except Exception as exc:
+        st.warning(f"Tidak bisa akses `clients` lintas-tenant. Perlu SUPABASE_SERVICE_KEY. ({exc})")
+        return
+
+    if not clients:
+        info_pill("Belum ada client yang terdaftar.", "info")
+        return
+
+    import pandas as pd
+    df = pd.DataFrame(clients)
+    # Format display
+    if "owner_phones" in df.columns:
+        df["owner_phones"] = df["owner_phones"].apply(
+            lambda x: ", ".join(x) if isinstance(x, list) else str(x)
+        )
+    # Pilih kolom yang relevan
+    show_cols = ["client_id", "name", "is_active", "plan_tier", "owner_phones", "created_at"]
+    show_cols = [c for c in show_cols if c in df.columns]
+    df_show = df[show_cols].copy()
+
+    st.dataframe(
+        df_show,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "is_active": st.column_config.CheckboxColumn("Aktif"),
+            "plan_tier": st.column_config.TextColumn("Plan"),
+        },
+    )
+    st.caption(f"Total: **{len(clients)}** client terdaftar")
+
+
 def _render_pengaturan_user(core, user_id, user_email) -> None:
     """Halaman Pengaturan untuk semua user.
 
@@ -1501,7 +1644,7 @@ def _render_plan_banner(core, user_id, user_email) -> None:
     - Pro/Bisnis: badge tier + "Sisa X hari lagi"
     - Kemitraan: badge special (no banner)
     """
-    client_id = core.get_client_id_for_user(user_id) or user_id
+    client_id = user_id  # Asumsi 1:1 mapping user_id → client_id
     try:
         plan_limits = core.get_plan_limits(client_id)
         quota = core.check_tx_quota(client_id)
