@@ -659,255 +659,26 @@ def render_dashboard(core: LarisCore, user) -> None:
             st.markdown("---")
             section_card(
                 "Panel Super Admin",
-                "Tambah & hubungkan client baru. Hanya untuk email admin.",
+                "Tambah toko baru, update nomor existing, lihat semua tenant. Hanya untuk email admin.",
                 icon="ti-shield-lock",
             )
-            if not core.table_exists("wa_users"):
-                info_pill(
-                    "Tabel 'wa_users' belum ada di Supabase. Jalankan setup_laris_ai.sql di SQL Editor.",
-                    "warning",
-                )
-            if core.table_exists("wa_users"):
-                info_pill(f"Mode Admin Super aktif: {user_email}", "success")
-                bw_url, catat_url = _bot_base_urls()
 
-                # === Cek tabel yang berfungsi ===
+            # === Tab separation supaya tidak bingung ===
+            tab_daftar, tab_update, tab_list = st.tabs([
+                "➕ Tambah Toko Baru",
+                "✏️ Update Toko Existing",
+                "📋 Daftar Semua Toko",
+            ])
+
+            with tab_daftar:
                 _render_schema_health_check(core)
+                _render_form_tambah_client(core, bw_url, catat_url, user_email)
 
-                section_card(
-                    "Tambah Client Baru (2 Nomor WA)",
-                    "Buat akun + hubungkan 2 nomor sekaligus (CS & Catat).",
-                    icon="ti-user-plus",
-                )
-                with st.form("create_client_form"):
-                    c_email = st.text_input("Email Client")
-                    c_pass = st.text_input("Password Sementara", type="password")
-                    c_label = st.text_input("Nama Usaha / Label")
-                    c_client_id = st.text_input(
-                        "Client ID BukuWarung (opsional)",
-                        placeholder="toko_rafih — otomatis dari nama jika kosong",
-                    )
-                    c_phone_cs = st.text_input(
-                        "① Nomor WA CS (Pelanggan)",
-                        placeholder="0857xxxxxxxx — device Fonnte untuk CS toko",
-                        help="Pelanggan chat nomor ini → balasan CS BukuWarung.",
-                    )
-                    c_phone_catat = st.text_input(
-                        "② Nomor HP Owner (AI Catat)",
-                        placeholder="0812xxxxxxxx — HP owner kirim jual/beli",
-                        help="Owner kirim 'jual kopi 50rb' dari HP ini → tercatat di Buku Kas.",
-                    )
-                    c_fonnte_token = st.text_input(
-                        "③ Fonnte Token (device CS)",
-                        type="password",
-                        placeholder="Token dari dashboard Fonnte device CS",
-                        help="WAJIB. Bisa di-update nanti via menu Update Nomor WA.",
-                    )
+            with tab_update:
+                _render_form_update_client(core, bw_url, catat_url, user_id, user_email)
 
-                    # === Preview schema sebelum submit ===
-                    with st.expander("📋 Preview schema yang akan di-insert", expanded=False):
-                        from core.client_registration import (
-                            normalize_phone_to_e164,
-                            normalize_phone_to_display,
-                            slugify_client_id,
-                        )
-                        preview_cid = c_client_id.strip() or slugify_client_id(
-                            c_label.strip() or c_email.split("@")[0]
-                        )
-                        preview_cs = normalize_phone_to_e164(c_phone_cs.strip())
-                        preview_catat = normalize_phone_to_e164(c_phone_catat.strip())
-                        st.code(
-                            f"Tabel: clients\n"
-                            f"  client_id       = '{preview_cid}'\n"
-                            f"  name            = '{c_label.strip() or preview_cid}'\n"
-                            f"  fonnte_token    = '***hidden***' (len={len(c_fonnte_token.strip())})\n"
-                            f"  owner_phones    = ['{preview_catat}']\n"
-                            f"  profile_key     = '{preview_cid}'\n"
-                            f"  products        = {{'items': []}}\n"
-                            f"  payment_methods = {{'cash': true, 'transfer': true}}\n"
-                            f"  is_active       = true\n"
-                            f"  metadata        = {{\n"
-                            f"    'user_id': '<UUID dari auth.users>',\n"
-                            f"    'wa_cs': '{preview_cs}',\n"
-                            f"    'wa_catat': '{preview_catat}',\n"
-                            f"    'whatsapp_display': '{normalize_phone_to_display(preview_cs)}',\n"
-                            f"    'pattern': 'multitenant_v1',\n"
-                            f"    'webhook_cs': '<auto>',\n"
-                            f"    'webhook_catat': '<auto>',\n"
-                            f"  }}\n"
-                            f"  plan_tier       = 'free'\n",
-                            language="yaml",
-                        )
-
-                    if st.form_submit_button("Buat Client + Hubungkan 2 Nomor", type="primary"):
-                        if not c_email.strip() or len(c_pass) < 6:
-                            st.error("Email wajib & password minimal 6 karakter.")
-                        elif not c_phone_cs.strip() or not c_phone_catat.strip():
-                            st.error("Nomor WA CS dan nomor AI Catat wajib diisi.")
-                        elif not c_fonnte_token.strip() or len(c_fonnte_token.strip()) < 10:
-                            st.error("Fonnte Token wajib diisi (min 10 karakter).")
-                        else:
-                            new_id, err = core.create_client_account(c_email.strip(), c_pass)
-                            if err:
-                                st.error(f"Gagal membuat client: {err}")
-                            else:
-                                try:
-                                    setup = core.setup_dual_wa_client(
-                                        new_id,
-                                        wa_cs=c_phone_cs.strip(),
-                                        wa_catat=c_phone_catat.strip(),
-                                        label=c_label.strip() or c_email.split("@")[0],
-                                        client_id=c_client_id.strip() or None,
-                                        email=c_email.strip(),
-                                        bukuwarung_base_url=bw_url,
-                                        catat_bot_base_url=catat_url,
-                                        fonnte_token=c_fonnte_token.strip(),
-                                    )
-                                    st.success(
-                                        f"Client dibuat! `user_id`: `{new_id}` · "
-                                        f"`client_id`: `{setup['client_id']}`"
-                                    )
-                                    if setup["bukuwarung_ok"]:
-                                        st.markdown("### ✅ Setup Berhasil!")
-                                        st.markdown(
-                                            "**📋 Yang Terdaftar:**\n"
-                                            f"- ✅ Tabel `auth.users` — akun owner dibuat\n"
-                                            f"- ✅ Tabel `clients` — toko + nomor + token terdaftar\n"
-                                            f"- ✅ Tabel `wa_users` — nomor owner linked ke UUID\n\n"
-                                            "**🔗 Webhook untuk Fonnte Dashboard:**\n"
-                                            f"- **Webhook CS (Customer chat):**\n"
-                                            f"  `{setup['webhook_cs']}`\n"
-                                            f"- **Webhook AI Catat (Owner):**\n"
-                                            f"  `{setup['webhook_catat']}`\n\n"
-                                            "**📝 Langkah Selanjutnya:**\n"
-                                            "1. Buka dashboard Fonnte device CS → set webhook URL di atas\n"
-                                            "2. Test customer chat dari HP lain ke nomor CS\n"
-                                            "3. Cek log Railway untuk konfirmasi"
-                                        )
-                                    else:
-                                        st.warning(
-                                            f"Akun & nomor Catat OK, tapi tabel clients gagal: "
-                                            f"{setup.get('bukuwarung_error')}. "
-                                            f"Jalankan `sql/add_free_tier_minimal.sql` di Supabase."
-                                        )
-                                    st.rerun()
-                                except Exception as e:
-                                    st.warning(f"Akun dibuat, setup WA gagal: {str(e)[:150]}")
-
-                # === List semua client (admin view) ===
+            with tab_list:
                 _render_clients_admin_list(core)
-
-                st.markdown("---")
-                section_card(
-                    "Update Dua Nomor WA Client",
-                    "Perbarui nomor CS & Catat untuk client yang sudah ada.",
-                    icon="ti-link",
-                )
-                with st.form("link_dual_wa_form"):
-                    target_uid = st.text_input("User ID Client")
-                    wa_cs = st.text_input("① Nomor WA CS (Pelanggan)", placeholder="0857xxxxxxxx")
-                    wa_catat = st.text_input("② Nomor HP Owner (AI Catat)", placeholder="0812xxxxxxxx")
-                    wa_label = st.text_input("Nama Usaha / Label")
-                    link_client_id = st.text_input("Client ID BukuWarung (opsional)")
-                    if st.form_submit_button("Simpan Dua Nomor", type="primary"):
-                        if not target_uid.strip() or not wa_cs.strip() or not wa_catat.strip():
-                            st.error("User ID, nomor CS, dan nomor Catat wajib diisi.")
-                        else:
-                            try:
-                                setup = core.setup_dual_wa_client(
-                                    target_uid.strip(),
-                                    wa_cs=wa_cs.strip(),
-                                    wa_catat=wa_catat.strip(),
-                                    label=wa_label.strip() or target_uid.strip()[:8],
-                                    client_id=link_client_id.strip() or None,
-                                    bukuwarung_base_url=bw_url,
-                                    catat_bot_base_url=catat_url,
-                                )
-                                st.success(
-                                    f"Terhubung · CS `{setup['wa_cs']}` · Catat `{setup['wa_catat']}` · "
-                                    f"client_id `{setup['client_id']}`"
-                                )
-                                st.code(
-                                    f"Webhook CS:\n{setup['webhook_cs']}\n\n"
-                                    f"Webhook AI Catat:\n{setup['webhook_catat']}",
-                                    language="text",
-                                )
-                                if not setup["bukuwarung_ok"]:
-                                    st.warning(setup.get("bukuwarung_error"))
-                                st.rerun()
-                            except Exception as e:
-                                st.error(f"Gagal: {str(e)[:150]}")
-
-                st.markdown("---")
-                section_card(
-                    "Hubungkan Nomor WA (satu nomor / legacy)",
-                    "Untuk klien lama dengan satu nomor WA.",
-                    icon="ti-phone",
-                )
-                with st.form("link_client_wa_form"):
-                    target_uid = st.text_input("User ID Client", key="legacy_target_uid")
-                    wa_phone = st.text_input("Nomor WhatsApp", placeholder="0812xxxxxxxx")
-                    wa_label = st.text_input("Label (opsional)")
-                    if st.form_submit_button("Hubungkan", type="primary"):
-                        if not target_uid.strip() or not wa_phone.strip():
-                            st.error("User ID & nomor WA wajib diisi.")
-                        else:
-                            try:
-                                core.link_wa_number(target_uid.strip(), wa_phone, wa_label or None)
-                                st.success(
-                                    f"Nomor {core.normalize_phone(wa_phone)} "
-                                    f"terhubung ke {target_uid.strip()}"
-                                )
-                                st.rerun()
-                            except Exception as e:
-                                st.error(f"Gagal menghubungkan: {str(e)[:150]}")
-
-                st.markdown("---")
-                section_card(
-                    "Semua Client Terdaftar",
-                    "Daftar lengkap client BukuWarung & nomor WA AI Catat.",
-                    icon="ti-list-details",
-                )
-                admin_core = get_admin_core()
-                if admin_core:
-                    bw_clients = admin_core.admin_list_bukuwarung_clients()
-                else:
-                    info_pill(
-                        "Tambahkan SUPABASE_SERVICE_KEY di secrets.toml untuk melihat semua client.",
-                        "warning",
-                    )
-                    bw_clients = core.list_bukuwarung_clients(user_id)
-                if bw_clients:
-                    st.markdown("**BukuWarung CS (tabel clients)**")
-                    for c in bw_clients:
-                        meta = c.get("metadata") or {}
-                        cs_disp = meta.get("whatsapp_cs_display") or meta.get("wa_cs") or "—"
-                        catat_disp = meta.get("whatsapp_catat_display") or meta.get("wa_catat") or "—"
-                        active = "✅" if c.get("is_active") else "⏸️"
-                        st.markdown(
-                            f"{active} **{c.get('name')}** (`{c.get('client_id')}`)  \n"
-                            f"① CS: `{cs_disp}` · ② Catat: `{catat_disp}`  \n"
-                            f"Webhook CS: `{meta.get('webhook_cs', '—')}`"
-                        )
-                    st.markdown("---")
-
-                if admin_core:
-                    numbers = admin_core.admin_list_all_wa_numbers()
-                else:
-                    numbers = core.list_wa_numbers(user_id)
-                if numbers is None:
-                    st.error("Gagal memuat data. Pastikan tabel 'wa_users' tersedia.")
-                elif not numbers:
-                    info_pill("Belum ada nomor AI Catat di wa_users.", "info")
-                else:
-                    st.markdown("**AI Catat (tabel wa_users)**")
-                    for n in numbers:
-                        c1, c2 = st.columns([5, 1])
-                        label = f" — {n.get('label')}" if n.get("label") else ""
-                        c1.write(f"📱 **{n.get('phone')}**{label}  \n`{n.get('user_id')}`")
-                        if c2.button("Hapus", key=f"unlink_{n['id']}"):
-                            core.unlink_wa_number(n["user_id"], n["phone"])
-                            st.rerun()
 
     elif menu == "Tambah Gudang":
         # === KHUSUS ADMIN: form input gudang baru ===
@@ -1456,6 +1227,281 @@ ADMIN_WA_DISPLAY = "+62 821-1282-6851"
 ADMIN_WA_MESSAGE = (
     "Halo Admin laris.AI, saya pengguna dashboard dan butuh bantuan."
 )
+
+
+def _render_form_tambah_client(core, bw_url: str, catat_url: str, admin_email: str) -> None:
+    """Form A: Tambah Toko Baru (3 tabel: auth.users, clients, wa_users).
+
+    Dipakai oleh Super Admin untuk onboard toko baru.
+    """
+    section_card(
+        "➕ Form Tambah Toko Baru",
+        "Pakai form ini untuk daftarkan toko UMKM baru ke sistem laris.AI. "
+        "Akan insert ke 3 tabel: `auth.users` (akun login) + `clients` (multi-tenant registry) + `wa_users` (nomor owner).",
+        icon="ti-user-plus",
+    )
+
+    # Info box: tabel mana yang akan ter-update
+    st.info(
+        "📋 **Yang akan terjadi setelah klik Submit:**\n\n"
+        "| Tabel | Apa yang di-insert |\n"
+        "|-------|--------------------|\n"
+        "| `auth.users` | Akun login owner (email + password) |\n"
+        "| `clients` | Toko, nomor, Fonnte token, metadata JSONB |\n"
+        "| `wa_users` | Nomor owner → UUID mapping (untuk routing) |\n",
+        icon="📝",
+    )
+
+    with st.form("create_client_form_v2"):
+        st.markdown("**🧑 Akun Login Owner**")
+        c_email = st.text_input("Email Owner (untuk login Streamlit)", placeholder="owner@tokomu.com")
+        c_pass = st.text_input("Password Sementara", type="password", placeholder="min 6 karakter")
+
+        st.markdown("---")
+        st.markdown("**🏪 Data Toko**")
+        c_label = st.text_input("Nama Usaha", placeholder="Toko Sumber Rezeki")
+        c_client_id = st.text_input(
+            "Client ID (slug)",
+            placeholder="toko_sumber_rezeki — otomatis dari nama jika kosong",
+            help="Huruf kecil + angka + underscore. Contoh: toko_rezeki, warung_berkah",
+        )
+
+        st.markdown("---")
+        st.markdown("**📱 2 Nomor WhatsApp**")
+        c_phone_cs = st.text_input(
+            "① Nomor WA CS (Pelanggan chat ke sini)",
+            placeholder="0857xxxxxxxx",
+            help="Nomor device Fonnte toko. Pelanggan chat ke nomor ini.",
+        )
+        c_phone_catat = st.text_input(
+            "② Nomor HP Owner (untuk catat transaksi)",
+            placeholder="0812xxxxxxxx",
+            help="HP owner. Kirim 'jual kopi 50rb' dari nomor ini → tercatat.",
+        )
+
+        st.markdown("---")
+        st.markdown("**🔑 Token Fonnte**")
+        c_fonnte_token = st.text_input(
+            "Token Fonnte (device CS)",
+            type="password",
+            placeholder="Token dari dashboard Fonnte",
+            help="WAJIB. Min 10 karakter. Ambil dari https://fonnte.com → device CS → Token.",
+        )
+
+        # === Preview schema sebelum submit ===
+        with st.expander("🔍 Preview schema yang akan di-insert", expanded=False):
+            from core.client_registration import (
+                normalize_phone_to_e164,
+                normalize_phone_to_display,
+                slugify_client_id,
+            )
+            preview_cid = c_client_id.strip() or slugify_client_id(
+                c_label.strip() or (c_email.split("@")[0] if c_email else "toko")
+            )
+            preview_cs = normalize_phone_to_e164(c_phone_cs.strip())
+            preview_catat = normalize_phone_to_e164(c_phone_catat.strip())
+            st.code(
+                f"┌─ Tabel: clients\n"
+                f"│  client_id       = '{preview_cid}'\n"
+                f"│  name            = '{c_label.strip() or preview_cid}'\n"
+                f"│  fonnte_token    = '***hidden***' (len={len(c_fonnte_token.strip())})\n"
+                f"│  owner_phones    = ['{preview_catat}']\n"
+                f"│  is_active       = true\n"
+                f"│  plan_tier       = 'free'\n"
+                f"│  metadata        = {{\n"
+                f"│    'user_id': '<UUID dari auth.users>',\n"
+                f"│    'wa_cs': '{preview_cs}',\n"
+                f"│    'wa_catat': '{preview_catat}',\n"
+                f"│    'whatsapp_display': '{normalize_phone_to_display(preview_cs)}',\n"
+                f"│    'pattern': 'multitenant_v1',\n"
+                f"│  }}\n"
+                f"└─\n\n"
+                f"┌─ Tabel: wa_users\n"
+                f"│  phone     = '{preview_catat}'\n"
+                f"│  user_id   = '<UUID dari auth.users>'\n"
+                f"│  label     = 'Owner {c_label.strip() or preview_cid}'\n"
+                f"└─",
+                language="yaml",
+            )
+
+        col1, col2, col3 = st.columns([1, 1, 2])
+        with col1:
+            submitted = st.form_submit_button("✅ Buat Toko", type="primary", use_container_width=True)
+        with col2:
+            cancelled = st.form_submit_button("❌ Reset", use_container_width=True)
+        if cancelled:
+            st.rerun()
+
+    if submitted:
+        # === Validasi ===
+        errors = []
+        if not c_email.strip():
+            errors.append("❌ Email Owner wajib diisi")
+        elif "@" not in c_email:
+            errors.append("❌ Format email tidak valid")
+        if not c_pass or len(c_pass) < 6:
+            errors.append("❌ Password minimal 6 karakter")
+        if not c_label.strip():
+            errors.append("❌ Nama Usaha wajib diisi")
+        if not c_phone_cs.strip():
+            errors.append("❌ Nomor WA CS wajib diisi")
+        if not c_phone_catat.strip():
+            errors.append("❌ Nomor HP Owner wajib diisi")
+        if not c_fonnte_token.strip() or len(c_fonnte_token.strip()) < 10:
+            errors.append("❌ Token Fonnte wajib diisi (min 10 karakter)")
+
+        if errors:
+            for e in errors:
+                st.error(e)
+            st.stop()
+
+        # === Submit ===
+        try:
+            new_id, err = core.create_client_account(c_email.strip(), c_pass)
+            if err:
+                st.error(f"❌ Gagal membuat akun: {err}")
+                st.stop()
+
+            setup = core.setup_dual_wa_client(
+                new_id,
+                wa_cs=c_phone_cs.strip(),
+                wa_catat=c_phone_catat.strip(),
+                label=c_label.strip() or c_email.split("@")[0],
+                client_id=c_client_id.strip() or None,
+                email=c_email.strip(),
+                bukuwarung_base_url=bw_url,
+                catat_bot_base_url=catat_url,
+                fonnte_token=c_fonnte_token.strip(),
+            )
+
+            st.success(f"✅ Toko berhasil didaftarkan!")
+            st.markdown(
+                f"**Detail toko baru:**\n"
+                f"- **User ID**: `{new_id}`\n"
+                f"- **Client ID**: `{setup['client_id']}`\n"
+                f"- **Nama**: {c_label.strip()}\n"
+                f"- **Plan**: 🆓 Free (default, bisa di-upgrade nanti)\n\n"
+                f"**📋 Tabel yang ter-update:**\n"
+                f"- ✅ `auth.users` — akun login\n"
+                f"- ✅ `clients` — multi-tenant registry\n"
+                f"- ✅ `wa_users` — owner phone mapping\n"
+            )
+
+            if setup["bukuwarung_ok"]:
+                st.markdown("### 🔗 Webhook untuk Fonnte Dashboard")
+                st.markdown(
+                    f"Copy-paste URL ini ke **Fonnte → Device CS → Webhook URL**:\n\n"
+                    f"```\n{setup['webhook_cs']}\n```\n\n"
+                    f"Untuk **Device Owner (catat)**: pakai URL di menu Pengaturan Bisnis toko baru."
+                )
+            else:
+                st.warning(f"Tabel clients gagal update: {setup.get('bukuwarung_error')}")
+
+            st.info(
+                "**📝 Langkah selanjutnya:**\n"
+                "1. Buka dashboard Fonnte → set webhook URL di atas\n"
+                "2. Owner login & coba catat transaksi via WA\n"
+                "3. Test customer chat dari HP lain ke nomor CS"
+            )
+        except Exception as e:
+            st.error(f"❌ Error: {str(e)[:200]}")
+
+
+def _render_form_update_client(core, bw_url: str, catat_url: str, current_user_id: str, admin_email: str) -> None:
+    """Form B: Update Toko Existing (1 tabel: clients via upsert)."""
+    section_card(
+        "✏️ Form Update Toko Existing",
+        "Pakai form ini untuk update nomor / token toko yang sudah terdaftar. "
+        "Hanya update 1 tabel: `clients` (via upsert on `client_id`).",
+        icon="ti-edit",
+    )
+
+    st.info(
+        "📋 **Yang terjadi setelah klik Submit:**\n\n"
+        "| Tabel | Aksi |\n"
+        "|-------|------|\n"
+        "| `clients` | UPDATE row by `client_id` (nomor, token, plan_tier) |\n"
+        "| `wa_users` | Optional — re-link nomor owner kalau berubah |\n",
+        icon="📝",
+    )
+
+    # === Ambil list client existing untuk dropdown ===
+    from core.client_registration import list_all_clients
+    try:
+        clients = list_all_clients(core)
+    except Exception:
+        clients = []
+
+    if not clients:
+        st.warning("Belum ada client yang terdaftar. Pindah ke tab 'Tambah Toko Baru' dulu.")
+        return
+
+    client_options = {f"{c['name']} ({c['client_id']})": c for c in clients}
+
+    with st.form("update_client_form_v2"):
+        selected = st.selectbox(
+            "Pilih Toko",
+            options=list(client_options.keys()),
+            help="Pilih toko yang mau di-update",
+        )
+        if not selected:
+            st.stop()
+        current = client_options[selected]
+        current_meta = current.get("metadata") or {}
+
+        st.markdown("---")
+        st.markdown("**📱 Update Nomor (kosongkan jika tidak berubah)**")
+
+        # Tampilkan nilai saat ini sebagai info
+        st.caption(
+            f"ℹ️ **Nilai saat ini**: CS=`{current_meta.get('wa_cs', '—')}` · "
+            f"Catat=`{current_meta.get('wa_catat', '—')}`"
+        )
+
+        new_phone_cs = st.text_input(
+            "① Nomor WA CS baru",
+            placeholder="0857xxxxxxxx (kosongkan jika tidak berubah)",
+        )
+        new_phone_catat = st.text_input(
+            "② Nomor HP Owner baru",
+            placeholder="0812xxxxxxxx (kosongkan jika tidak berubah)",
+        )
+
+        st.markdown("---")
+        st.markdown("**🔑 Update Token (kosongkan jika tidak berubah)**")
+        new_token = st.text_input(
+            "Token Fonnte baru",
+            type="password",
+            placeholder="Token baru (kosongkan jika tidak berubah)",
+        )
+
+        submitted = st.form_submit_button("💾 Simpan Perubahan", type="primary")
+
+    if submitted:
+        try:
+            user_id = current_meta.get("user_id") or current.get("client_id", "")
+            label = current.get("name", "")
+
+            # Bangun payload update — hanya field yang diisi
+            update_kwargs = dict(
+                client_id=current["client_id"],
+                name=label,
+                wa_cs=new_phone_cs.strip() or current_meta.get("wa_cs", ""),
+                wa_catat=new_phone_catat.strip() or current_meta.get("wa_catat", ""),
+                user_id=user_id,
+                bukuwarung_base_url=bw_url,
+                catat_bot_base_url=catat_url,
+            )
+            if new_token.strip():
+                update_kwargs["fonnte_token"] = new_token.strip()
+
+            ok, err = core.upsert_bukuwarung_client(**update_kwargs)
+            if ok:
+                st.success(f"✅ Toko `{current['client_id']}` berhasil di-update!")
+            else:
+                st.error(f"❌ Gagal: {err}")
+        except Exception as e:
+            st.error(f"❌ Error: {str(e)[:200]}")
 
 
 def _render_schema_health_check(core) -> None:
