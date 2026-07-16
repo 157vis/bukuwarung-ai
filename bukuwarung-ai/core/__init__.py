@@ -1,11 +1,10 @@
 """Core system — Otak AI, Personality, Router."""
-# Force-redeploy trigger 2026-07-16
 from core.otak_ai import OtakAI, MemoryRecord
 from core.personality import PERSONALITY_PROFILES, PersonalityEngine
 from core.semantic_router import RouteResult, SemanticRouter
 from core.client_registry import ClientConfig, get_client_registry
-from core.tenant_bridge import TenantBridge
-from core.tenant_data import TenantData
+from core.tenant_bridge import get_tenant_core
+from core.tenant_data import TenantContext, build_tenant_context, fetch_client_settings, fetch_products
 
 __all__ = [
     "OtakAI",
@@ -16,6 +15,9 @@ __all__ = [
     "RouteResult",
     "ClientConfig",
     "get_client_registry",
-    "TenantBridge",
-    "TenantData",
+    "get_tenant_core",
+    "TenantContext",
+    "build_tenant_context",
+    "fetch_client_settings",
+    "fetch_products",
 ]
