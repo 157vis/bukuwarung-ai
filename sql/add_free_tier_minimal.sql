@@ -131,6 +131,55 @@ END;
 $$;
 
 -- ============================================================
+-- Function: increment transaction counter (dipanggil dari bot tiap catat transaksi)
+-- Aman dipanggil walau function belum ada (fallback di Python)
+-- ============================================================
+CREATE OR REPLACE FUNCTION increment_tx_count(p_client_id TEXT)
+RETURNS INTEGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_new_count INTEGER;
+BEGIN
+  UPDATE clients
+  SET tx_count_this_month = COALESCE(tx_count_this_month, 0) + 1,
+      tx_count_reset_at = COALESCE(tx_count_reset_at, NOW())
+  WHERE client_id = p_client_id
+  RETURNING tx_count_this_month INTO v_new_count;
+
+  IF v_new_count IS NULL THEN
+    v_new_count := 0;
+  END IF;
+
+  RETURN v_new_count;
+END;
+$$;
+
+-- ============================================================
+-- Function: increment customer chat counter (untuk CS Agent billing)
+-- ============================================================
+CREATE OR REPLACE FUNCTION increment_customer_chat_count(p_client_id TEXT)
+RETURNS INTEGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_new_count INTEGER;
+BEGIN
+  UPDATE clients
+  SET customer_chat_count_this_month = COALESCE(customer_chat_count_this_month, 0) + 1,
+      customer_chat_reset_at = COALESCE(customer_chat_reset_at, NOW())
+  WHERE client_id = p_client_id
+  RETURNING customer_chat_count_this_month INTO v_new_count;
+
+  IF v_new_count IS NULL THEN
+    v_new_count := 0;
+  END IF;
+
+  RETURN v_new_count;
+END;
+$$;
+
+-- ============================================================
 -- Seed data awal: set Toko Rafih = pro (untuk testing)
 -- UNCOMMENT kalau mau set Toko Rafih sebagai Pro
 -- ============================================================
