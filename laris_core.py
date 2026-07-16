@@ -216,6 +216,125 @@ class LarisCore:
         payload["updated_at"] = datetime.now().isoformat()
         return self.supabase.table("client_settings").upsert(payload, on_conflict="user_id").execute()
 
+    # ============================================================
+    # Plan / Tier — Free / Pro / Bisnis / Kemitraan
+    # Pakai client_id (PK asli) bukan user_id (tidak ada di real schema)
+    # ============================================================
+    PLAN_TIERS = ("free", "pro", "bisnis", "kemitraan")
+    PLAN_LIMITS = {
+        "free":      {"tx": 100,  "customer_chat": 50,   "warehouses": 1},
+        "pro":       {"tx": 1000, "customer_chat": 500,  "warehouses": 5},
+        "bisnis":    {"tx": 10000,"customer_chat": 5000, "warehouses": 20},
+        "kemitraan": {"tx": 999999, "customer_chat": 999999, "warehouses": 999},
+    }
+
+    def get_plan_tier(self, client_id: str) -> str:
+        """Ambil plan_tier dari tabel clients by client_id."""
+        if not client_id:
+            return "free"
+        try:
+            resp = (
+                self.supabase.table("clients")
+                .select("plan_tier, plan_expires_at, is_active")
+                .eq("client_id", client_id)
+                .limit(1)
+                .execute()
+            )
+            rows = resp.data or []
+            if not rows:
+                return "free"
+            tier = str(rows[0].get("plan_tier") or "free").strip().lower()
+            if tier not in self.PLAN_TIERS:
+                tier = "free"
+            expires_at = rows[0].get("plan_expires_at")
+            if expires_at and tier != "free" and tier != "kemitraan":
+                try:
+                    exp_str = expires_at.replace("Z", "+00:00")
+                    exp_dt = datetime.fromisoformat(exp_str)
+                    now = datetime.now(datetime.timezone.utc)
+                    if exp_dt.tzinfo is None:
+                        exp_dt = exp_dt.replace(tzinfo=datetime.timezone.utc)
+                    if exp_dt < now:
+                        tier = "free"
+                except Exception:
+                    pass
+            if rows[0].get("is_active") is False and tier != "kemitraan":
+                tier = "free"
+            return tier
+        except Exception as exc:
+            logger.error("get_plan_tier client_id=%s: %s", client_id, exc)
+            return "free"
+
+    def get_plan_limits(self, client_id: str) -> dict:
+        tier = self.get_plan_tier(client_id)
+        return {"tier": tier, **self.PLAN_LIMITS.get(tier, self.PLAN_LIMITS["free"])}
+
+    def upgrade_plan(
+        self, client_id: str, new_tier: str, duration_days: int = 30,
+    ) -> tuple[bool, str]:
+        if new_tier not in self.PLAN_TIERS:
+            return False, f"tier tidak valid: {new_tier}"
+        if not client_id:
+            return False, "client_id kosong"
+        try:
+            payload = {
+                "plan_tier": new_tier,
+                "plan_started_at": datetime.now(datetime.timezone.utc).isoformat(),
+                "plan_expires_at": (
+                    datetime.now(datetime.timezone.utc) + timedelta(days=duration_days)
+                ).isoformat(),
+            }
+            self.supabase.table("clients").update(payload).eq("client_id", client_id).execute()
+            return True, f"Berhasil upgrade ke {new_tier} selama {duration_days} hari"
+        except Exception as exc:
+            logger.error("upgrade_plan client_id=%s: %s", client_id, exc)
+            return False, str(exc)[:200]
+
+    def check_tx_quota(self, client_id: str) -> dict:
+        try:
+            resp = (
+                self.supabase.table("clients")
+                .select("plan_tier, tx_count_this_month")
+                .eq("client_id", client_id)
+                .limit(1)
+                .execute()
+            )
+            rows = resp.data or []
+            tier = rows[0].get("plan_tier", "free") if rows else "free"
+            count = rows[0].get("tx_count_this_month", 0) if rows else 0
+        except Exception:
+            tier, count = "free", 0
+        limit = self.PLAN_LIMITS.get(tier, self.PLAN_LIMITS["free"])["tx"]
+        return {
+            "tier": tier,
+            "current": count,
+            "limit": limit,
+            "allowed": count < limit,
+            "remaining": max(0, limit - count),
+        }
+
+    def increment_tx_count(self, client_id: str) -> None:
+        if not client_id:
+            return
+        try:
+            self.supabase.rpc("increment_tx_count", {"p_client_id": client_id}).execute()
+        except Exception:
+            try:
+                resp = (
+                    self.supabase.table("clients")
+                    .select("tx_count_this_month")
+                    .eq("client_id", client_id)
+                    .limit(1)
+                    .execute()
+                )
+                rows = resp.data or []
+                current = (rows[0].get("tx_count_this_month", 0) if rows else 0) + 1
+                self.supabase.table("clients").update(
+                    {"tx_count_this_month": current}
+                ).eq("client_id", client_id).execute()
+            except Exception as exc:
+                logger.debug("increment_tx_count fallback gagal: %s", exc)
+
     @staticmethod
     def slugify_client_id(label: str, email: str = "") -> str:
         """Buat client_id aman untuk BukuWarung dari nama usaha atau email."""

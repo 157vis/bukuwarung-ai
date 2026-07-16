@@ -324,6 +324,9 @@ def render_dashboard(core: LarisCore, user) -> None:
             icon="ti-layout-dashboard",
         )
 
+        # === Plan / Tier Banner (Free vs Pro) ===
+        _render_plan_banner(core, user_id, user_email)
+
         if not core.table_exists("approvals"):
             empty_state(
                 "ti-database",
@@ -1488,6 +1491,124 @@ def _render_pengaturan_user(core, user_id, user_email) -> None:
             logout()
             st.success("Berhasil keluar. Mengalihkan ke halaman login...")
             st.rerun()
+
+
+def _render_plan_banner(core, user_id, user_email) -> None:
+    """Tampilkan banner Free Tier + tombol Upgrade Pro.
+
+    Ditampilkan di Ruang Komando untuk SEMUA user (admin & client).
+    - Free: banner kuning + counter "X / 100 transaksi bulan ini" + tombol "⬆️ Upgrade ke Pro"
+    - Pro/Bisnis: badge tier + "Sisa X hari lagi"
+    - Kemitraan: badge special (no banner)
+    """
+    client_id = user_id  # Asumsi 1:1 mapping user_id → client_id
+    try:
+        plan_limits = core.get_plan_limits(client_id)
+        quota = core.check_tx_quota(client_id)
+    except Exception as exc:
+        logger.debug("render_plan_banner error: %s", exc)
+        return
+
+    tier = plan_limits["tier"]
+    tier_label = {
+        "free":      "🆓 Free",
+        "pro":       "⭐ Pro",
+        "bisnis":    "🏢 Bisnis",
+        "kemitraan": "🤝 Kemitraan",
+    }.get(tier, tier.title())
+
+    # === KEMITRAAN: badge gold, no banner ===
+    if tier == "kemitraan":
+        st.markdown(
+            "<div style='text-align:right;'>"
+            "<span style='background:linear-gradient(135deg,#FFD700,#FFA500);"
+            "color:#000;padding:.25rem .75rem;border-radius:1rem;"
+            "font-size:.85rem;font-weight:600;'>"
+            "🤝 Kemitraan — Akses Penuh</span></div>",
+            unsafe_allow_html=True,
+        )
+        return
+
+    # === FREE TIER BANNER ===
+    if tier == "free":
+        cols = st.columns([3, 1])
+        with cols[0]:
+            tx_count = quota.get("current", 0)
+            tx_limit = quota.get("limit", 100)
+            pct = min(100, int(tx_count / tx_limit * 100)) if tx_limit else 0
+            warn_color = "#ef4444" if pct >= 80 else "#f59e0b"
+            st.markdown(
+                f"<div class='laris-plan-banner' style='background:rgba(245,158,11,.08);"
+                f"border:1px solid {warn_color};border-radius:.75rem;padding:1rem 1.25rem;"
+                f"margin-bottom:1rem;'>"
+                f"<div style='display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;'>"
+                f"<span style='background:#f59e0b;color:#fff;padding:.2rem .6rem;"
+                f"border-radius:1rem;font-size:.75rem;font-weight:700;'>🆓 FREE</span>"
+                f"<strong>Upgrade ke Pro</strong> — transaksi tanpa batas & AI CS 24/7"
+                f"</div>"
+                f"<div style='background:rgba(0,0,0,.06);border-radius:.5rem;height:.5rem;"
+                f"overflow:hidden;margin-bottom:.25rem;'>"
+                f"<div style='background:{warn_color};height:100%;width:{pct}%;'></div></div>"
+                f"<small style='color:#6b7280;'>📊 {tx_count} / {tx_limit} transaksi bulan ini</small>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+        with cols[1]:
+            if st.button("⬆️ Upgrade Pro", key="upgrade_pro_top", type="primary", use_container_width=True):
+                _show_upgrade_dialog()
+
+    # === PRO / BISNIS: badge kecil ===
+    else:
+        try:
+            resp = (
+                core.supabase.table("clients")
+                .select("plan_expires_at")
+                .eq("client_id", client_id)
+                .limit(1)
+                .execute()
+            )
+            rows = resp.data or []
+            expires_at = rows[0].get("plan_expires_at") if rows else None
+        except Exception:
+            expires_at = None
+
+        days_left = ""
+        if expires_at:
+            try:
+                from datetime import datetime, timezone
+                exp_str = expires_at.replace("Z", "+00:00")
+                exp_dt = datetime.fromisoformat(exp_str)
+                now = datetime.now(timezone.utc)
+                if exp_dt.tzinfo is None:
+                    exp_dt = exp_dt.replace(tzinfo=timezone.utc)
+                days = max(0, (exp_dt - now).days)
+                days_left = f" · ⏰ {days} hari lagi"
+            except Exception:
+                pass
+
+        st.markdown(
+            f"<div style='text-align:right;'>"
+            f"<span style='background:linear-gradient(135deg,#3b82f6,#8b5cf6);"
+            f"color:#fff;padding:.25rem .75rem;border-radius:1rem;"
+            f"font-size:.8rem;font-weight:600;'>{tier_label}{days_left}</span></div>",
+            unsafe_allow_html=True,
+        )
+
+
+def _show_upgrade_dialog() -> None:
+    """Dialog instruksi upgrade Pro (manual transfer)."""
+    st.info(
+        "**Cara Upgrade ke Pro (Rp 149.000/bulan):**\n\n"
+        "1. Transfer **Rp 149.000** ke salah satu rekening:\n"
+        "   • BCA: 123-456-7890 a/n Rafih R\n"
+        "   • GoPay/OVO/DANA: 0812-3456-7890\n\n"
+        "2. Kirim bukti transfer via WhatsApp ke **0857-8997-4981**\n\n"
+        "3. Admin akan aktifkan Pro dalam 1x24 jam\n\n"
+        "✅ **Pro** (Rp 149k/bln): 1.000 transaksi/bulan + AI CS 24/7 + 5 gudang\n"
+        "✅ **Bisnis** (Rp 299k/bln): 10.000 transaksi/bulan + unlimited AI CS + 20 gudang\n"
+        "✅ **Kemitraan**: Custom — hubungi admin untuk penawaran",
+        icon="💎",
+    )
 
 
 def render_daftar_produk(core, user_id, user_email) -> None:
