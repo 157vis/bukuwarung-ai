@@ -1501,7 +1501,7 @@ def _render_plan_banner(core, user_id, user_email) -> None:
     - Pro/Bisnis: badge tier + "Sisa X hari lagi"
     - Kemitraan: badge special (no banner)
     """
-    client_id = user_id  # Asumsi 1:1 mapping user_id → client_id
+    client_id = core.get_client_id_for_user(user_id) or user_id
     try:
         plan_limits = core.get_plan_limits(client_id)
         quota = core.check_tx_quota(client_id)
