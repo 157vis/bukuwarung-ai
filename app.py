@@ -1685,6 +1685,64 @@ def _render_pengaturan_user(core, user_id, user_email) -> None:
             st.rerun()
 
 
+def _resolve_client_id_for_user(core, user_id: str, user_email: str | None = None) -> str | None:
+    """Resolve Supabase auth user_id (UUID) → client_id (string PK di tabel clients).
+
+    Urutan lookup:
+    1. metadata->>user_id == user_id  ← FIX yang sebelumnya gagal
+    2. metadata->>'user_email' == user_email (lowercase)
+    3. profile_key == user_id (legacy)
+    4. owner_phones contains phone derived from email (rare)
+    """
+    if not user_id and not user_email:
+        return None
+
+    uid = (user_id or "").strip()
+    email = (user_email or "").strip().lower()
+
+    try:
+        # Cara 1: metadata.user_id (cara yang dipakai saat migrasi)
+        if uid:
+            resp = (
+                core.supabase.table("clients")
+                .select("client_id, name, is_active, owner_phones, metadata, profile_key")
+                .filter("metadata->>user_id", "eq", uid)
+                .limit(1)
+                .execute()
+            )
+            if resp.data:
+                return str(resp.data[0].get("client_id") or "").strip() or None
+
+        # Cara 2: metadata.user_email
+        if email:
+            resp = (
+                core.supabase.table("clients")
+                .select("client_id, name, is_active, owner_phones, metadata, profile_key")
+                .filter("metadata->>user_email", "eq", email)
+                .limit(1)
+                .execute()
+            )
+            if resp.data:
+                return str(resp.data[0].get("client_id") or "").strip() or None
+
+        # Cara 3: profile_key (legacy - kadang profile_key = user_id UUID atau email)
+        if uid or email:
+            target = uid or email
+            resp = (
+                core.supabase.table("clients")
+                .select("client_id, name, is_active, owner_phones, metadata, profile_key")
+                .eq("profile_key", target)
+                .limit(1)
+                .execute()
+            )
+            if resp.data:
+                return str(resp.data[0].get("client_id") or "").strip() or None
+
+    except Exception as exc:
+        logger.debug("_resolve_client_id_for_user uid=%s email=%s: %s", uid, email, exc)
+    return None
+
+
 def _render_plan_banner(core, user_id, user_email) -> None:
     """Tampilkan banner Free Tier + tombol Upgrade Pro.
 
@@ -1693,10 +1751,12 @@ def _render_plan_banner(core, user_id, user_email) -> None:
     - Pro/Bisnis: badge tier + "Sisa X hari lagi"
     - Kemitraan: badge special (no banner)
     """
-    client_id = user_id  # Asumsi 1:1 mapping user_id → client_id
+    # FIX: user_id (UUID dari auth.users) BUKAN client_id (string PK di tabel clients).
+    # Resolve user_id → client_id lewat tabel clients dengan metadata->>user_id.
+    client_id = _resolve_client_id_for_user(core, user_id, user_email)
     try:
-        plan_limits = core.get_plan_limits(client_id)
-        quota = core.check_tx_quota(client_id)
+        plan_limits = core.get_plan_limits(client_id) if client_id else {"tier": "free"}
+        quota = core.check_tx_quota(client_id) if client_id else {"current": 0, "limit": 100}
     except Exception as exc:
         logger.debug("render_plan_banner error: %s", exc)
         return
